@@ -973,3 +973,14 @@ Toggle the behind-the-scenes continuity checkpoint. Writes `autosave: on|off` to
 **Off:** write `autosave: off`. Confirm: *"Autosave off — I'll only persist on /dm:dnd save and /dm:dnd end."*
 
 **Why turn-count, not a context percentage:** the model cannot see its own context-usage level, so there is no reliable "save at 80% full" trigger from inside the skill. The cadence is keyed on turns instead, tuned to fire well before auto-compaction.
+
+<!-- BEGIN image-library -->
+## Image library — reuse before you download
+
+Every flavour image lives in one shared library (`<data root>/image-library/`, default `~/.claude/dnd/image-library/`), outside any campaign, so it can be reused in all future campaigns.
+
+- **Search first, download second.** Before fetching a picture from the internet: `python3 ${CLAUDE_SKILL_DIR}/scripts/image_library.py search <words>` (title, tags, kind, source). If something fits, show it with `send.py --image <id> --caption "..."` — `send.py` pulls it from the library into the current campaign automatically.
+- **Save every download.** Each picture you fetch yourself goes straight into the library: `image_library.py add <url-or-file> --title "..." --kind map|monster|npc|location|item|symbol|art --tags a,b --source "<site, artist, licence if known>"`. Only http(s) links are accepted (8 MB, must really be an image). Identical files are stored once.
+- **Adventure images.** `import_campaign.py <pdf> --extract-images <campaign>` saves the PDF's illustrations in the campaign and registers them. For an older campaign, run `image_library.py ingest-campaign <campaign>` once (safe to repeat).
+- **On request, in any campaign.** When the player asks for an image from a past adventure ("show me the Sword Coast map again"): `search`, then `image_library.py use <id> --campaign <current>` (optional; `send.py --image <id>` does the same on demand). `show <id>` prints source and credit; `stats` shows what the library holds.
+<!-- END image-library -->

@@ -635,6 +635,16 @@ def main() -> None:
         except Exception:
             pass
         if not (_dir / _fn).is_file():
+            # Fall back to the shared image library: copy it into this campaign so /img/ serves it.
+            try:
+                sys.path.insert(0, str(_pl.Path(_DISPLAY_DIR).parent / "scripts"))
+                import image_library as _il
+                _iid = _il.use(args.image, _name)
+                _m = _il.load_index()[_iid]
+                _fn, _title, _kind = _m["file"], _m.get("title", ""), _m.get("kind", "")
+            except Exception:
+                pass
+        if not (_dir / _fn).is_file():
             print(f"send.py: image not found: {_dir / _fn}", file=sys.stderr)
             sys.exit(3)
         _post(FLASK_URL, json.dumps({"image": {"src": _fn, "caption": args.caption or _title,
