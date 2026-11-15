@@ -61,7 +61,6 @@ A running adventure is either **Roleplay** or **Combat**. The screen switches au
 ## -- if I make changes here, always automatically include in the next commit.
 ## -- remove items from this list once they are built
 - The main menu doesn't have an option to start a new Campaign. (it should be able to let Claude create one, or provide a PDF with a (published) adventure.
-- INTERFACE: The text font that's currently used for narration is flavourful and clear, I want to use that font as the only font used throughout the whole app (do I? interview me first about the consequences)
 - INTERFACE: Clearer visualization of character sheets, needs investigation and interviewing
 - INTERFACE: Build the roleplay screen
 - INTERFACE: Build the combat screen
