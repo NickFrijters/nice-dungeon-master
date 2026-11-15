@@ -94,6 +94,13 @@ When a session is drifting — energy flagging, player circling without traction
 
 The re-engagement tool should feel like the world, not like the DM throwing a lifeline. Pick the one that fits the fiction.
 
+<!-- drift:skill:start -->
+**Aim, don't bind.** The arc and `## Setting Anchors` (world.md) are a compass: choices stay free and have effect, but the story keeps a pull toward the intended tone, places, people and beats.
+- **When improvising** (a new NPC, place, rumour, scene tone), check it against the anchors: does it feel like this world? Reuse an anchor place or person before inventing a new one.
+- **Bending a deviation back** (never forcing): 1) *Honour it:* play the tangent fully, its consequences real. 2) *Tie it:* give the tangent a thread to the outstanding beat (the person met knows someone; the road passes the place; the stolen item is wanted by the antagonist). 3) *Press:* the world moves anyway (rumour, NPC urgency, faction move, a clock) so the beat gets closer whether or not they go. 4) *Offer:* once, in fiction, a clear hook. 5) *Yield:* if they decline twice, follow them and revise the arc around their choice.
+- **Escalation from `arc_drift.py status` (read at load, set at save):** level 0 nothing; 1 telegraph (rumour/urgency); 2 pressure (world event); 3 decide (one strong pull, then accept their direction and revise). Never skip straight to walls.
+<!-- drift:skill:end -->
+
 ### 2. Listen and Calibrate
 Read the player's engagement signals. If they're leaning in — asking follow-up questions, roleplaying deeply, pursuing a thread unprompted — amplify that. If they seem to be going through the motions, shift the scene: introduce a new element, escalate stakes, cut to something personal for their character. The player's fun is the north star, not your narrative vision.
 

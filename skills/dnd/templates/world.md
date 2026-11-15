@@ -8,6 +8,14 @@
 - **Danger level:** <lethal / gritty / standard / heroic>
 - **Premise:** <the campaign in one sentence — what it's fundamentally about>
 
+## Setting Anchors
+*What the DM re-reads at every load and improvises toward. Not rules: a compass. Tight: 5-8 bullets, drawn from the source or the generated world.*
+- **Tone & feel:** <3-4 words, plus what to avoid>
+- **Themes:** <2-3 themes the story keeps returning to>
+- **Places that must feel present:** <2-4 key locations, each with its signature image>
+- **People who matter:** <2-4 NPCs/factions the story turns on>
+- **The pull:** <the one thing the world wants from the party, in a sentence>
+
 ---
 
 ## World Foundations
