@@ -10,12 +10,12 @@ Notes from the owner interview (2026-11-15). This is the plan for what the fork 
 - Pain points: starting is too complicated, and display and sound can be flaky.
 
 ## Front door: a web app Main Menu
-The web app is where a session starts, not a Claude chat command. The Main Menu offers:
+You start the web app through Claude (for example with `/dm:dnd`). From that moment on, the web app has all the controls; you don't go back to the Claude chat during play. The Main Menu offers:
 - Start a new campaign or load an existing one
 - Manage characters
 - Manage settings
 
-Claude plays the DM behind the app.
+Claude keeps running as the DM behind the app. The app sends your choices and actions to Claude, and Claude sends back narration and state. The existing autorun mode already works this way: the display collects player input in a queue and Claude waits for it between turns. That is the starting point for the new design.
 
 ## Settings (from day one)
 | Setting | Options | Effect |
@@ -53,6 +53,6 @@ A running adventure is either **Roleplay** or **Combat**. The screen switches au
 - **Around the map:** initiative order bar, party and enemy HP, narration of the action, and the dice roll display
 
 ## Open questions
-- The web app starting and controlling Claude is a significant change from today, where Claude drives the display. We need to decide how the app launches and talks to Claude.
+- Menu actions (load campaign, change settings, manage characters) must reach Claude through the input queue. We need to decide which of these the app handles itself and which it passes to Claude.
 - Exact visual design of the two layouts (colors, sizes, how the left panels collapse).
 - Whether Experience is set per character only, or can also apply to the whole session.
