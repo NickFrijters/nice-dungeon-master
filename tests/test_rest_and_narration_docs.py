@@ -76,7 +76,7 @@ class NarrationGuidanceTests(unittest.TestCase):
                        "Open each turn on what changed",
                        "write it to `state.md → ## DM Style Notes` immediately",
                        "replace any earlier note it contradicts",
-                       "in the language it was asked",
+                       "Answer an out-of-character question in English",
                        "never say a sheet was updated unless you wrote it",
                        "check it isn't already recorded",
                        "One word per game term"):
