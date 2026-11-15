@@ -15,7 +15,7 @@ Migration is just two steps:
 
 ```text
 1. Install the plugin
-   /plugin marketplace add neuralinitiative/claude-dnd-skill
+   /plugin marketplace add NickFrijters/nice-dungeon-master
    /plugin install dm@nice-dungeon-master
 
 2. Run the one-time migration helper

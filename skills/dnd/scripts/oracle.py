@@ -1,7 +1,7 @@
 """
 oracle.py — solo/GM oracle tools (chaos factor, yes/no, event focus, scene meaning).
 
-Ported from the Neural Initiative engine's oracle module, re-implemented in the
+Ported from an earlier engine's oracle module, re-implemented in the
 skill's idiom (stdlib only; chaos factor persisted in the campaign's state.md
 Session Flags rather than a DB row).
 

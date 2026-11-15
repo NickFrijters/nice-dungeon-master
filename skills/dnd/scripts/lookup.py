@@ -370,29 +370,10 @@ FORMATTERS = {
 #      warning before the click. An unknown category degraded to a bare slug at
 #      the site root, which is the least likely form to resolve at all.
 #
-# Branch 2 now points at an SRD reference whose coverage was checked against
-# every category below, with a control: a deliberately fake slug returns 404,
-# so a 200 means the page is really there rather than a catch-all route
-# swallowing everything. It is the same SRD content, without the ads.
-
-#: Category → path on the reference wiki. Every one of these was verified to
-#: resolve; a category missing from here has no verified mapping and gets no
-#: constructed link rather than a guessed one.
-_WIKI_SECTIONS = {
-    "spells":      "spells",
-    "spell":       "spells",
-    "conditions":  "conditions",
-    "condition":   "conditions",
-    "monsters":    "monsters",
-    "monster":     "monsters",
-    "equipment":   "gear",
-    "magic_items": "magic-items",
-    "features":    "features",
-    "feature":     "features",
-}
-
-_WIKI_BASE = "https://neuralinitiative.ai/wiki"
-
+# Branch 2 used to point at a hosted SRD reference run by the upstream project.
+# This fork has no such site and no other reference whose URLs were verified, so
+# branch 2 now returns nothing: silence beats a guessed link. Supplemental
+# records (branch 1) still link to the page they were fetched from.
 
 def reference_url(name: str, category: str = None, record: dict = None) -> dict:
     """Return {url, label} for a name, or {} when there is nothing to link.
@@ -403,19 +384,8 @@ def reference_url(name: str, category: str = None, record: dict = None) -> dict:
     if record and record.get("wikidot_url"):
         return {"url": record["wikidot_url"], "label": "View on D&D 5e Wiki"}
 
-    section = _WIKI_SECTIONS.get((category or "").lower())
-    if not section:
-        # No verified mapping. A guessed link is worse than none: it reads as
-        # an answer and dead-ends.
-        return {}
-
-    slug = re.sub(r"[^a-z0-9]+", "-", (name or "").lower()).strip("-")
-    if not slug:
-        return {}
-    return {
-        "url": f"{_WIKI_BASE}/{section}/{slug}",
-        "label": "View the full description on the Neural Initiative Wiki",
-    }
+    # No verified reference site for the plain SRD entries: no link.
+    return {}
 
 
 def wikidot_url(name: str, category: str = None, record: dict = None) -> str:

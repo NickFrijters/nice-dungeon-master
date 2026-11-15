@@ -195,7 +195,7 @@ def main() -> int:
         _say(f"No standalone install found at {LEGACY_SKILL}.")
         _say("Nothing to migrate — you're either already on the plugin or starting fresh.")
         _say("Install the plugin with:")
-        _say("    /plugin marketplace add neuralinitiative/claude-dnd-skill")
+        _say("    /plugin marketplace add NickFrijters/nice-dungeon-master")
         _say("    /plugin install dm@nice-dungeon-master")
         return 0
 
@@ -236,7 +236,7 @@ def main() -> int:
     _say("Done." if rc == 0 else "Finished with steps skipped.")
     _say("Going forward, invoke the DM with  /dm:dnd  (the old /dnd is retired).")
     _say("If you haven't installed the plugin yet:")
-    _say("    /plugin marketplace add neuralinitiative/claude-dnd-skill")
+    _say("    /plugin marketplace add NickFrijters/nice-dungeon-master")
     _say("    /plugin install dm@nice-dungeon-master")
     return rc
 

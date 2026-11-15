@@ -25,10 +25,10 @@ import urllib.request
 from paths import skill_root as _skill_root
 
 # Canonical VERSION on the published marketplace branch — used to tell a plugin
-# install whether it's behind. 404s gracefully before the org transfer lands.
+# install whether it's behind.
 # Override with DND_UPDATE_VERSION_URL (e.g. to test, or track a fork).
 _REMOTE_VERSION_URL = os.environ.get("DND_UPDATE_VERSION_URL", "").strip() or (
-    "https://raw.githubusercontent.com/neuralinitiative/claude-dnd-skill/main/VERSION"
+    "https://raw.githubusercontent.com/NickFrijters/nice-dungeon-master/main/VERSION"
 )
 
 # The skill dir holds SKILL.md + scripts/data/display. The git checkout root is
@@ -155,7 +155,7 @@ def main() -> int:
               file=sys.stderr)
         print(
             "If you installed manually, reinstall via:\n"
-            "    git clone https://github.com/neuralinitiative/claude-dnd-skill\n"
+            "    git clone https://github.com/NickFrijters/nice-dungeon-master\n"
             "or install it as a plugin (see README).",
             file=sys.stderr,
         )
