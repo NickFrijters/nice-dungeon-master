@@ -32,8 +32,9 @@ FILE_MAP = {
     "seeds":   "world-seeds.md",
     "npcs":    "npcs.md",
     "npcsfull":"npcs-full.md",
+    "conseq":  "consequences.md",
 }
-DEFAULT_FILES = ["state", "log", "archive", "world", "npcs"]
+DEFAULT_FILES = ["state", "log", "archive", "world", "npcs", "conseq"]
 
 
 def find_section_heading(lines, match_idx):
