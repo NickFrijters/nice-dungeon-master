@@ -587,3 +587,15 @@ python3 ${CLAUDE_SKILL_DIR}/scripts/corpus_check.py --campaign <name>
 ```
 
 Validates that every chapter id in `source-index.md` has a matching `source/<id>.md` (and vice-versa) and that `arc.md` exists. Run it at the end of `/dm:dnd import`. A campaign with no `source/` layer (dynamic, sandbox, or a pre-v2.2.0 import) is reported as a clean no-op — nothing to validate, and its load path is unchanged.
+
+## Arc Drift — `scripts/arc_drift.py`
+
+Keeps a campaign aimed at its arc without binding it to it. The DM records one drift verdict per save; the script logs it to `<campaign>/drift-log.md`, detects stalls (no beat landed, no chapter advanced) and returns an escalation level 0-3.
+
+```bash
+python3 ${CLAUDE_SKILL_DIR}/scripts/arc_drift.py status  --campaign <name> [--json]
+python3 ${CLAUDE_SKILL_DIR}/scripts/arc_drift.py record  --campaign <name> --verdict on-course|detour|drifting|off-arc --note "<why>" --move "<steering move>"
+python3 ${CLAUDE_SKILL_DIR}/scripts/arc_drift.py anchors --campaign <name>
+```
+
+`anchors` prints `## Setting Anchors` from world.md (exit 1 if missing). Used by `load` and `save`; see SKILL.md "Aim, don't bind".

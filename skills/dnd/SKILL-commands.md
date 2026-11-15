@@ -64,6 +64,9 @@ Open the web **Main Menu**. After this, the player works in the browser and you 
 
    Write to `state.md → ## Campaign Arc` with `type: dynamic`. Deliver a one-paragraph arc summary to the DM.
 
+   <!-- drift:new:start -->
+   Either way, write `## Setting Anchors` to world.md from the tone, premise, threat, key settlement and NPCs just created (template block). Sandbox campaigns need the anchors too: they are the only thing that keeps an open story recognisably *this* story.
+   <!-- drift:new:end -->
    **If no:** Write `type: sandbox` to `## Campaign Arc`. The story remains open-ended with no arc tracking.
 
 14. Write state.md with session count 0, starting location.
@@ -129,6 +132,9 @@ Open the web **Main Menu**. After this, the player works in the browser and you 
    - **world.md:** Load in full — World Foundations, Three Truths, and factions inform narration and faction moves. Do NOT read `world-seeds.md` at load (generation artifact, not live reference).
    - **world-nodes.md (imported campaigns only):** Do **NOT** load at session start. It holds the full Quest Seed Bank and Adventure Nodes for the whole module; read only the current act's nodes on demand when a scene needs them. If the file is absent (dynamic/sandbox, or an older import), there is nothing to lazy-load — `world.md` already carries the nodes, unchanged from prior behavior.
    - **arc.md (imported campaigns only):** Do **NOT** load at session start. `state.md → ## Campaign Arc` already carries the current + next chapter window. Read `arc.md` only when advancing chapters or when a player asks about the broader arc. If absent, the arc lives inline in `state.md` (dynamic/sandbox) — read it there as before. **Sanity-check the pointer at load:** if `## Campaign Arc`'s `current_chapter` shows its `outstanding_beats` already cleared, or the last session plainly ended in the *next* chapter's location or situation, the pointer never advanced — surface it (*"the current chapter looks finished; pick up in `<next_chapter>`?"*) instead of opening another scene in a chapter that's already done. A pointer that never moves is exactly how a structured campaign quietly drifts off its own arc and starts improvising.
+   <!-- drift:load:start -->
+   - **world.md → `## Setting Anchors` and drift status (all arc types except sandbox):** the anchors are already in world.md; keep them hot. Then run `python3 ${CLAUDE_SKILL_DIR}/scripts/arc_drift.py status --campaign <name>` and act on its level (SKILL.md "Aim, don't bind"). If anchors are missing (older campaign), write them now from `world.md` Tone/Premise (and `source/0.1.md` or the arc theme) and tell the player in one line.
+   <!-- drift:load:end -->
    - **source/<chapter-id>.md (imported campaigns only):** the full module text, one file per chapter. Never loaded at session start. Before running a scene in a chapter, read that chapter's `source/<id>.md` (the `source_ref` in the arc) — and only that chapter. This is the predefined-story equivalent of reading a single NPC's full entry on demand.
    - **npcs.md:** Index row only at load. **Before writing substantive dialogue or decisions for any named NPC, read their full entry in `npcs-full.md`.** Do not wait for an explicit `/dm:dnd npc [name]` call — do it proactively when a scene centers on that character. Index rows carry surface traits only; personality axes, relationships, and hidden goals are in the full entry.
    - **Do NOT read session-log.md at load** — recent events are already in `state.md → ## Recent Events`. Only read session-log.md if the player explicitly requests a recap, or if DM Calibration from the last 1-2 sessions is needed and not already internalized.
@@ -322,6 +328,10 @@ On confirmation:
 
 6. Write **arc.md** from `${CLAUDE_SKILL_DIR}/templates/arc.md` — the **full** act/chapter tree: every chapter's `id`, `title`, `location`, `source_ref` (its file in the lazy corpus, see step 6b), `key_beats`, `telegraph_scene`, `branching_notes`, plus `outstanding_beats` and `steering_notes`. This is the heavy structure; it lives here so it is read on demand, not at every load.
 
+<!-- drift:import:start -->
+6-anchors. Add `## Setting Anchors` to world.md (template block, 5-8 bullets): tone and what to avoid, 2-3 themes, 2-4 key places each with its signature image, 2-4 people/factions the story turns on, and *the pull* (what the world wants from the party). Draw only from the source; no invention. Validate: `python3 ${CLAUDE_SKILL_DIR}/scripts/arc_drift.py anchors --campaign <name>`.
+<!-- drift:import:end -->
+
 6a. Write **state.md** from template:
    - Populate `## Current Situation` — starting location and party placeholder
    - Populate `## World State` — in-world date if given, factions, threat arc stage 1
@@ -371,6 +381,10 @@ Write session events to session-log.md, update state.md (location, active quests
 If nothing changed in a category this session, leave it as-is. If a fact was wrong in the previous save, correct it.
 
 **Structured (imported) campaigns — keep the arc window and arc.md in sync.** Advancing the pointer is not optional bookkeeping — it is what keeps the campaign on its own rails, and a pointer that never moves is how an imported module quietly becomes an improvised one. Before you decide "no chapter advanced," check honestly: **if this session cleared the last of the current chapter's `outstanding_beats`, or the party has plainly moved into the next chapter's location or situation, the chapter advanced — treat it as such and move the pointer now.** When a chapter advances: mark the completed chapter `status: complete` in `arc.md`, set the new chapter `status: current`, and update `state.md → ## Campaign Arc` so its `current_chapter`, `current_chapter_detail`, `next_chapter`, and `outstanding_beats` reflect the new window. The full tree stays in `arc.md`; `state.md` carries only the current + next chapter so the load stays light. Only when the party is genuinely still mid-chapter, update `outstanding_beats`/`steering_notes` inline in `state.md` — no need to touch `arc.md`. (Dynamic/sandbox campaigns have no `arc.md`; update the inline arc in `state.md` as before.)
+
+<!-- drift:save:start -->
+**Drift check (every save; structured and dynamic arcs).** Compare this session's events with the current chapter/beat and the Setting Anchors, then run `python3 ${CLAUDE_SKILL_DIR}/scripts/arc_drift.py record --campaign <name> --verdict <on-course|detour|drifting|off-arc> --note "<one line: what the session did vs the beat>" --move "<one steering move for next session>"`. Verdicts: `on-course` (served the beat), `detour` (player-led tangent, played fully, legit), `drifting` (arc ignored, no pull felt), `off-arc` (the story lives where the arc no longer describes). Write the move into `steering_notes`. The script prints an escalation level; follow SKILL.md "Aim, don't bind". Never mention the verdict to players.
+<!-- drift:save:end -->
 
 Then update `## Faction Moves` in state.md: for each active faction, answer *"what did they do while the party was occupied?"* One line per faction — even if nothing visible yet. Confirm what was written.
 
@@ -450,6 +464,9 @@ If `graph.json` doesn't exist yet for this campaign, skip the sweep entirely (no
         - **Did not land — pressure absorbed without consequence** → the beat is overdue and its current shape no longer fits. **Run `/dm:dnd arc revise` immediately**; do not just update `steering_notes`. The beat's `what_changes` was event-shaped (something specific happens) when it should be consequence-shaped (something fundamentally different is true) — revise both `what_changes` and `world_pressure` to fit a path that DOES land. The committed shape bends; it does not break.
         - **Pressure not yet delivered** → leave beat alone; expected to deliver next session.
       iv. Update `steering_notes` for the next outstanding beat with the *consequence shape* expected, not the specific event.
+   <!-- drift:end:start -->
+   e2. **Structured arcs:** the pre-emption check above is dynamic-only. For structured arcs, read `arc_drift.py status`: at level 3, ask the player in one line whether to steer back toward the next chapter or follow the new direction; if they follow it, note the divergence in `steering_notes` and re-aim `outstanding_beats` at what the new direction still needs from the source.
+   <!-- drift:end:end -->
    f. **Tail verification (added 2026-05-01):** before killing the display, verify the campaign-side `session_tail.json` is healthy:
       ```bash
       bash ${CLAUDE_SKILL_DIR}/display/verify_tail.sh <campaign-name>
