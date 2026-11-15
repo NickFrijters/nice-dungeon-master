@@ -84,8 +84,6 @@ for _i in range(1800):  # 0.3s * 1800 = 9 min
         break
     time.sleep(0.3)
 
-_beat()
-
 # Clean up our session file if it's still ours
 try:
     if open(SESSION_FILE, encoding="utf-8").read().strip() == my_session:

@@ -40,6 +40,8 @@
     Claude is running. Start it with <code>/dm:dnd</code> (or the desktop shortcut).
   </div>
 
+  <div id="saving" class="notice" hidden><strong>Saving your session…</strong> One moment; you can pick a campaign when this goes away.</div>
+
   <h2>Campaigns</h2>
   <div id="campaigns"><p class="empty">Looking for campaigns…</p></div>
 
@@ -123,13 +125,15 @@ async function refresh() {
   try {
     const data = await (await fetch('/menu/campaigns')).json();
     render(data);
-    document.getElementById('no-dm').hidden = !!data.dm_listening;
+    document.getElementById('no-dm').hidden = !!data.dm_listening || !!data.saving;
+    document.getElementById('saving').hidden = !data.saving;
+    if (data.saving) document.querySelectorAll('#campaigns button').forEach(b => b.disabled = true);
     if (waitingFor && data.active === waitingFor) { location.href = '/'; return; }
   } catch (e) { /* server busy; try again */ }
 }
 refresh();
 setInterval(() => { if (waitingFor) refresh(); }, 2000);
-setInterval(() => { if (!waitingFor && !quitting) refresh(); }, 5000);   // keeps the 'no Dungeon Master' notice honest
+setInterval(() => { if (!waitingFor && !quitting) refresh(); }, 2500);   // keeps the 'no Dungeon Master' notice honest
 </script>
 </body>
 </html>

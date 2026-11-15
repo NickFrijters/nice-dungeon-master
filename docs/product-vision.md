@@ -60,10 +60,8 @@ A running adventure is either **Roleplay** or **Combat**. The screen switches au
 ## Manual additions done by Nick in this .md file, read this as "next things" or the backlog.
 ## -- if I make changes here, always automatically include in the next commit.
 ## -- remove items from this list once they are built
-- INTERFACE: Add the option to save and exit. This quits the running session and returns to the main menu. Place it in the bottom left menu.
 - INTERFACE: Als ik "Party input" open klap wil ik onder elkaar een regel per character met elk een tekst invoer veld(bovenaan een regel voor "Everybody"). Geen "stage" knoppen, maar maak het visueel als een veld tekstinvoer bevat. De "GO" knop verstuurt simpelweg alle ingevoerde tekstvelden naar de DM. Does the TV exactly mirror the PC screen? If so, can we remove the toggle altogether because they will show the same? In reality, I will only be typing or inputting in one of the two devices so there doesn't need to be any guardrails to block input from the other. Interview me first if you think that's necessary.
 - INTERFACE: Loading between DM responses should always visualize what it's doing and how many things it has to do next (loading bar with several parts, or another way to show progress). Because waiting is always annoying for players. Goal is that every waiting time is accompanied by a tracker, always.
-- INTERFACE: Fade the narration text near the top of the screen so it looks prettier
 - INTERFACE: The text font that's currently used for narration is flavourful and clear, I want to use that font as the only font used throughout the whole app (do I? interview me first about the consequences)
 - INTERFACE: Clearer visualization of character sheets, needs investigation and interviewing
 - INTERFACE: Build the roleplay screen
@@ -81,6 +79,7 @@ A running adventure is either **Roleplay** or **Combat**. The screen switches au
 - PERSISTENCY: Do a full analysis on adventure/campaign persistency. For example: Making sure that we're aiming towards (but not bound to) the general adventure/campaign setting. So that we don't drift off further from it with every session.
 - PERFORMANCE: Persistent image saving and rendering. Keep a very thorough database of previously downloaded images. Save all provided campaign/adventure images and all self-downloaded images from internet. To be able to use those in all future campaigns or on request.
 - CLEANUP: Remove the Neural Initiative mentions and logo from our app and code.
+- PRETTIFY: The "DM Help" info block that pops up, and the "Save and Exit" error block that pops up (can you check what I mean) doesn't match the rest of the interface style.
 
 ## Status
 - **v1 (done):** `/dm:dnd menu` starts the display. The Main Menu lists your campaigns, and clicking Load hands the request to Claude, who loads it and switches the browser to the play screen. "Manage characters" and "Settings" are placeholders.

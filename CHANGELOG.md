@@ -10,6 +10,17 @@ Versions before **1.6.0** are reconstructed retroactively from git history; the 
 
 ## [Unreleased]
 
+## [2.21.0] — 2026-11-15 — Save and exit
+
+### Added — Save & exit, in the bottom-left menu
+
+- A **Save & exit** button next to the cog and the TV | PC switch (PC only). It asks Claude to save and sends every screen, the TV included, back to the Main Menu. The display keeps running (Quit is what stops it) and the campaign stays the active one, so **Continue** picks it up again.
+- Claude handles `[Menu]: save-exit` by running the save procedure and the non-interactive parts of `/dm:dnd end`, with conservative defaults where those would ask a question (the player is in the browser), then returns to the menu wait. The menu shows **Saving…** until Claude's next wait begins, and disables loading meanwhile. Without a connected Dungeon Master, nothing is queued and the screens still go back to the menu.
+
+### Changed — a smoother narration fade at the top
+
+The fade at the top of the story area is now an eased ramp in `vh` instead of one short pixel gradient, so it looks the same and covers a proportional part of the screen on a TV as on a laptop.
+
 ## [2.20.0] — 2026-11-15 — Party loads from the campaign
 
 ### Fixed — loading a campaign showed only a placeholder "Aldric"

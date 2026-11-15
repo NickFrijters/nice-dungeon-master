@@ -221,6 +221,19 @@ console.log(JSON.stringify({ sent: sent.length }));
         self.assertEqual(r, {"sent": 0})
 
 
+@unittest.skipUnless(NODE, "node not available")
+class GoMenuTest(unittest.TestCase):
+    def test_every_screen_goes_to_the_main_menu_when_told_to(self):
+        r = _run("""
+const bus = [];
+const a = makeScreen('A', bus, { tv: false });
+const b = makeScreen('B', bus, { tv: true });
+a.win._relaySend({ t: 'go-menu' });
+console.log(JSON.stringify({ a: a.ctx.location.href, b: b.ctx.location.href }));
+""")
+        self.assertEqual(r, {"a": "/menu", "b": "/menu"})
+
+
 class PageTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

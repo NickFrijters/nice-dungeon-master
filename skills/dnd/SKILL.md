@@ -1,6 +1,6 @@
 ---
 name: dnd
-description: "v2.20.0 · Dungeon Master assistant for running persistent D&D 5e campaigns. Handles campaign creation/loading, character management, combat tracking, NPC generation, dice rolling, and session state — all persisted across sessions. Invoke with /dm:dnd followed by a subcommand, or just speak naturally once a campaign is loaded."
+description: "v2.21.0 · Dungeon Master assistant for running persistent D&D 5e campaigns. Handles campaign creation/loading, character management, combat tracking, NPC generation, dice rolling, and session state — all persisted across sessions. Invoke with /dm:dnd followed by a subcommand, or just speak naturally once a campaign is loaded."
 tools: Read, Write, Edit, Glob, Bash, AskUserQuestion
 ---
 
@@ -301,7 +301,7 @@ AUTORUN=$(python3 ${CLAUDE_SKILL_DIR}/display/autorun_wait.py)
 echo "$AUTORUN"
 ```
 
-- If `AUTORUN` is non-empty: treat it as the player action for the next turn. Process immediately — no DM message needed. The content has already been sanitised by dnd-display-app.py before being written to the queue. Lines that start with `[Menu]:` are not player actions but requests from the Main Menu (`load <campaign>`, `quit`): handle them as described under `/dm:dnd menu` in `SKILL-commands.md`. After `[Menu]: quit`, save and do **not** restart the wait.
+- If `AUTORUN` is non-empty: treat it as the player action for the next turn. Process immediately — no DM message needed. The content has already been sanitised by dnd-display-app.py before being written to the queue. Lines that start with `[Menu]:` are not player actions but requests from the Main Menu or the game's menu (`load <campaign>`, `quit`, `save-exit`): handle them as described under `/dm:dnd menu` in `SKILL-commands.md`. After `[Menu]: quit`, save and do **not** restart the wait.
 - If `AUTORUN` is empty (timeout after 9 min): **silently restart the wait** — do not print anything, do not wait for a DM message. Just run the same Bash block again immediately. This keeps the loop alive indefinitely until a player submits or the DM intervenes.
 - If the DM sends a message mid-wait: the Bash is interrupted. **Before processing the DM's message, run `check_input.py` once.** If it returns content, that is queued player input that arrived during the gap — treat it as part of this turn alongside the DM's message (or as the primary action if the DM message is administrative). If it returns empty, proceed with the DM's message as the turn input. After resolving the DM's turn, restart the wait if `autorun: true` is still in state.md.
 

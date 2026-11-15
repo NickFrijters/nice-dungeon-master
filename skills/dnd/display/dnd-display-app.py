@@ -1329,6 +1329,23 @@ def _dm_listening() -> bool:
         return False
 
 
+# Save & exit: when it was asked for. The menu says "Saving..." until Claude is back
+# in its wait loop (its next heartbeat is newer than this), or ten minutes pass.
+_exit_requested_at = None
+
+
+def _saving() -> bool:
+    if _exit_requested_at is None:
+        return False
+    now = _time.time()
+    if now - _exit_requested_at > 600:
+        return False
+    try:
+        return os.path.getmtime(rt(".dm-heartbeat")) <= _exit_requested_at
+    except OSError:
+        return True
+
+
 def _open_campaign_here(name: str) -> None:
     """Show the campaign's party and mark it active, without waiting for Claude.
 
@@ -1366,6 +1383,7 @@ def menu():
 def menu_campaigns():
     return jsonify({"active": _active_campaign_name(),
                     "dm_listening": _dm_listening(),
+                    "saving": _saving(),
                     "campaigns": _list_campaigns()})
 
 
@@ -1391,6 +1409,31 @@ def menu_load():
     _MENU_FIRST = False
     _open_campaign_here(name)
     return "", 204
+
+
+@app.route("/menu/exit", methods=["POST"])
+def menu_exit():
+    """Save and exit: ask Claude to save, and send every screen back to the Main Menu.
+
+    The display keeps running (Quit is what stops it). The campaign stays the
+    active one, so 'Continue' on the menu picks it up again.
+    """
+    if not _token_ok():
+        return "Forbidden", 403
+    if not _from_this_machine():
+        return _THIS_MACHINE_ONLY
+    global _MENU_FIRST, _exit_requested_at
+    asked_claude = _dm_listening()
+    if asked_claude:
+        try:
+            with _staged_lock, open(QUEUE_FILE, "a", encoding="utf-8") as f:
+                f.write("[Menu]: save-exit\n")
+        except OSError:
+            asked_claude = False
+    _exit_requested_at = _time.time() if asked_claude else None
+    _MENU_FIRST = True
+    _broadcast({"relay": {"t": "go-menu"}})        # every screen, the TV included
+    return jsonify({"asked_claude": asked_claude}), 200
 
 
 # Quit: tell Claude first (so it saves and stops waiting), then stop the display
