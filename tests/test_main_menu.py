@@ -32,6 +32,10 @@ class MainMenuTest(unittest.TestCase):
         sys.path.insert(0, str(SCRIPTS))
         sys.path.insert(0, str(DISPLAY))
         import paths  # may already be imported by another test with another root
+        import runtime_paths  # remembers its folder from first import: pin it to the temp dir
+        (root / ".runtime").mkdir(exist_ok=True)
+        cls._rt_patch = mock.patch.object(runtime_paths, "RT", str(root / ".runtime"))
+        cls._rt_patch.start()
         cls._root_patch = mock.patch.object(paths, "_root", lambda: root)
         cls._root_patch.start()
         spec = importlib.util.spec_from_file_location("display_app_menu", DISPLAY / "dnd-display-app.py")
@@ -39,10 +43,12 @@ class MainMenuTest(unittest.TestCase):
         sys.modules["display_app_menu"] = cls.mod
         spec.loader.exec_module(cls.mod)
         cls.client = cls.mod.app.test_client()
+        assert str(root) in cls.mod.QUEUE_FILE, "test would touch the real runtime folder"
 
     @classmethod
     def tearDownClass(cls):
         cls._root_patch.stop()
+        cls._rt_patch.stop()
         for k, v in cls._env.items():
             if v is None:
                 os.environ.pop(k, None)

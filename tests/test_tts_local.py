@@ -92,6 +92,10 @@ class RouteTest(unittest.TestCase):
         cls._env = {k: os.environ.get(k) for k in ("DND_CAMPAIGN_ROOT", "DND_RUNTIME_DIR")}
         os.environ["DND_CAMPAIGN_ROOT"] = str(root)
         os.environ["DND_RUNTIME_DIR"] = str(root / ".runtime")
+        import runtime_paths  # remembers its folder from first import: pin it to the temp dir
+        (root / ".runtime").mkdir(exist_ok=True)
+        cls._rt_patch = mock.patch.object(runtime_paths, "RT", str(root / ".runtime"))
+        cls._rt_patch.start()
         spec = importlib.util.spec_from_file_location("display_app_tts", DISPLAY / "dnd-display-app.py")
         cls.mod = importlib.util.module_from_spec(spec)
         sys.modules["display_app_tts"] = cls.mod
@@ -100,6 +104,7 @@ class RouteTest(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
+        cls._rt_patch.stop()
         for k, v in cls._env.items():
             if v is None:
                 os.environ.pop(k, None)

@@ -10,6 +10,12 @@ Versions before **1.6.0** are reconstructed retroactively from git history; the 
 
 ## [Unreleased]
 
+## [2.10.2] — 2026-11-15 — Tests stay out of the real folder
+
+### Fixed — tests wrote into the real runtime folder
+
+The display remembers its runtime folder from the moment it is first imported, so when the whole suite ran, the menu, settings and narration tests could write to the real `.runtime` (for example a fake `[Menu]: load alpha-quest` line in a live session's input queue). Those tests now pin the runtime folder to a temporary one and fail if they would touch anything else.
+
 ## [2.10.1] — 2026-11-15 — Local Pocket TTS narration
 
 ### Fixed — narration uses the local Pocket TTS voice

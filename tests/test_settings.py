@@ -125,13 +125,19 @@ class RouteTest(SettingsCase):
         os.environ["DND_CAMPAIGN_ROOT"] = str(self.root)
         os.environ["DND_RUNTIME_DIR"] = str(self.root / ".runtime")
         (self.root / "campaigns" / "demo" / "state.md").write_text("**Ruleset:** 2014\n", encoding="utf-8")
+        import runtime_paths  # remembers its folder from first import: pin it to the temp dir
+        (self.root / ".runtime").mkdir(exist_ok=True)
+        self._rt_patch = mock.patch.object(runtime_paths, "RT", str(self.root / ".runtime"))
+        self._rt_patch.start()
         spec = importlib.util.spec_from_file_location("display_app_settings", DISPLAY / "dnd-display-app.py")
         self.mod = importlib.util.module_from_spec(spec)
         sys.modules["display_app_settings"] = self.mod
         spec.loader.exec_module(self.mod)
         self.client = self.mod.app.test_client()
+        assert str(self.root) in self.mod.rt("narration_target"), "test would touch the real runtime folder"
 
     def tearDown(self):
+        self._rt_patch.stop()
         for k, v in self._env.items():
             if v is None:
                 os.environ.pop(k, None)
