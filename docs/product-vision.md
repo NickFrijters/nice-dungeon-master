@@ -64,7 +64,6 @@ A running adventure is either **Roleplay** or **Combat**. The screen switches au
 - The main menu doesn't have an option to start a new Campaign. (it should be able to let Claude create one, or provide a PDF with a (published) adventure.
 - INTERFACE: The text font that's currently used for narration is flavourful and clear, I want to use that font as the only font used throughout the whole app (do I? interview me first about the consequences)
 - INTERFACE: Clearer visualization of character sheets, needs investigation and interviewing
-- BUG: when creating a new campaign, the dropdowns for tone, magic level, setting, danger levels and Ruleset are empty. When clicking "Create campaign" it returns with "That did not work. Try again."
 - INTERFACE: Build the roleplay screen
 - INTERFACE: Build the combat screen
 - INTERFACE: Screenshot all interfaces and look for graphical inconsistencies or things that don't look nice - fix them (interview me where you think that's necessary).
