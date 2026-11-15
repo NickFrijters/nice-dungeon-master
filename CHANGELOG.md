@@ -10,6 +10,20 @@ Versions before **1.6.0** are reconstructed retroactively from git history; the 
 
 ## [Unreleased]
 
+## [2.26.0] — 2026-11-15 — Consequence ledger and drift check
+
+### Added — a consequence ledger, so the world remembers (continuity and persistent memory)
+
+Analysis in `docs/research/persistence-continuity.md`: no store anywhere held "what the party did at this place or to this person", so the inn door broken in session 3 was gone from the DM's context by session 5. New `scripts/consequences.py` keeps a durable, queryable ledger (`consequences.md` in the campaign) of lasting consequences keyed to every place, NPC or faction that should remember them, with the session and the character who caused them. The DM records an entry the moment something lasting happens (micro-save), sweeps for missed ones at every save, and runs `consequences.py scene --place ... --present ...` on entering a place or meeting a named NPC and at load. Commands: `add`, `scene`, `list`, `search`, `stats`; `campaign_search.py` and the autosave checkpoint know the new file.
+
+### Added — a drift check and setting anchors ("aim toward, don't bind")
+
+Analysis in `docs/research/campaign-drift.md`. New `scripts/arc_drift.py` and a `## Setting Anchors` block in `world.md` (tone, themes, places that must feel present, people who matter, "the pull"), written at campaign creation and import and re-read at every load. At every save the DM compares the session with the current chapter or beat and records a verdict (`on-course`, `detour`, `drifting`, `off-arc`) with one steering move; the status level (0 nothing, 1 telegraph, 2 pressure, 3 decide) is read at load. SKILL.md gains "Aim, don't bind": honour a tangent, tie it to the beat, let the world press on, offer the thread, and never force it.
+
+### Changed — the turn tracker also shows "DM has your move"
+
+A new step between Sent and DM is writing, driven by the display noticing that Claude picked the move up off the queue.
+
 ## [2.25.0] — 2026-11-15 — Stepped trackers
 
 ### Changed — every wait has a stepped tracker
