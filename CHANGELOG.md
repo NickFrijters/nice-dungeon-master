@@ -10,6 +10,14 @@ Versions before **1.6.0** are reconstructed retroactively from git history; the 
 
 ## [Unreleased]
 
+## [2.15.0] — 2026-11-15 — LAN mode always on
+
+### Changed — LAN mode is always on
+
+- `start-display.sh` now runs in LAN mode by default (`--local` keeps it on this computer; `--lan` is still accepted). It finds the network address with Python, so it works on Windows (it used to find none there), and prints the address to open on the TV.
+- The display is no longer a question at `/dm:dnd load` or `/dm:dnd new`: it always starts in LAN mode with autorun on. Only the dice question remains.
+- **Because the page and its token are now visible to every device on the network, loading a campaign, changing settings and Quit only answer to the computer running the game** (loopback, or its own network address). Other devices can still open and read the pages, and input from a new device still waits for the DM's approval.
+
 ## [2.14.0] — 2026-11-15 — Voice speed 80%
 
 ### Changed — the narrator speaks at 80% speed

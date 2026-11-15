@@ -26,6 +26,7 @@ import os
 import queue
 import re
 import secrets
+import socket
 import subprocess
 import sys
 import threading
@@ -1254,6 +1255,35 @@ def index():
     )
 
 
+# ─── Control from this computer only ─────────────────────────────────────────
+# In LAN mode the page (and its token) can be opened by any device on the
+# network. Loading a campaign, changing settings and Quit change the running
+# game, so they answer only to the computer the game runs on: loopback, or this
+# machine's own network address (browsing to its own LAN IP shows up that way).
+
+def _local_addresses() -> set:
+    addrs = {"127.0.0.1", "::1", "localhost"}
+    try:
+        addrs.update(socket.gethostbyname_ex(socket.gethostname())[2])
+    except OSError:
+        pass
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))    # sends nothing: asks which address would be used
+        addrs.add(s.getsockname()[0])
+        s.close()
+    except OSError:
+        pass
+    return addrs
+
+
+def _from_this_machine() -> bool:
+    return (request.remote_addr or "") in _local_addresses()
+
+
+_THIS_MACHINE_ONLY = ("Only the computer running the game can do this", 403)
+
+
 # ─── Main Menu ───────────────────────────────────────────────────────────────
 # The web app is the front door: Claude starts the display, then the player
 # picks what to do here. Menu actions travel to Claude through the same input
@@ -1304,6 +1334,8 @@ def menu_load():
     """Ask Claude to load a campaign. Only names that exist on disk are accepted."""
     if not _token_ok():
         return "Forbidden", 403
+    if not _from_this_machine():
+        return _THIS_MACHINE_ONLY
     data = request.get_json(force=True, silent=True) or {}
     name = str(data.get("campaign", ""))
     if name not in {c["name"] for c in _list_campaigns()}:
@@ -1333,6 +1365,8 @@ def menu_quit():
     """Stop the display (and the local voice) after telling Claude to wrap up."""
     if not _token_ok():
         return "Forbidden", 403
+    if not _from_this_machine():
+        return _THIS_MACHINE_ONLY
     try:
         with _staged_lock, open(QUEUE_FILE, "a", encoding="utf-8") as f:
             f.write("[Menu]: quit\n")
@@ -1379,6 +1413,8 @@ def settings_data():
 def settings_save():
     if not _token_ok():
         return "Forbidden", 403
+    if not _from_this_machine():
+        return _THIS_MACHINE_ONLY
     import settings as _settings
     data = request.get_json(force=True, silent=True) or {}
     try:
@@ -1401,6 +1437,8 @@ def settings_save():
 def settings_experience():
     if not _token_ok():
         return "Forbidden", 403
+    if not _from_this_machine():
+        return _THIS_MACHINE_ONLY
     import settings as _settings
     data = request.get_json(force=True, silent=True) or {}
     campaign = str(data.get("campaign", ""))

@@ -354,18 +354,20 @@ pip3 install flask flask-cors numpy cryptography
 
 ### Starting the Display
 
-The display starts automatically when you answer **y** at the `/dm:dnd load` prompt. Or start it manually:
+The display starts by itself when you run `/dm:dnd`, always in LAN mode (no question). Or start it manually:
 
 ```bash
-# Local only (Mac/same machine) — HTTP, no cert setup
+# LAN mode (the default) — HTTP, the TV and other devices on your network can connect
 bash ${CLAUDE_SKILL_DIR}/display/start-display.sh
 
-# LAN mode — HTTP, accessible to phones/tablets on your network
-bash ${CLAUDE_SKILL_DIR}/display/start-display.sh --lan
+# This computer only
+bash ${CLAUDE_SKILL_DIR}/display/start-display.sh --local
 
 # LAN mode with TLS — for public or untrusted networks
-bash ${CLAUDE_SKILL_DIR}/display/start-display.sh --lan --tls
+bash ${CLAUDE_SKILL_DIR}/display/start-display.sh --tls
 ```
+
+The launcher prints the address to open on the TV (for example `http://192.168.1.x:5001`). Input from a new device waits for your approval, and the Main Menu, Settings and Quit only answer to the computer running the game. Windows may ask once to allow network access the first time.
 
 Then open `http://localhost:5001` in your browser. HTTP is the default — no certificate warnings. For LAN devices use the IP URL printed at startup (e.g. `http://192.168.1.x:5001`). Use `--tls` only when the network is public or untrusted.
 

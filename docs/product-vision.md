@@ -61,14 +61,14 @@ A running adventure is either **Roleplay** or **Combat**. The screen switches au
 ## -- if I make changes here, always automatically include in the next commit.
 ## -- remove items from this list once they are built
 - TTS: Voorlopig gaan we alleen Engelse TTS ondersteunen.
+- TTS: De leessnelheid is momenteel 80% en moet worden aangepast terug naar 100%.
 - BUG: In de lopende campaign met setting "Dutch" is alles nog Nederlands, in plaats van (zoals de bedoeling) standaard alles Engels en een korte Nederlandse samenvatting. Remember, the Dutch setting is an ADDITION to the default English functionality.
 - INTERFACE: Interview me about the visualization of the text (being typed) in sync with the TTS.
 - INTERFACE: Verplaats alle nog bestaande settings van het speelscherm naar het settings menu. A small cog icon in the corner of the screen should show the settings menu straight form an adventure, instead of just from the main menu.
-- INTERFACE: Loading between DM responses should always visualize what it's doing and how many things it has to do next (loading bar with several parts, or another way to show progress). Because waiting is always annoying for players.
+- INTERFACE: Loading between DM responses should always visualize what it's doing and how many things it has to do next (loading bar with several parts, or another way to show progress). Because waiting is always annoying for players. Goal is that every waiting time is accompanied by a tracker, always.
 - CLEANUP: No "PHONE" screen will ever be used, remove that function from the screen and code completely.
 - INTERFACE: Fade the narration text near the top of the screen so it looks prettier
 - INTERFACE: The text font that's currently used for narration is flavourful and clear, I want to use that font as the only font used throughout the whole app (do I? interview me first about the consequences)
-- CLEANUP: 100% of the time I want to play on LAN mode, so that doesn't need to be a question anymore
 - INTERFACE: Convert the TV Mode / PC Mode buttons to a TV/PC toggle. The TV mode has no inputs but is a 100% exact mirror (real-time, include typing) of the PC mode. Default mode is TV mode and if one session clicks "PC mode" then all other sessions automatically change to TV mode.
 - INTERFACE: Clearer visualization of character sheets, needs investigation and interviewing
 - INTERFACE: Build the roleplay screen

@@ -2,11 +2,14 @@
 # start-display.sh — Launch the DnD cinematic display companion
 #
 # Usage:
-#   bash start-display.sh              # localhost only, HTTP (default)
-#   bash start-display.sh --lan        # LAN mode, HTTP  ← use this for home/trusted networks
-#   bash start-display.sh --lan --tls  # LAN mode, HTTPS ← use this on public/untrusted networks
+#   bash start-display.sh              # LAN mode, HTTP (default): the TV and other devices can connect
+#   bash start-display.sh --local      # this computer only (localhost)
+#   bash start-display.sh --tls        # LAN mode, HTTPS ← use this on public/untrusted networks
+#   bash start-display.sh --menu       # open on the Main Menu (combine with any of the above)
 #
-# HTTP is the default. Guests and new devices connect instantly with no setup.
+# LAN is the default. Guests and new devices connect instantly with no setup;
+# input from a new device waits for the DM's approval, and the Main Menu, Settings
+# and Quit only answer to this computer.
 # TLS adds encryption but requires a one-time certificate install on each device.
 
 # Force UTF-8 for every python this script spawns (display app, RT resolver,
@@ -37,13 +40,14 @@ RT="$("$PY" -c "import sys,os;sys.path.insert(0,os.path.join('$DISPLAY_DIR','..'
 [ -z "$RT" ] && { RT="${DND_CAMPAIGN_ROOT:-$HOME/.claude/dnd}/.runtime"; mkdir -p "$RT"; }
 
 # ── Parse flags ───────────────────────────────────────────────────────────────
-LAN_FLAG=""
+LAN_FLAG="--lan"
 MENU_FLAG=""
 TLS_MODE=false
 
 for arg in "$@"; do
   case "$arg" in
-    --lan) LAN_FLAG="--lan" ;;
+    --lan) LAN_FLAG="--lan" ;;      # accepted for old callers; LAN is already the default
+    --local) LAN_FLAG="" ;;
     --tls) TLS_MODE=true ;;
     --menu) MENU_FLAG="--menu" ;;
   esac
@@ -57,7 +61,10 @@ fi
 # ── Get LAN IP ────────────────────────────────────────────────────────────────
 LAN_IP=""
 if [[ -n "$LAN_FLAG" ]]; then
-  LAN_IP=$(ipconfig getifaddr en0 2>/dev/null \
+  # Python first: it works the same on Windows, macOS and Linux (a UDP "connect"
+  # sends nothing; it only asks the OS which address it would use).
+  LAN_IP=$("$PY" -c "import socket;s=socket.socket(socket.AF_INET,socket.SOCK_DGRAM);s.connect(('8.8.8.8',80));print(s.getsockname()[0])" 2>/dev/null \
+        || ipconfig getifaddr en0 2>/dev/null \
         || ipconfig getifaddr en1 2>/dev/null \
         || hostname -I 2>/dev/null | awk '{print $1}')
 fi
@@ -130,7 +137,7 @@ for i in $(seq 1 10); do
   if curl -sk "$LOCAL_URL/ping" > /dev/null 2>&1; then
     echo ""
     echo "Display started — $LOCAL_URL"
-    [[ -n "$LAN_IP" ]] && echo "LAN access:     ${SCHEME}://${LAN_IP}:5001"
+    [[ -n "$LAN_IP" ]] && echo "On the TV / other devices open:  ${SCHEME}://${LAN_IP}:5001"
 
     if $TLS_MODE; then
       echo ""

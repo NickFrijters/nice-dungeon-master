@@ -9,24 +9,18 @@ Full step-by-step procedures for all `/dm:dnd` slash commands. Load this file at
 ## `/dm:dnd menu`
 Open the web **Main Menu**. After this, the player works in the browser and you only act on what the menu sends you.
 
-1. Start the display with the menu first: `bash ${CLAUDE_SKILL_DIR}/display/start-display.sh --menu` (add `--lan` if the player wants phones or a TV on the network). Set `_display_running = true`.
+1. Start the display with the menu first: `bash ${CLAUDE_SKILL_DIR}/display/start-display.sh --menu` (LAN mode is the default, so the TV and other devices can connect). Set `_display_running = true`.
 2. Tell the player to open the printed URL; it opens the Main Menu by itself.
 3. Enter the **menu wait**: the same blocking Bash call as the autorun wait (`python3 ${CLAUDE_SKILL_DIR}/display/autorun_wait.py`). No campaign is loaded yet, so there is no `state.md` flag to check; keep waiting until something arrives. If it times out empty, restart the wait silently.
 4. Menu requests arrive as lines starting with `[Menu]:`. Handle them like this:
-   - `[Menu]: load <campaign-name>` → run the `/dm:dnd load <campaign-name>` procedure **without asking any setup questions**: the display is already running, so skip the display and input choice, and turn autorun **on** (write `autorun: true` to `state.md → ## Session Flags`) so the browser keeps control. Then give the recap and enter the autorun wait as usual.
+   - `[Menu]: load <campaign-name>` → run the `/dm:dnd load <campaign-name>` procedure **without asking any setup questions**: the display is already running, so skip the display step, and turn autorun **on** (write `autorun: true` to `state.md → ## Session Flags`) so the browser keeps control. Then give the recap and enter the autorun wait as usual.
    - `[Menu]: quit` → the player pressed **Quit**. The display and the voice stop on their own about three seconds later. If a campaign is loaded, run the `/dm:dnd save` procedure first. Then say a short goodbye in one line and **end the loop: do not start another wait**. This line can also arrive while a campaign is running in autorun; handle it the same way.
    - Anything else after `[Menu]:` → tell the player it is not available yet, then go back to waiting.
 
 ## `/dm:dnd new <campaign-name> [theme]`
-1. **Session setup — call `AskUserQuestion`** with **two questions**:
+1. **Session setup.** The display is never a question: it always runs in LAN mode with autorun on. If it is not already running (`curl -s localhost:5001/ping`), start it with `bash ${CLAUDE_SKILL_DIR}/display/start-display.sh`, print the URLs it shows (the one for the TV too), set `_display_running = true`, then `python3 ${CLAUDE_SKILL_DIR}/display/push_stats.py --clear`, and write `autorun: true` to `state.md → ## Session Flags`. Then call `AskUserQuestion` with **one question**:
 
-   **Q1 *"Display & input mode?"***
-   - `No display` → continue without display.
-   - `Display (local)` → `bash ${CLAUDE_SKILL_DIR}/display/start-display.sh`, print URL, set `_display_running = true`, then `python3 ${CLAUDE_SKILL_DIR}/display/push_stats.py --clear`.
-   - `Display (LAN)` → `bash ${CLAUDE_SKILL_DIR}/display/start-display.sh --lan`, print both URLs, set `_display_running = true`, then `--clear` as above.
-   - `Display + autorun (LAN)` → as **Display (LAN)**, and write `autorun: true` to `state.md → ## Session Flags`.
-
-   **Q2 *"Dice rolls?"*** — set how PC d20s are handled (see SKILL.md "Dice convention"):
+   **Dice rolls?** — set how PC d20s are handled (see SKILL.md "Dice convention"):
    - `Players roll their own` (default) → write `roll_mode: players` to `state.md → ## Session Flags`. You will call for each PC roll and wait — never auto-roll a PC.
    - `DM rolls everything openly` → write `roll_mode: auto`. You resolve PC rolls yourself with full math shown.
 
@@ -81,15 +75,9 @@ Open the web **Main Menu**. After this, the player works in the browser and you 
 
 ## `/dm:dnd load <campaign-name>`
 0. **Pick the campaign if none was named.** If `<campaign-name>` was supplied (or the player clearly named one), use it. Otherwise `ls` the campaigns dir (`~/.claude/dnd/campaigns/` or `$DND_CAMPAIGN_ROOT/campaigns/`) and **call `AskUserQuestion`**: *"Which campaign?"* with the existing campaign names as options (most-recently-played first — sort by `state.md` mtime). The player can pick "Other" to type a name. If there are no campaigns, tell them and offer `/dm:dnd new`.
-1. **Session setup — call `AskUserQuestion`** with **two questions** (not typed y/n prompts):
+1. **Session setup.** The display is never a question: it always runs in LAN mode with autorun on. If it is not already running (`curl -s localhost:5001/ping`; it is when you were started from the Main Menu), start it with `bash ${CLAUDE_SKILL_DIR}/display/start-display.sh`, print the URLs it shows (the one for the TV too) and set `_display_running = true`. Write `autorun: true` to `state.md → ## Session Flags` and enter the autorun wait after the recap. Then call `AskUserQuestion` with **one question** (not a typed y/n prompt):
 
-   **Q1 *"Display & input mode?"***
-   - `No display` → continue without display.
-   - `Display (local)` → `bash ${CLAUDE_SKILL_DIR}/display/start-display.sh`, print URL, set `_display_running = true`.
-   - `Display (LAN)` → `bash ${CLAUDE_SKILL_DIR}/display/start-display.sh --lan`, print both URLs, set `_display_running = true`.
-   - `Display + autorun (LAN)` → as **Display (LAN)**, and also write `autorun: true` to `state.md → ## Session Flags`; enter the autorun wait after the recap.
-
-   **Q2 *"Dice rolls?"*** — confirm how PC d20s are handled this session (see SKILL.md "Dice convention"). Pre-fill the recommended option from the existing `roll_mode` in `state.md` if present, else `players`:
+   **Dice rolls?** — confirm how PC d20s are handled this session (see SKILL.md "Dice convention"). Pre-fill the recommended option from the existing `roll_mode` in `state.md` if present, else `players`:
    - `Players roll their own` → write `roll_mode: players`. Call for each PC roll and wait — never auto-roll a PC.
    - `DM rolls everything openly` → write `roll_mode: auto`. Resolve PC rolls yourself with full math shown.
 
