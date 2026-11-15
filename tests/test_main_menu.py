@@ -25,6 +25,7 @@ class MainMenuTest(unittest.TestCase):
             camp.mkdir(parents=True)
             (camp / "state.md").write_text(f"# State\n**Ruleset:** {ruleset}\n", encoding="utf-8")
         (root / "campaigns" / ".hidden").mkdir()
+        (root / "campaigns" / "alpha-quest.backup-20261114-195106").mkdir()
         cls._env = {k: os.environ.get(k) for k in ("DND_CAMPAIGN_ROOT", "DND_RUNTIME_DIR")}
         os.environ["DND_CAMPAIGN_ROOT"] = str(root)
         os.environ["DND_RUNTIME_DIR"] = str(root / ".runtime")
@@ -66,6 +67,7 @@ class MainMenuTest(unittest.TestCase):
         self.assertEqual(names["alpha-quest"], "2014")
         self.assertEqual(names["beta-saga"], "2024")
         self.assertNotIn(".hidden", names)
+        self.assertFalse([n for n in names if ".backup-" in n])
 
     def test_load_queues_a_menu_line_for_claude(self):
         r = self.client.post("/menu/load", json={"campaign": "alpha-quest"})

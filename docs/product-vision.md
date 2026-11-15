@@ -59,7 +59,7 @@ A running adventure is either **Roleplay** or **Combat**. The screen switches au
 
 ## Manual additions done by Nick in this .md file, read this as "next things" or the backlog.
 ## -- if I make changes here, always automatically include in the next commit.
-## -- remove items from below here once they are built
+## -- remove items from this list once they are built
 - Always use local TTS, never the remote API anymore
 - 100% of the time I want to play on LAN mode, so that doesn't need to be a question anymore
 - Convert the TV Mode / PC Mode buttons to a TV/PC toggle. The TV mode has no inputs but is a 100% exact mirror (real-time, include typing) of the PC mode. Default mode is TV mode and if one session clicks "PC mode" then all other sessions automatically change to TV mode.

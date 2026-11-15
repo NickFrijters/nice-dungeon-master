@@ -1223,7 +1223,7 @@ def _list_campaigns() -> list[dict]:
     except OSError:
         return []
     for d in entries:
-        if not d.is_dir() or d.name.startswith("."):
+        if not d.is_dir() or d.name.startswith(".") or ".backup-" in d.name:
             continue
         state = d / "state.md"
         marker = state if state.exists() else d
