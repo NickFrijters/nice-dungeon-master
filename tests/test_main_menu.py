@@ -54,6 +54,14 @@ class MainMenuTest(unittest.TestCase):
         if os.path.exists(self.mod.QUEUE_FILE):
             os.remove(self.mod.QUEUE_FILE)
 
+    def test_root_opens_menu_first_until_a_campaign_is_requested(self):
+        self.mod._MENU_FIRST = True
+        r = self.client.get("/")
+        self.assertEqual(r.status_code, 302)
+        self.assertTrue(r.headers["Location"].endswith("/menu"))
+        self.client.post("/menu/load", json={"campaign": "alpha-quest"})
+        self.assertEqual(self.client.get("/").status_code, 200)
+
     def test_menu_page_renders(self):
         r = self.client.get("/menu")
         self.assertEqual(r.status_code, 200)

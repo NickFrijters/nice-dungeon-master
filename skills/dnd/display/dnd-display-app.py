@@ -32,7 +32,7 @@ import threading
 import unicodedata
 from collections import deque
 from typing import Optional
-from flask import Flask, Response, request, render_template, jsonify, send_from_directory
+from flask import Flask, Response, request, render_template, jsonify, send_from_directory, redirect
 from flask_cors import CORS
 
 # This file lives at <code-root>/display/ — resolve dirs from its location so
@@ -131,6 +131,12 @@ if _LAN_MODE:
     sys.argv.remove("--lan")   # prevent Flask from seeing an unknown flag
 if _TLS_MODE:
     sys.argv.remove("--tls")
+
+# --menu: the address bar opens the Main Menu first. Cleared once a campaign
+# has been requested from the menu, after which "/" is the play screen.
+_MENU_FIRST: bool = "--menu" in sys.argv
+if _MENU_FIRST:
+    sys.argv.remove("--menu")
 
 
 def _get_or_create_token() -> str:
@@ -1198,6 +1204,8 @@ def _broadcast(payload: dict) -> None:
 
 @app.route("/")
 def index():
+    if _MENU_FIRST:
+        return redirect("/menu")
     # Pass LAN token to template so the browser can authenticate /help-request
     return render_template(
         "index.html",
@@ -1268,6 +1276,8 @@ def menu_load():
             f.write(f"[Menu]: load {name}\n")
     except OSError:
         return "could not queue", 500
+    global _MENU_FIRST
+    _MENU_FIRST = False
     return "", 204
 
 

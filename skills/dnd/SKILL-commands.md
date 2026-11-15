@@ -9,8 +9,8 @@ Full step-by-step procedures for all `/dm:dnd` slash commands. Load this file at
 ## `/dm:dnd menu`
 Open the web **Main Menu**. After this, the player works in the browser and you only act on what the menu sends you.
 
-1. Start the display: `bash ${CLAUDE_SKILL_DIR}/display/start-display.sh` (add `--lan` if the player wants phones or a TV on the network). Set `_display_running = true`.
-2. Tell the player to open the printed URL followed by `/menu`.
+1. Start the display with the menu first: `bash ${CLAUDE_SKILL_DIR}/display/start-display.sh --menu` (add `--lan` if the player wants phones or a TV on the network). Set `_display_running = true`.
+2. Tell the player to open the printed URL; it opens the Main Menu by itself.
 3. Enter the **menu wait**: the same blocking Bash call as the autorun wait (`python3 ${CLAUDE_SKILL_DIR}/display/autorun_wait.py`). No campaign is loaded yet, so there is no `state.md` flag to check; keep waiting until something arrives. If it times out empty, restart the wait silently.
 4. Menu requests arrive as lines starting with `[Menu]:`. Handle them like this:
    - `[Menu]: load <campaign-name>` → run the `/dm:dnd load <campaign-name>` procedure **without asking any setup questions**: the display is already running, so skip the display and input choice, and turn autorun **on** (write `autorun: true` to `state.md → ## Session Flags`) so the browser keeps control. Then give the recap and enter the autorun wait as usual.

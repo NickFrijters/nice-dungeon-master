@@ -24,12 +24,14 @@ RT="$(python3 -c "import sys,os;sys.path.insert(0,os.path.join('$DISPLAY_DIR','.
 
 # ── Parse flags ───────────────────────────────────────────────────────────────
 LAN_FLAG=""
+MENU_FLAG=""
 TLS_MODE=false
 
 for arg in "$@"; do
   case "$arg" in
     --lan) LAN_FLAG="--lan" ;;
     --tls) TLS_MODE=true ;;
+    --menu) MENU_FLAG="--menu" ;;
   esac
 done
 
@@ -100,7 +102,7 @@ if ! python3 -c "import flask, flask_cors" 2>/dev/null; then
 fi
 
 # ── Start Flask ───────────────────────────────────────────────────────────────
-APP_ARGS="$LAN_FLAG"
+APP_ARGS="$LAN_FLAG $MENU_FLAG"
 $TLS_MODE && APP_ARGS="$APP_ARGS --tls"
 
 nohup python3 "$DISPLAY_DIR/dnd-display-app.py" $APP_ARGS > "$LOG" 2>&1 &
