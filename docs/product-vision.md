@@ -60,7 +60,6 @@ A running adventure is either **Roleplay** or **Combat**. The screen switches au
 ## Manual additions done by Nick in this .md file, read this as "next things" or the backlog.
 ## -- if I make changes here, always automatically include in the next commit.
 ## -- remove items from this list once they are built
-- TTS: De snelheid van de stem moet 80% zijn.
 - TTS: Voorlopig gaan we alleen Engelse TTS ondersteunen.
 - BUG: In de lopende campaign met setting "Dutch" is alles nog Nederlands, in plaats van (zoals de bedoeling) standaard alles Engels en een korte Nederlandse samenvatting. Remember, the Dutch setting is an ADDITION to the default English functionality.
 - INTERFACE: Interview me about the visualization of the text (being typed) in sync with the TTS.
