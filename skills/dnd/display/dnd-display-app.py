@@ -2869,6 +2869,62 @@ def ready_input():
     return "", 204
 
 
+@app.route("/party-input", methods=["POST"])
+def party_input():
+    """GO: send every filled row of the Party Input to the DM at once.
+
+    Body: {"entries": [{"character": "Everybody", "text": "..."}, {"character": "Mira", "text": "..."}]}
+    Empty rows are ignored. A row the DM's input gate is closed for is refused (409),
+    so nothing is half sent. Reaches the DM the same way a staged batch always did.
+    """
+    if not _token_ok():
+        return "Forbidden", 403
+    if not _rate_ok(request.remote_addr):
+        return "Too Many Requests", 429
+
+    device_id = request.headers.get("X-DND-Device", "")
+    status    = _device_ok(device_id, request.remote_addr)
+    if status == "denied":
+        return "Forbidden", 403
+    if status == "pending":
+        return jsonify({"status": "pending"}), 202
+
+    data = request.get_json(force=True, silent=True) or {}
+    raw = data.get("entries")
+    if not isinstance(raw, list):
+        return "Bad Request", 400
+
+    with _stats_lock:
+        known = {p["name"] for p in _current_stats.get("players", [])}
+    entries = {}
+    blocked = []
+    for item in raw[:30]:
+        if not isinstance(item, dict):
+            continue
+        character = str(item.get("character", ""))[:50].strip()
+        text = _sanitize_input(str(item.get("text", "")))
+        if not character or not text:
+            continue                                  # an empty row is simply not sent
+        if not _char_ok(character, known):
+            return "Forbidden", 403
+        if _gate_blocks(character):
+            blocked.append(character)
+            continue
+        entries[character] = text                     # one line per character; the last one wins
+    if blocked:
+        return "The DM is not waiting for: " + ", ".join(blocked), 409
+    if not entries:
+        return "Nothing to send", 400
+
+    now = _time.time()
+    with _staged_lock:
+        _staged.clear()
+        for character, text in entries.items():
+            _staged[character] = {"text": text, "ready": True, "timestamp": now}
+    _check_auto_trigger(force=True)
+    return "", 204
+
+
 @app.route("/player-input/go", methods=["POST"])
 def go_input():
     """Final confirmation: send everything that is staged to the DM at once."""

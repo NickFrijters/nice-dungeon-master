@@ -10,6 +10,15 @@ Versions before **1.6.0** are reconstructed retroactively from git history; the 
 
 ## [Unreleased]
 
+## [2.22.0] — 2026-11-15 — Party Input rows, equal screens
+
+### Changed — Party Input is one row per character, and every screen is the same
+
+- **Party Input:** opening the panel shows a text field per character, **Everybody** first. A row with text is marked (green edge and dot), the header badge counts the filled rows, and **GO** sends every filled row to the DM in one batch (`POST /party-input`; Ctrl+Enter in a field is GO too). There are no Stage or Edit buttons any more. Empty rows are ignored; a refused send keeps your text. The DM's input gate and the new-device approval still apply (a gated row is hidden, and GO is refused as a whole rather than half sent). The old stage controls remain for the phone view only.
+- **The rows stay in sync between screens:** what is typed on one screen appears in the same rows on the others (the last one to type wins), a screen that has just opened asks the others for what is already typed, and GO on one screen clears all of them.
+- **No TV/PC mode.** The TV | PC switch, the one-PC rule and the TV-only layout are gone: every screen looks and works the same, with the cog and Save & exit on all of them. Because every screen can now send and receive, relay messages carry the sending screen's id (a screen ignores its own), and sheets, spell and rule pop-ups, images and sheet tabs mirror both ways without echoing.
+- **Every screen speaks:** narration starts by itself on every screen that has Narration audio on, and Play or Stop pressed on one screen is mirrored to the others.
+
 ## [2.21.0] — 2026-11-15 — Save and exit
 
 ### Added — Save & exit, in the bottom-left menu

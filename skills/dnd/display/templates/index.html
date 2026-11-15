@@ -11,6 +11,7 @@
   // The display settings are chosen in the Settings menu and are the same on every
   // screen. Seed the keys the early theme/skin/text-size code below reads.
   window._DISPLAY = {{ display_settings|tojson }};
+  window._SCREEN_ID = Math.random().toString(36).slice(2) + Date.now().toString(36);   // this screen, this load
   try {
     localStorage.setItem('dnd-theme', window._DISPLAY.theme);
     localStorage.setItem('dnd-skin', window._DISPLAY.skin);
@@ -68,7 +69,7 @@
       // Reading text size — a font-size multiplier (not page zoom). Applied here
       // to avoid a flash at the default size before the picker JS runs.
       var q = location.search; var phoneView = /[?&](view=input|char=|character=)/.test(q);
-      if (!phoneView && window.sessionStorage.getItem('dnd-view') !== 'pc') document.documentElement.classList.add('tv-view');
+      // (There is no TV/PC mode any more: every screen looks and works the same.)
       var ts = parseFloat(window.localStorage.getItem('dnd-text-scale-tv3'));
       if (!ts) ts = 0.75;  /* TV default */
       if (ts && ts >= 0.5 && ts <= 3) {
@@ -639,7 +640,7 @@
     color: rgba(220, 196, 148, 0.8); font-size: 26px; line-height: 1; cursor: pointer;
   }
   #so-close:hover { color: rgba(240, 210, 120, 1); }
-  html.tv-view #settings-cog, html.tv-view #settings-overlay, body.input-only #settings-cog { display: none !important; }
+  body.input-only #settings-cog { display: none !important; }
 
   #sidebar-toggle {
     position: fixed;
@@ -3775,30 +3776,42 @@
   html.tv-view #phone-mode-btn, html.tv-view #phone-mode-menu, html.tv-view #dm-help-btn{ display:none !important; }
   html.tv-view body #text-scroll{ padding-right:5.5vw !important; }
   html.tv-view body #text-content{ max-width:1500px !important; }
-  #view-switch{ position:fixed; left:56px; bottom:14px; z-index:80; height:34px; display:flex; align-items:stretch;
-    border:1px solid rgba(180,140,60,.3); border-radius:17px; overflow:hidden; background:rgba(8,5,2,.55); }
-  #view-switch button{ background:none; border:0; padding:0 13px; cursor:pointer; color:rgba(180,140,60,.55);
-    font:700 11px 'Cinzel',serif; letter-spacing:2px; }
-  #view-switch button:hover{ color:rgba(240,210,120,1); }
-  #view-switch button[aria-pressed="true"]{ background:rgba(200,160,64,.88); color:#1a1208; }
-  #view-switch button + button{ border-left:1px solid rgba(180,140,60,.3); }
-  body.input-only #view-switch{ display:none !important; }
-  #exit-btn{ position:fixed; left:157px; bottom:14px; z-index:80; height:34px; padding:0 15px; cursor:pointer;
+  /* Party Input: one row per character. The old stage-and-edit controls stay for the phone view only. */
+  body.input-only #party-rows, body.input-only #party-footer{ display:none !important; }
+  body:not(.input-only) #char-tabs, body:not(.input-only) #player-input-text, body:not(.input-only) #input-footer,
+  body:not(.input-only) #staged-queue, body:not(.input-only) #waiting-indicator, body:not(.input-only) #phone-status{ display:none !important; }
+  #party-rows{ display:flex; flex-direction:column; gap:6px; }
+  .party-row{ display:grid; grid-template-columns:minmax(90px,170px) 1fr; align-items:center; gap:10px;
+    padding:3px 8px 3px 10px; border-left:3px solid transparent; border-radius:3px; transition:border-color .15s, background .15s; }
+  .party-row[hidden]{ display:none; }
+  .party-row .pr-name{ font:700 9px 'Cinzel',serif; letter-spacing:2px; text-transform:uppercase; color:rgba(180,140,60,.6);
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .party-row.everybody .pr-name{ color:rgba(220,185,100,.95); }
+  .party-row input{ width:100%; box-sizing:border-box; background:rgba(8,5,2,.85); border:1px solid rgba(180,140,60,.18);
+    border-radius:3px; color:rgba(220,200,160,.9); font-family:'Fell Straight Quotes','IM Fell English',serif; font-size:13px;
+    padding:7px 10px; outline:none; transition:border-color .15s; }
+  .party-row input:focus{ border-color:rgba(180,140,60,.45); }
+  .party-row input::placeholder{ color:rgba(180,140,60,.28); }
+  .party-row input:disabled{ opacity:.45; }
+  .party-row.filled{ border-left-color:rgba(110,200,120,.85); background:rgba(60,150,80,.08); }
+  .party-row.filled .pr-name::before{ content:'\25CF '; color:rgba(110,200,120,.95); }
+  .party-row.filled input{ border-color:rgba(110,200,120,.45); }
+  #party-footer{ display:flex; align-items:center; justify-content:flex-end; gap:12px; margin-top:4px; }
+  #party-hint{ margin-right:auto; font-size:11px; color:rgba(180,140,60,.5); }
+  #party-go-btn{ background:rgba(60,150,80,.25); color:rgba(170,235,170,.95); border:1px solid rgba(110,200,120,.6); border-radius:4px;
+    font:700 12px 'Cinzel',serif; letter-spacing:.15em; padding:8px 20px; cursor:pointer; }
+  #party-go-btn:hover:not(:disabled){ background:rgba(60,150,80,.45); }
+  #party-go-btn:disabled{ opacity:.35; cursor:default; }
+  :root[data-theme="light"] .party-row input{ background:rgba(250,244,230,.95); color:rgb(50,35,18); border-color:rgba(140,95,20,.4); }
+  :root[data-theme="light"] .party-row .pr-name{ color:rgba(110,75,20,.85); }
+  :root[data-theme="light"] #party-hint{ color:rgba(110,75,20,.7); }
+
+  #exit-btn{ position:fixed; left:56px; bottom:14px; z-index:80; height:34px; padding:0 15px; cursor:pointer;
     border:1px solid rgba(180,140,60,.3); border-radius:17px; background:rgba(8,5,2,.55); color:rgba(180,140,60,.7);
     font:700 11px 'Cinzel',serif; letter-spacing:2px; text-transform:uppercase; white-space:nowrap; }
   #exit-btn:hover{ color:rgba(240,210,120,1); border-color:rgba(220,185,100,.8); background:rgba(8,5,2,.85); }
   #exit-btn:disabled{ opacity:.5; cursor:default; }
-  html.tv-view #exit-btn, body.input-only #exit-btn{ display:none !important; }
-  /* what is being typed on the PC, mirrored on the TV as it happens */
-  #tv-typing{ display:none; margin:.8em 0 .4em; padding:.5em 1em; border-left:2px solid rgba(120,160,200,.5);
-    color:rgba(220,205,170,.9); font-style:italic; }
-  html.tv-view #tv-typing.show{ display:block; }
-  #tv-typing .tvt-name{ font:700 .72em 'Cinzel',serif; letter-spacing:.15em; text-transform:uppercase; font-style:normal;
-    color:rgba(130,170,210,.9); margin-right:.6em; }
-  #tv-link{ position:fixed; left:290px; bottom:21px; z-index:80; font:600 9px 'Cinzel',serif; letter-spacing:1.5px; text-transform:uppercase;
-    color:rgba(120,210,150,.85); display:none; pointer-events:none; }
-  #tv-link.warn{ color:rgba(235,190,90,.95); }
-  html.tv-view #tv-link{ display:none !important; }
+  body.input-only #exit-btn{ display:none !important; }
 </style>
 </head>
 <body>
@@ -3920,6 +3933,12 @@
     <span id="input-toggle-arrow">▲</span>
   </div>
   <div id="input-body" data-active-tab="move">
+    <!-- Party Input: one row per character (Everybody first); GO sends every filled row to the DM -->
+    <div id="party-rows" role="group" aria-label="What each character does"></div>
+    <div id="party-footer">
+      <span id="party-hint">Type what each character does, then press GO.</span>
+      <button id="party-go-btn" type="button" disabled title="Send everything that is filled in to the DM (Ctrl+Enter)">GO &#9654;</button>
+    </div>
     <!-- Phone-only tab bar (shown by ?view=input). Top-level switcher between
          the action input (Move) and the dice pad (Roll). The same DOM children
          exist for the TV view too — tab data-attributes only take effect in
@@ -5593,12 +5612,12 @@ function _imgLightbox(open, im, silent) {
   } else {
     lb.classList.remove('open');
   }
-  if (!silent && window._relaySend && !document.documentElement.classList.contains('tv-view'))
+  if (!silent && window._relaySend && !(window._relayAppliedAt && Date.now() - window._relayAppliedAt < 400))
     window._relaySend({ t: 'img', open: !!(open && im), im: open && im ? { src: im.src, caption: im.caption || '', big: false } : null });
 }
 window._relayHandlers = window._relayHandlers || [];
 window._relayHandlers.push(function(m){
-  if (m && m.t === 'img' && document.documentElement.classList.contains('tv-view')) _imgLightbox(!!m.open, m.im, true);
+  if (m && m.t === 'img') _imgLightbox(!!m.open, m.im, true);
 });
 function renderImageBlock(im, replay) {
   _flushForBlock();
@@ -5769,7 +5788,7 @@ function handleIncomingText(text) {
   // Voice: start it on ARRIVAL and HOLD the text until the audio is ready, so
   // text and voice start together. Skipped if something is already speaking or
   // the tab is hidden; the text then types normally.
-  if (_ttsAutoNarrate && !window._tvPeerConnected && _TTS_AVAILABLE && !_ttsActivePlayBtn && !_narratedEarly &&
+  if (_ttsAutoNarrate && _TTS_AVAILABLE && !_ttsActivePlayBtn && !_narratedEarly &&
       !document.hidden && _plain && _heldItems.length === 0) {
     const blk = document.createElement('div');
     const para = document.createElement('p');
@@ -6443,7 +6462,7 @@ function _smSetTab(key, silent) {
   content.querySelectorAll('.sm-tabpane').forEach(p => p.classList.toggle('active', p.dataset.pane === key));
   content.querySelectorAll('.sm-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === key));
   _smFit();
-  if (!silent && window._relaySend && !document.documentElement.classList.contains('tv-view')) window._relaySend({ t: 'sheet-tab', tab: key });
+  if (!silent && window._relaySend && !(window._relayAppliedAt && Date.now() - window._relayAppliedAt < 400)) window._relaySend({ t: 'sheet-tab', tab: key });
 }
 
 function closeSheet() {
@@ -7201,7 +7220,12 @@ function _addTtsBar(blockEl, noAutoNarrate) {
   playBtn.innerHTML = _SVG_PLAY;
   playBtn.setAttribute('aria-label', 'Play narration');
   playBtn.title = 'Play';
-  playBtn.addEventListener('click', e => { e.stopPropagation(); _ttsPlayBlock(playBtn, blockEl); });
+  playBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    const wasActive = playBtn.classList.contains('tts-playing') || playBtn.classList.contains('tts-loading');
+    _ttsPlayBlock(playBtn, blockEl);
+    if (window._ttsRelayPressed) window._ttsRelayPressed(blockEl, wasActive);   // the other screens follow
+  });
   bar.appendChild(playBtn);
 
   const _cb = document.createElement('span');
@@ -7213,7 +7237,7 @@ function _addTtsBar(blockEl, noAutoNarrate) {
   _ttsScheduleCacheRefresh();
   _ttsMountStatus(blockEl);
 
-  if (_ttsAutoNarrate && !noAutoNarrate && !window._tvPeerConnected) {
+  if (_ttsAutoNarrate && !noAutoNarrate) {
     // Defer one tick so the bar is in the DOM before triggering the click path
     setTimeout(() => _ttsPlayBlock(playBtn, blockEl), 0);
   }
@@ -7366,6 +7390,7 @@ function _buildCharTabs(players) {
     });
     _charTabs.appendChild(btn);
   });
+  _buildPartyRows(players);
   _applyInputGate();
 }
 
@@ -7385,6 +7410,7 @@ function _applyInputGate() {
   const goB = document.getElementById('go-btn'); if (goB && none) goB.disabled = true;
   _inputText.placeholder = none ? 'The DM is resolving this — no input needed right now.' : 'Enter action or dialogue…';
   _charTabs.dataset.gate = allowed ? (visible.map(b => b.dataset.char).join(', ') || 'none') : 'all';
+  _applyRowGate();
 }
 
 // ── Render staged queue ───────────────────────────────────────────
@@ -7704,6 +7730,144 @@ _inputText.addEventListener('keydown', e => {
     _stageAction();
   }
 });
+
+// ═════════════════════════════════════════════════════════════════
+// PARTY INPUT ROWS: one row per character (Everybody first). A row with text is
+// marked. GO sends every filled row to the DM at once. The rows are kept in sync
+// between screens, so you can start on one and carry on at another.
+// ═════════════════════════════════════════════════════════════════
+const _partyRowsEl = document.getElementById('party-rows');
+const _partyGoBtn  = document.getElementById('party-go-btn');
+const _partyHint   = document.getElementById('party-hint');
+let _partyNames = [];
+
+function _partyRows() { return Array.from(_partyRowsEl.querySelectorAll('.party-row')); }
+
+function _partyFields() {
+  const out = {};
+  _partyRows().forEach(r => {
+    const v = r.querySelector('input').value;
+    if (v.trim()) out[r.dataset.char] = v;
+  });
+  return out;
+}
+
+function _partyRefresh() {
+  let n = 0;
+  _partyRows().forEach(r => {
+    const has = r.querySelector('input').value.trim() !== '';
+    r.classList.toggle('filled', has);
+    if (has && !r.hidden) n++;
+  });
+  _partyGoBtn.disabled = n === 0;
+  _partyGoBtn.textContent = n ? 'GO \u25B6 (' + n + ')' : 'GO \u25B6';
+  _inputBadge.style.display = n ? 'inline' : 'none';
+  if (n) _inputBadge.textContent = n + ' filled in';
+}
+
+function _buildPartyRows(players) {
+  const names = ['Everybody', ...(players || []).map(p => p.name).filter(Boolean)];
+  if (names.join('|') === _partyNames.join('|')) { _applyRowGate(); return; }   // same party: leave what is being typed alone
+  const keep = _partyFields();
+  _partyNames = names;
+  _partyRowsEl.textContent = '';
+  names.forEach(name => {
+    const row = document.createElement('div');
+    row.className = 'party-row' + (name === 'Everybody' ? ' everybody' : '');
+    row.dataset.char = name;
+    const label = document.createElement('div');
+    label.className = 'pr-name'; label.textContent = name; label.title = name;
+    const input = document.createElement('input');
+    input.type = 'text'; input.maxLength = 500; input.autocomplete = 'off';
+    input.placeholder = name === 'Everybody' ? 'Something the whole party does or says\u2026'
+                                              : 'What does ' + name.split(' ')[0] + ' do or say?';
+    input.setAttribute('aria-label', name);
+    input.value = keep[name] || '';
+    input.addEventListener('input', () => { _partyRefresh(); _partySync(); });
+    input.addEventListener('keydown', e => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); _partyGo(); }
+    });
+    row.appendChild(label); row.appendChild(input);
+    _partyRowsEl.appendChild(row);
+  });
+  _partyRefresh();
+  _applyRowGate();
+}
+
+// The DM's input gate: only the characters it is waiting on can type.
+function _applyRowGate() {
+  if (!_partyRowsEl) return;
+  const allowed = _inputAllowed ? _inputAllowed.map(n => n.toLowerCase()) : null;
+  let open = 0;
+  _partyRows().forEach(r => {
+    const ok = !allowed || allowed.includes((r.dataset.char || '').toLowerCase());
+    r.hidden = !ok;
+    if (ok) open++;
+  });
+  const none = !!allowed && open === 0;
+  _partyRows().forEach(r => { r.querySelector('input').disabled = none; });
+  _partyHint.textContent = none ? 'The DM is resolving this: no input needed right now.'
+    : (allowed ? 'Only the characters the DM is waiting on can type.' : 'Type what each character does, then press GO.');
+  _partyRefresh();
+}
+
+async function _partyGo() {
+  const entries = Object.entries(_partyFields()).map(([character, text]) => ({ character, text }));
+  if (!entries.length) return;
+  _partyGoBtn.disabled = true;
+  _partyGoBtn.textContent = 'Sending\u2026';
+  try {
+    const res = await fetch('/party-input', { method: 'POST', headers: _authHeaders(), body: JSON.stringify({ entries }) });
+    if (res.status === 202) {                       // a new device waits for the DM's approval
+      localStorage.setItem('dnd_awaiting_approval', _deviceId);
+      _partyGoBtn.textContent = 'Awaiting approval\u2026';
+      _partyGoBtn.disabled = false;
+      return;
+    }
+    if (res.ok) {
+      localStorage.removeItem('dnd_awaiting_approval');
+      _partyRows().forEach(r => { r.querySelector('input').value = ''; });
+      _partyRefresh();
+      _partySync(true);                             // the other screens clear theirs too
+      _turnStart();                                 // loading bar until text and voice are done
+      return;
+    }
+    const why = res.status === 409 ? await res.text()
+      : 'Could not send (' + res.status + '). Your text is still here; try again.';
+    try { _showToast(why, 6000); } catch (_) {}
+  } catch (_) {
+    try { _showToast('Could not reach the display. Your text is still here; try again.', 6000); } catch (__) {}
+  }
+  _partyRefresh();
+}
+_partyGoBtn.addEventListener('click', _partyGo);
+
+// Keep the rows in step between screens (the last one to type wins).
+let _partySyncTimer = null;
+function _partySync(now) {
+  clearTimeout(_partySyncTimer);
+  const send = () => { if (window._relaySend) window._relaySend({ t: 'party-fields', fields: _partyFields() }); };
+  if (now) send(); else _partySyncTimer = setTimeout(send, 120);
+}
+window._relayHandlers = window._relayHandlers || [];
+window._relayHandlers.push(function(m) {
+  if (!m) return;
+  if (m.t === 'party-fields' && m.fields && typeof m.fields === 'object') {
+    _partyRows().forEach(r => {
+      const input = r.querySelector('input');
+      const v = typeof m.fields[r.dataset.char] === 'string' ? m.fields[r.dataset.char].slice(0, 500) : '';
+      if (input.value !== v) {
+        const focused = document.activeElement === input, pos = input.selectionStart;
+        input.value = v;
+        if (focused) { try { const p = Math.min(pos, v.length); input.setSelectionRange(p, p); } catch (_) {} }
+      }
+    });
+    _partyRefresh();
+  } else if (m.t === 'fields-request') {
+    if (Object.keys(_partyFields()).length) _partySync(true);
+  }
+});
+setTimeout(() => { if (window._relaySend) window._relaySend({ t: 'fields-request' }); }, 1800);   // a screen that just opened asks what is already typed
 
 // ── Keep the reading column clear of the fixed PARTY INPUT panel ──────
 // #input-panel is position:fixed at the bottom; when it expands (or the
@@ -8078,7 +8242,12 @@ function connect() {
       _setSidebarVisible(true);   // reset to visible for next campaign
       clearDisplay();
     }
-    if (payload.relay) { (window._relayHandlers || []).forEach(function(h){ try { h(payload.relay); } catch (_) {} }); return; }
+    if (payload.relay) {
+      if (payload.relay.from === window._SCREEN_ID) return;          // my own message coming back
+      window._relayAppliedAt = Date.now();                            // observers must not echo what was just applied
+      (window._relayHandlers || []).forEach(function(h){ try { h(payload.relay); } catch (_) {} });
+      return;
+    }
     if (payload.replay_batch) {
       renderReplayBatch(payload.replay_batch);
     }
@@ -8862,51 +9031,11 @@ function _initDicePad() {
   window._onDiceRequestCancelled = _onDiceRequestCancelled;
 }
 </script>
-<span id="tv-link"></span>
 <button id="exit-btn" type="button" title="Save the session and go back to the Main Menu">Save &amp; exit</button>
-<div id="view-switch" role="group" aria-label="Screen mode" title="TV: a mirror with no inputs. PC: the one screen you play on (Alt+V)">
-  <button type="button" data-view="tv" aria-pressed="true">TV</button>
-  <button type="button" data-view="pc" aria-pressed="false">PC</button>
-</div>
 <script>
-// TV | PC. TV is a mirror with no inputs and is the default. PC is the screen you play on;
-// only one screen can be the PC: when one switches to PC, every other screen drops to TV.
 (function(){
-  var r = document.documentElement, sw = document.getElementById('view-switch');
-  if (!sw) return;
-  if (/[?&](view=input|char=|character=)/.test(location.search)) { sw.style.display = 'none'; return; }
-  var ME = Math.random().toString(36).slice(2) + Date.now().toString(36);   // this screen, this load
-  function isTV(){ return r.classList.contains('tv-view'); }
-  function paint(){
-    var tv = isTV();
-    sw.querySelectorAll('button').forEach(function(b){ b.setAttribute('aria-pressed', String((b.dataset.view === 'tv') === tv)); });
-  }
-  function claim(){ if (window._relaySend) window._relaySend({t:'pc-claim', id:ME}); }
-  function setView(view, silent){
-    var tv = view === 'tv';
-    r.classList.toggle('tv-view', tv);
-    try { sessionStorage.setItem('dnd-view', tv ? 'tv' : 'pc'); } catch(e) {}
-    paint();
-    if (!tv && !silent) claim();
-  }
-  sw.addEventListener('click', function(e){
-    var b = e.target.closest && e.target.closest('button[data-view]');
-    if (b) setView(b.dataset.view);
-  });
-  document.addEventListener('keydown', function(e){
-    if (e.altKey && (e.key === 'v' || e.key === 'V')) { e.preventDefault(); setView(isTV() ? 'pc' : 'tv'); }
-  });
+  if (/[?&](view=input|char=|character=)/.test(location.search)) return;
   window._relayHandlers = window._relayHandlers || [];
-  window._relayHandlers.push(function(m){
-    if (m && m.t === 'pc-claim' && m.id !== ME && !isTV()) {
-      setView('tv', true);                                    // someone else is the PC now
-      try { _showToast('Another screen is now the PC. This one is the TV.', 5000); } catch(_) {}
-    }
-  });
-  paint();
-  // A PC screen that reloads claims the PC role again, so the latest one wins.
-  if (!isTV()) setTimeout(claim, 1500);
-
   // ── Save & exit: ask Claude to save, then every screen goes back to the Main Menu ──
   window._relayHandlers.push(function(m){
     if (m && m.t === 'go-menu') location.href = '/menu';
@@ -8920,40 +9049,6 @@ function _initDicePad() {
       .catch(function(){ exitBtn.disabled = false; exitBtn.textContent = 'Save & exit';
         try { _showToast('Could not save and exit. Try again.', 5000); } catch(_) {} });
   });
-
-  // ── typing mirror: the PC reports what is typed in Party Input; the TV shows it live ──
-  var box = null, last = '';
-  function typingBox(){
-    var tc = document.getElementById('text-content'); if (!tc) return null;
-    if (!box) {
-      box = document.createElement('div'); box.id = 'tv-typing';
-      new MutationObserver(function(){ if (box.classList.contains('show') && tc.lastElementChild !== box) tc.appendChild(box); })
-        .observe(tc, {childList:true});
-    }
-    return box;
-  }
-  function showTyping(name, text){
-    var el = typingBox(); if (!el) return;
-    if (!text) { el.className = ''; el.textContent = ''; return; }
-    el.className = 'show'; el.textContent = '';
-    var n = document.createElement('span'); n.className = 'tvt-name'; n.textContent = (name || 'Everybody') + ':';
-    el.appendChild(n); el.appendChild(document.createTextNode(text));
-    var tc = document.getElementById('text-content'); if (tc && tc.lastElementChild !== el) tc.appendChild(el);
-    var sc = document.getElementById('text-scroll'); if (sc) sc.scrollTop = sc.scrollHeight;
-  }
-  window._relayHandlers.push(function(m){
-    if (m && m.t === 'typing' && isTV()) showTyping(String(m.name || '').slice(0, 50), String(m.text || '').slice(0, 500));
-  });
-  setInterval(function(){                                     // PC side: report changes
-    if (isTV() || !window._tvPeerConnected || !window._relaySend) { last = ''; return; }
-    var ta = document.getElementById('player-input-text'); if (!ta) return;
-    var tab = document.querySelector('#char-tabs .char-tab.active');
-    var name = tab ? (tab.dataset.char || tab.textContent) : 'Everybody';
-    var sig = name + '\u0000' + ta.value;
-    if (sig === last) return;
-    last = sig;
-    window._relaySend({t:'typing', name:name, text:ta.value});
-  }, 150);
 })();
 </script>
 <script>
@@ -9030,15 +9125,15 @@ function _initDicePad() {
   var orig=openSrdModal;
   openSrdModal=function(name,category,level){
     orig(name,category,level);
-    if(!isTV() && window._relaySend) window._relaySend({t:'srd',open:true,name:name,category:category||'',level:level||null});
+    if(window._relaySend && !(window._relayAppliedAt && Date.now() - window._relayAppliedAt < 400)) window._relaySend({t:'srd',open:true,name:name,category:category||'',level:level||null});
   };
   new MutationObserver(function(){
-    if(isTV() || modal.classList.contains('open') || !window._relaySend) return;
+    if(modal.classList.contains('open') || !window._relaySend || !(window._relayAppliedAt && Date.now() - window._relayAppliedAt < 400)) return;
     window._relaySend({t:'srd',open:false});
   }).observe(modal,{attributes:true,attributeFilter:['class']});
   window._relayHandlers=window._relayHandlers||[];
   window._relayHandlers.push(function(m){
-    if(!m || m.t!=='srd' || !isTV()) return;
+    if(!m || m.t!=='srd') return;
     if(m.open && m.name) openSrdModal(m.name,m.category||'',m.level||null); else closeSrdModal();
   });
 })();
@@ -9048,61 +9143,59 @@ function _initDicePad() {
 (function(){
   var modal=document.getElementById('sheet-modal'); if(!modal) return;
   window._relayHandlers = window._relayHandlers || [];
-  window._relaySend = function(msg){ try { fetch('/relay', { method:'POST', headers:_authHeaders(), body:JSON.stringify({msg:msg}) }).catch(function(){}); } catch(_){} };
+  window._relaySend = function(msg){ msg = Object.assign({ from: window._SCREEN_ID }, msg); try { fetch('/relay', { method:'POST', headers:_authHeaders(), body:JSON.stringify({msg:msg}) }).catch(function(){}); } catch(_){} };
   var r=document.documentElement;
   function isTV(){ return r.classList.contains('tv-view'); }
   new MutationObserver(function(){
-    if (isTV()) return;
+    if (!(window._relayAppliedAt && Date.now() - window._relayAppliedAt < 400)) return;
     var open=modal.classList.contains('open');
     _relaySend({t:'sheet', open:open, name: open ? (typeof _openSheetName!=='undefined' ? _openSheetName : null) : null});
   }).observe(modal,{attributes:true,attributeFilter:['class']});
   window._relayHandlers.push(function(m){
-    if(!m || m.t!=='sheet' || !isTV()) return;
+    if(!m || m.t!=='sheet') return;
     if (m.open && m.name) openSheet(m.name); else closeSheet();
   });
-  window._relayHandlers.push(function(m){ if(m && m.t==='sheet-tab' && isTV() && typeof _smSetTab==='function') _smSetTab(m.tab, true); });
+  window._relayHandlers.push(function(m){ if(m && m.t==='sheet-tab' && typeof _smSetTab==='function') _smSetTab(m.tab, true); });
 })();
 </script>
 <script>
-// TV link: a PC View tab can play narration on the TV View tab (the cast tab) instead of locally.
+// Voice on every screen: a Play (or Stop) pressed on one screen is mirrored to the others, so every
+// screen speaks. Each screen also plays new narration by itself when Narration audio is on.
 (function(){
   if (/[?&](view=input|char=|character=)/.test(location.search)) return;
-  var r=document.documentElement, link=document.getElementById('tv-link');
-  var lastSeen=0, audioReady=false;
-  function isTV(){ return r.classList.contains('tv-view'); }
-  function ctxRunning(){ try { return !!(typeof _ttsCtx!=='undefined' && _ttsCtx && _ttsCtx.state==='running'); } catch(e){ return false; } }
-  function hello(){ if(isTV()) _relaySend({t:'tv-hello', audio: ctxRunning()}); }
-  function refresh(){
-    var on = (Date.now()-lastSeen) < 5000 && !isTV();
-    window._tvPeerConnected = on;
-    if (!link) return;
-    if (on) { link.style.display='block'; link.className = audioReady ? '' : 'warn';
-      link.textContent = audioReady ? '● TV connected – sound plays on TV' : '● TV connected – click once on the TV tab to enable sound'; }
-    else link.style.display='none';
+  window._relayHandlers = window._relayHandlers || [];
+  var applying = false;
+  function findPlayButton(text){
+    var found = null;
+    document.querySelectorAll('.tts-bar').forEach(function(bar){
+      var blk = bar.parentElement;
+      if (!found && blk && _ttsExtractText(blk) === text) found = bar.querySelector('.tts-play-btn');
+    });
+    return found;
   }
-  setInterval(function(){ hello(); refresh(); }, 2000);
-  setTimeout(function(){ _relaySend({t:'ping'}); }, 1500);
-  // PC side: intercept the speaker buttons
-  document.addEventListener('click', function(e){
-    if (isTV() || !window._tvPeerConnected) return;
-    var b = e.target.closest && e.target.closest('.tts-play-btn'); if(!b) return;
-    var bar=b.closest('.tts-bar'); var blk = bar && bar.parentElement; if(!blk) return;
-    e.stopImmediatePropagation(); e.preventDefault();
-    _relaySend({t:'tts', text: _ttsExtractText(blk)});
-  }, true);
+  window._ttsRelayPressed = function(blockEl, wasActive){
+    if (applying || !window._relaySend) return;
+    if (wasActive) window._relaySend({ t:'tts-stop' });
+    else window._relaySend({ t:'tts-play', text:_ttsExtractText(blockEl) });
+  };
   window._relayHandlers.push(function(m){
-    m = m || {};
-    if (m.t==='ping') { hello(); return; }
-    if (m.t==='tv-hello' && !isTV()) { lastSeen=Date.now(); audioReady=!!m.audio; refresh(); return; }
-    if (m.t==='tts' && isTV() && m.text) {
-      var found=null;
-      document.querySelectorAll('.tts-bar').forEach(function(bar){
-        var blk=bar.parentElement; if(!found && blk && _ttsExtractText(blk)===m.text) found=bar.querySelector('.tts-play-btn');
-      });
-      if (!ctxRunning()) { try{ _getTtsCtx().resume(); }catch(_){}; try{ _showToast('Click once on this screen to enable sound', 6000); }catch(_){} }
-      if (found) found.click();
-      else { var d=document.createElement('div'); var p=document.createElement('p'); p.textContent=m.text; d.appendChild(p);
-             _ttsPlayBlock(document.createElement('button'), d, {text:m.text}); }
+    if (!m) return;
+    if (m.t === 'tts-play' && m.text) {
+      var btn = findPlayButton(m.text);
+      if (btn && (btn.classList.contains('tts-playing') || btn.classList.contains('tts-loading'))) return;   // already speaking here
+      applying = true;
+      try {
+        try { _getTtsCtx().resume(); } catch(_) {}
+        if (btn) btn.click();
+        else {
+          var d = document.createElement('div'), p = document.createElement('p');
+          p.textContent = m.text; d.appendChild(p);
+          _ttsPlayBlock(document.createElement('button'), d, { text:m.text });
+        }
+      } finally { applying = false; }
+    } else if (m.t === 'tts-stop') {
+      applying = true;
+      try { _ttsStopActive(); } finally { applying = false; }
     }
   });
 })();

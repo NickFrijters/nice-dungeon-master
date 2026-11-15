@@ -137,20 +137,16 @@ class PageAndSkillTest(unittest.TestCase):
         cls.html = (DISPLAY / "templates" / "index.html").read_text(encoding="utf-8")
         cls.cmds = (SKILL / "SKILL-commands.md").read_text(encoding="utf-8")
 
-    def test_the_button_sits_in_the_bottom_left_menu_after_the_switch(self):
-        cog = re.search(r"#settings-cog \{[^}]*left: (\d+)px; bottom: (\d+)px", self.html, re.S)
-        sw = re.search(r"#view-switch\{ position:fixed; left:(\d+)px; bottom:(\d+)px", self.html)
+    def test_the_button_sits_in_the_bottom_left_menu_beside_the_cog(self):
+        cog = re.search(r"#settings-cog \{[^}]*left: (\d+)px; bottom: (\d+)px;[^}]*width: (\d+)px", self.html, re.S)
         ex = re.search(r"#exit-btn\{ position:fixed; left:(\d+)px; bottom:(\d+)px", self.html)
-        self.assertTrue(cog and sw and ex)
-        self.assertEqual(ex.group(2), cog.group(2))                       # same row
-        self.assertGreater(int(ex.group(1)), int(sw.group(1)) + 90)       # after the TV | PC switch
+        self.assertTrue(cog and ex)
+        self.assertEqual(ex.group(2), cog.group(2))                                        # same row
+        self.assertEqual(int(ex.group(1)) - (int(cog.group(1)) + int(cog.group(3))), 8)    # right next to it
 
-    def test_only_the_pc_has_it(self):
-        self.assertIn("html.tv-view #exit-btn", self.html)
-
-    def test_the_corner_message_does_not_sit_under_the_new_button(self):
-        left = int(re.search(r"#tv-link\{ position:fixed; left:(\d+)px", self.html).group(1))
-        self.assertGreater(left, 157 + 100)
+    def test_it_is_on_every_screen_but_the_phone_view(self):
+        self.assertNotIn("html.tv-view #exit-btn", self.html)
+        self.assertIn("body.input-only #exit-btn{ display:none !important; }", self.html)
 
     def test_every_screen_follows_the_go_menu_message(self):
         self.assertIn("m.t === 'go-menu'", self.html)

@@ -177,7 +177,8 @@ class PlayScreenTest(unittest.TestCase):
     def test_there_is_a_cog_that_opens_the_settings_menu_in_the_game(self):
         self.assertIn('id="settings-cog"', self.html)
         self.assertIn("/settings?embedded=1", self.html)
-        self.assertIn("html.tv-view #settings-cog", self.html)     # the TV has no controls
+        self.assertNotIn("html.tv-view #settings-cog", self.html)   # every screen has the cog; only the phone view hides it
+        self.assertIn("body.input-only #settings-cog { display: none !important; }", self.html)
 
     def test_the_page_follows_live_changes(self):
         self.assertIn("payload.display_settings", self.html)
