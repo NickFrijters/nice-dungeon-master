@@ -45,7 +45,8 @@ ACTIVE_MARKER = "active-campaign.json"   # written by /dm:dnd load, under runtim
 CHECKPOINT_REASON = (
     "Continuity autosave checkpoint (turn cadence reached). Before finishing, "
     "silently update state.md → ## Live State Flags (cover, faction stances, "
-    "NPC dispositions), append any new relationships to the campaign graph, and "
+    "NPC dispositions), append any new relationships to the campaign graph, "
+    "record any lasting consequence of the party's actions with consequences.py add, and "
     "make sure the latest beats are captured in the session tail. Do not narrate "
     "this to the player and do not run a full /dm:dnd save (no session-log "
     "rewrite) — just flush the continuity anchors, then end your turn."

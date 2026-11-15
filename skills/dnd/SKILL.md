@@ -187,6 +187,7 @@ inside the plugin (so it survives updates/uninstalls):
 ```
 <DATA root>/campaigns/<name>/
   state.md / world.md / npcs.md / session-log.md / characters/<name>.md
+  consequences.md    ← durable world-consequence ledger (consequences.py)
 <DATA root>/characters/
   <name>.md          ← global roster: latest known state of every PC across all campaigns
 ```
@@ -242,6 +243,7 @@ Once a campaign is loaded, stay in DM mode. Interpret all player messages as in-
   The constraint: one targeted Read per claim, not a full file reload. The player's trust in world continuity depends on accuracy; the session's momentum depends on not stalling to reload everything.
 
 - **Continuity micro-save (autosave).** Unless `state.md → ## Session Flags` has `autosave: off`, keep unsaved continuity near zero so a context compaction can never cost more than a turn or two. At each natural scene boundary — a location change, the end of combat, a major NPC reveal or disposition shift — and otherwise every several turns, *silently* flush the continuity anchors: update `## Live State Flags` in `state.md`, append any new relationships to the campaign graph, and make sure recent beats are in the session tail. This is a lightweight write, **not** a full `/dm:dnd save` — do not rewrite `session-log.md`, do not narrate it, do not interrupt the scene. It is the same information a save captures, just kept current continuously instead of only at session end. If the optional autosave Stop hook is installed (`install_autosave_hook.py`), it will also prompt this flush on a turn cadence as a backstop — but do not wait for it; the scene-boundary habit is the primary mechanism.
+- **Consequence ledger (persistence).** What the party does to the world must outlive the scene. When something lasting happens (damage, theft, a crime, a debt, a promise, a kill, a favour, a place changed), run `consequences.py add` right then, as part of the micro-save, keyed to every place/NPC/faction that should remember it. **Whenever the party enters a place or meets a named NPC**, run `consequences.py scene --place ... --present ...` first and let the result shape the scene: the innkeeper mentions the broken door, the price goes up, the guard recognises the face. Consequences age but never vanish; only something the party does in play resolves them. Syntax in SKILL-scripts.md.
 
 **Structured campaign arc steering** (when `state.md → ## Campaign Arc` has `type: structured`):
 

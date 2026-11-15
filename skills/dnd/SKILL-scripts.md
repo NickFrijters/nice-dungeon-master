@@ -397,9 +397,25 @@ python3 ${CLAUDE_SKILL_DIR}/scripts/campaign_search.py -c $CAMP Harwick -C 6
 ```
 
 File keys: `state`, `log`, `archive`, `world`, `seeds`, `npcs`, `npcsfull`
-Default files searched: state, log, archive, world, npcs
+Default files searched: state, log, archive, world, npcs, conseq (consequences.md)
 
 **When to use:** Any time a player asks about a past event, NPC detail, location, or plot thread that may not be in active context. Run this first — only escalate to a full `Read` if the search returns insufficient context.
+
+---
+
+## Consequence Ledger — `scripts/consequences.py`
+
+Durable "what the party did to the world" lines in `<campaign>/consequences.md`, keyed by place / NPC / faction, never deleted (resolve instead). Query it on scene entry so a smashed inn door is remembered 50 sessions later.
+
+```bash
+C="python3 ${CLAUDE_SKILL_DIR}/scripts/consequences.py -c $CAMP"
+$C add --subject "Gilded Stag Inn" --subject "Hobb Brewer" --by Balasar --text "Smashed the front door in a brawl; Hobb wants it paid for."
+$C scene --place "Gilded Stag Inn" --present "Hobb Brewer" [--faction "Town Watch"]   # scene entry / NPC meeting
+$C list-for --subject "Hobb Brewer"      # everything touching one subject
+$C search door                           # keyword AND search
+$C resolve --id C1 --note "Balasar paid 5 gp"
+$C list --status open | $C stats
+```
 
 ---
 
