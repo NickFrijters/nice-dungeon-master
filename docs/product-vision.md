@@ -32,9 +32,27 @@ Each character has an **Experience** option:
 - **Experienced**: full character options and summarized explanations
 
 ## Two screen states
-A running adventure is either **Roleplay** or **Combat**, and each has its own TV layout. The layouts are still to be decided in a follow-up interview.
+A running adventure is either **Roleplay** or **Combat**. The screen switches automatically when Claude starts or ends combat.
+
+### Roleplay layout
+- **Left:** summary info panels
+  - Characters: name, race, class, HP, XP
+  - All NPCs in the current setting
+  - All factions
+  - All quests
+- **Center:** the narration text
+- **Right:** always-visible images of the current situation (scene, setting, active monsters or characters)
+- Always visible: party strip, current location and time, active quest or goal
+- NPC dialogue is shown as a portrait with a speech bubble
+
+### Combat layout
+- **Dominant:** the battle map
+  - Published maps are used when an adventure provides them. Otherwise Claude generates a simple, hand-drawn-looking grid from the scene description.
+  - The grid has numbered columns and rows, so players can say exactly where to move.
+  - Tokens can be moved by dragging on screen or by telling Claude.
+- **Around the map:** initiative order bar, party and enemy HP, narration of the action, and the dice roll display
 
 ## Open questions
 - The web app starting and controlling Claude is a significant change from today, where Claude drives the display. We need to decide how the app launches and talks to Claude.
-- Layouts for Roleplay and Combat.
+- Exact visual design of the two layouts (colors, sizes, how the left panels collapse).
 - Whether Experience is set per character only, or can also apply to the whole session.
