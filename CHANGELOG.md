@@ -10,6 +10,12 @@ Versions before **1.6.0** are reconstructed retroactively from git history; the 
 
 ## [Unreleased]
 
+## [2.10.1] — 2026-11-15 — Local Pocket TTS narration
+
+### Fixed — narration uses the local Pocket TTS voice
+
+2.10.0 removed the remote voice but left the browser's built-in voice in its place, which was not the intended replacement. Narration now uses the local Pocket TTS model (Kyutai; English and Dutch, chosen from the text) through `/tts`, with `display/local_tts/` carrying the model server and its client. Clips are cached on disk, the voice is loaded in the background when the display starts (so the first block does not wait ~30 s), and if the local voice is missing the speaker button says "No local voice" rather than switching to another voice. The browser speech code is removed.
+
 ## [2.10.0] — 2026-11-15 — Local narration only
 
 ### Removed — the remote narration service

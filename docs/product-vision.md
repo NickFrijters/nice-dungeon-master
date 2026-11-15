@@ -72,7 +72,7 @@ A running adventure is either **Roleplay** or **Combat**. The screen switches au
 - C:\Users\frijt\Documents\Claude\nice-dungeon-master\design-mockups shows a kind of visualization that I really dislike, why do we (still) have this folder with images?
 - When opening a campaign from the main menu, always start with a recap instead of showing the whole history
 - Add the option to save and quit. This processes/summarizes the session to memory, leaving no loose ends
-- I believe the current local TTS that we're using is the best (fast) available for Dutch. But please do further research of we can use another one (requirements: super fast) for a more realistic English voice, preferably a voice that would be great for a DM.
+- I believe the current local TTS that we're using is the best (fast) available for Dutch. But please do further research of we can use another one (requirements: super fast) for a more realistic English voice, preferably a voice that would be great for a DM. Try Kokoro-82M (hexgrad/Kokoro-82M) first.
 - Waiting for the DM should never take more than 5 seconds (this probably needs data management improvements).
 
 ## Status

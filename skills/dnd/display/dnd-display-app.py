@@ -73,6 +73,13 @@ try:
 except Exception:
     _audio = None   # type: ignore
 
+# Narrator voice: local Pocket TTS only (no remote service).
+try:
+    import tts as _tts
+except Exception:
+    _tts = None   # type: ignore
+
+
 def _apply_campaign_sfx_languages() -> None:
     """Read sfx_languages from the active campaign's state.md Session Flags.
 
@@ -1212,6 +1219,7 @@ def index():
         "index.html",
         lan_token=_lan_token or "",
         narration_audio_default=_narration_audio_default(),
+        tts_available=bool(_tts is not None and _tts.available()),
     )
 
 
@@ -2009,6 +2017,35 @@ def _active_campaign_name() -> Optional[str]:
         return None
 
 
+@app.route("/tts", methods=["POST"])
+def tts_synthesize():
+    """Speak a narration block with the local Pocket TTS voice.
+
+    Body: {"text": str}
+    Response: raw 16-bit mono PCM at 24 kHz (audio/L16).
+    Failures: 503 (Pocket TTS not installed or switched off), 400 (empty),
+    502 (the local model failed). The page says so; it never switches voice.
+    """
+    if _tts is None:
+        return "TTS module unavailable", 503
+    if not _token_ok():
+        return "Forbidden", 403
+    if not _rate_ok(request.remote_addr or "?"):
+        return "Rate limited", 429
+    data = request.get_json(silent=True) or {}
+    text = (data.get("text") or "").strip()
+    if not text:
+        return "empty text", 400
+    if not _tts.available():
+        return "Local TTS is not installed (see README: Spoken narration)", 503
+    try:
+        pcm = _tts.synthesize_strict(text)
+    except _tts.TtsError as e:
+        return f"Local TTS failed: {e}", 502
+    return Response(pcm, mimetype="audio/L16;codec=pcm;rate=24000",
+                    headers={"Cache-Control": "no-store"})
+
+
 @app.route("/audio/sfx/<name>")
 def audio_sfx(name):
     """Serve a synthesized SFX WAV for the given effect name."""
@@ -2769,4 +2806,9 @@ if __name__ == "__main__":
         print(f"DnD DM Display — Flask server starting on {scheme}://localhost:5001")
         print(f"Open {scheme}://localhost:5001 in your browser, then Chromecast the tab.")
         print()
+    # Load the narrator voice now, in the background, so the first narration
+    # block is not the one that waits ~30 s for the model. DND_TTS_WARMUP=off
+    # skips it.
+    if _tts is not None and os.environ.get("DND_TTS_WARMUP", "on").lower() != "off":
+        threading.Thread(target=_tts.warm_up, daemon=True).start()
     app.run(host=host, port=5001, threaded=True, debug=False, ssl_context=ssl_ctx)

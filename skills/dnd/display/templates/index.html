@@ -6,6 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="dnd-token" content="{{ lan_token }}">
+<meta name="tts-available" content="{{ '1' if tts_available else '0' }}">
 <meta name="narration-audio-default" content="{{ '1' if narration_audio_default else '0' }}">
 
 <!-- Theme anti-FOUC. Runs synchronously before the stylesheet parses so the
@@ -1546,6 +1547,8 @@
   }
   .tts-play-btn.tts-playing { color: rgba(210, 90, 70, 0.9); }
   .tts-play-btn.tts-loading { color: rgba(180, 140, 60, 0.45); }
+  @keyframes tts-spin { to { transform: rotate(360deg); } }
+  .tts-spin { animation: tts-spin 0.9s linear infinite; }
 
   /* ── Player input panel ── */
   #input-panel {
@@ -6428,154 +6431,39 @@ let _ttsAutoNarrate = localStorage.getItem('dnd_tts_auto') !== null
 
 let _ttsActivePlayBtn = null;
 
-// Narration is spoken by the browser's own speech synthesis. There is no
-// remote text-to-speech service: nothing is configured, billed or sent out.
-let _ttsUtterance = null;
-const _TTS_HAS_BROWSER = 'speechSynthesis' in window;
-if (_TTS_HAS_BROWSER) {
-  // Chrome populates the voice list asynchronously; the first call primes it.
-  speechSynthesis.getVoices();
-  speechSynthesis.onvoiceschanged = () => speechSynthesis.getVoices();
-}
+// Narration is spoken by the local Pocket TTS voice, through this display's
+// /tts route. There is no remote text-to-speech service and no switching to a
+// different voice: if the local voice is not installed the page says so.
+const _ttsAvailableMeta = document.querySelector('meta[name="tts-available"]');
+const _TTS_AVAILABLE = !!(_ttsAvailableMeta && _ttsAvailableMeta.getAttribute('content') === '1');
 
-// The language the text itself is written in, where its script says. This
-// page's <html lang> is a static "en" whatever the campaign is played in, so
-// without this a Japanese or Russian block went to an English voice, which
-// reads it as silence or noise. A script shared by several languages takes
-// the browser's first language that uses it, else the script's most common
-// one; Latin text returns null and leaves the choice to the chain below.
-const _TTS_SHARED_SCRIPTS = [
-  [/[\u0400-\u04ff]/, ['ru', 'uk', 'bg', 'sr', 'mk', 'be', 'kk', 'ky', 'mn', 'tg']],
-  [/[\u0600-\u06ff]/, ['ar', 'fa', 'ur', 'ps']],
-];
-function _ttsScriptLang(text) {
-  const t = String(text || '');
-  if (/[\u3040-\u30ff]/.test(t)) return 'ja';
-  if (/[\uac00-\ud7af\u1100-\u11ff]/.test(t)) return 'ko';
-  if (/[\u4e00-\u9fff\u3400-\u4dbf]/.test(t)) return 'zh';
-  if (/[\u0e00-\u0e7f]/.test(t)) return 'th';
-  if (/[\u0370-\u03ff]/.test(t)) return 'el';
-  if (/[\u0590-\u05ff]/.test(t)) return 'he';
-  for (const [re, langs] of _TTS_SHARED_SCRIPTS) {
-    if (!re.test(t)) continue;
-    const nav = (navigator.languages && navigator.languages.length
-      ? navigator.languages : [navigator.language])
-      .map(l => String(l || '').slice(0, 2).toLowerCase());
-    return nav.find(l => langs.includes(l)) || langs[0];
+let _ttsCtx = null;
+let _ttsActiveSource = null;
+
+function _getTtsCtx() {
+  if (!_ttsCtx || _ttsCtx.state === 'closed') {
+    _ttsCtx = new (window.AudioContext || window.webkitAudioContext)();
   }
-  return null;
-}
-
-function _ttsPickBrowserVoice(text) {
-  const voices = speechSynthesis.getVoices() || [];
-  if (!voices.length) return null;
-  // Preference order: the language the text's script implies, then the
-  // page's declared language, then the browser's accept-language chain,
-  // then English, then any voice at all -- a voice in the wrong accent still
-  // beats silence. No single locale is hardcoded.
-  const prefs = [];
-  const want = t => {
-    t = String(t || '').slice(0, 2).toLowerCase();
-    if (t && !prefs.includes(t)) prefs.push(t);
-  };
-  want(_ttsScriptLang(text));
-  want(document.documentElement.lang);
-  (navigator.languages && navigator.languages.length
-    ? navigator.languages : [navigator.language]).forEach(want);
-  want('en');
-  // Neural/online voices first: the local fallbacks are markedly flatter.
-  // Note these are usually NOT local — Chrome's "Google …" and Edge's
-  // "… Online (Natural)" voices synthesize on the vendor's servers. No key
-  // and no cost to the player, but not offline. `v.localService === true`
-  // is the flag to rank on instead if on-device ever has to be the default.
-  const rank = v => /natural|online|neural/i.test(v.name) ? 0
-                  : /google/i.test(v.name) ? 1 : 2;
-  for (const p of prefs) {
-    const pool = voices.filter(v => (v.lang || '').toLowerCase().startsWith(p));
-    if (pool.length) return pool.sort((a, b) => rank(a) - rank(b))[0];
-  }
-  return voices.slice().sort((a, b) => rank(a) - rank(b))[0];
-}
-
-const _TTS_CHUNK_MAX = 220;
-
-function _ttsChunkText(text) {
-  // Short utterances avoid Chrome's ~15s cut-off on a single long speech.
-  // The terminator set carries CJK and Arabic/Armenian stops as well as the
-  // Latin ones: a Japanese paragraph contains no ".!?" at all, so a
-  // Latin-only split returns the whole paragraph as one chunk and walks
-  // straight into the cut-off this function exists to avoid.
-  const parts = text.match(/[^.!?…。！？؟։]+[.!?…。！？؟։]*["»”」』]?\s*/g) || [text];
-  const chunks = [];
-  let cur = '';
-  for (const part of parts) {
-    // A single sentence longer than the cap still has to be broken, or
-    // scripts that do not punctuate every 220 characters are back to one
-    // oversized utterance.
-    let p = part;
-    while (p.length > _TTS_CHUNK_MAX) {
-      if (cur) { chunks.push(cur.trim()); cur = ''; }
-      let cut = p.lastIndexOf(' ', _TTS_CHUNK_MAX);
-      if (cut < _TTS_CHUNK_MAX * 0.5) cut = _TTS_CHUNK_MAX;   // CJK has no spaces
-      chunks.push(p.slice(0, cut).trim());
-      p = p.slice(cut);
-    }
-    if ((cur + p).length > _TTS_CHUNK_MAX && cur) { chunks.push(cur.trim()); cur = ''; }
-    cur += p;
-  }
-  if (cur.trim()) chunks.push(cur.trim());
-  return chunks.filter(Boolean);
-}
-
-function _ttsBrowserSpeak(btn, text) {
-  speechSynthesis.cancel();
-  const voice = _ttsPickBrowserVoice(text);
-  const chunks = _ttsChunkText(text);
-  let last = null;
-  chunks.forEach(chunk => {
-    const u = new SpeechSynthesisUtterance(chunk);
-    // Leave lang unset when no voice matched: the browser default is a better
-    // guess than any locale this file could name.
-    if (voice) { u.voice = voice; u.lang = voice.lang; }
-    u.rate = 0.95;
-    speechSynthesis.speak(u);
-    last = u;
-  });
-  if (!last) return;
-
-  btn.innerHTML = _SVG_STOP;
-  btn.classList.remove('tts-loading');
-  btn.classList.add('tts-playing');
-  btn.setAttribute('aria-label', 'Stop narration');
-  _ttsActivePlayBtn = btn;
-  _ttsUtterance = last;
-
-  const done = () => {
-    if (_ttsUtterance !== last) return;      // a newer block took over
-    _ttsUtterance = null;
-    if (_ttsActivePlayBtn === btn) {
-      btn.innerHTML = _SVG_SPEAKER;
-      btn.classList.remove('tts-playing');
-      btn.setAttribute('aria-label', 'Listen to narration');
-      _ttsActivePlayBtn = null;
-    }
-  };
-  last.onend = done;
-  last.onerror = done;
+  return _ttsCtx;
 }
 
 const _SVG_SPEAKER = '<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 5.5h3l4-3v11l-4-3H3v-5z" fill="currentColor"/><path d="M10.5 5.2c.9.8 1.5 1.8 1.5 2.8s-.6 2-1.5 2.8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><path d="M12.2 3.4c1.5 1.2 2.3 2.7 2.3 4.6s-.8 3.4-2.3 4.6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>';
 const _SVG_STOP    = '<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 12 12" fill="none" aria-hidden="true"><rect x="2" y="2" width="8" height="8" rx="1.5" fill="currentColor"/></svg>';
+const _SVG_SPIN    = '<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" class="tts-spin" aria-hidden="true"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" stroke-dasharray="31.4 31.4" stroke-linecap="round"/></svg>';
+
+function _ttsSetIdle(btn) {
+  btn.innerHTML = _SVG_SPEAKER;
+  btn.classList.remove('tts-playing', 'tts-loading');
+  btn.setAttribute('aria-label', 'Listen to narration');
+}
 
 function _ttsStopActive() {
-  if (_TTS_HAS_BROWSER && (_ttsUtterance || speechSynthesis.speaking || speechSynthesis.pending)) {
-    _ttsUtterance = null;
-    speechSynthesis.cancel();
+  if (_ttsActiveSource) {
+    try { _ttsActiveSource.stop(); } catch (_) {}
+    _ttsActiveSource = null;
   }
   if (_ttsActivePlayBtn) {
-    _ttsActivePlayBtn.innerHTML = _SVG_SPEAKER;
-    _ttsActivePlayBtn.classList.remove('tts-playing', 'tts-loading');
-    _ttsActivePlayBtn.setAttribute('aria-label', 'Listen to narration');
+    _ttsSetIdle(_ttsActivePlayBtn);
     _ttsActivePlayBtn = null;
   }
 }
@@ -6587,16 +6475,76 @@ function _ttsExtractText(blockEl) {
   return (clone.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 2000);
 }
 
-function _ttsPlayBlock(btn, blockEl) {
+async function _ttsPlayBlock(btn, blockEl) {
   if (btn.classList.contains('tts-playing')) { _ttsStopActive(); return; }
   _ttsStopActive();
   const text = _ttsExtractText(blockEl);
-  if (!text || !_TTS_HAS_BROWSER) return;
-  _ttsBrowserSpeak(btn, text);
+  if (!text) return;
+
+  const ctx = _getTtsCtx();
+  const resumeP = ctx.state !== 'running' ? ctx.resume() : Promise.resolve();
+
+  btn.innerHTML = _SVG_SPIN;
+  btn.classList.add('tts-loading');
+  btn.setAttribute('aria-label', 'Loading…');
+  _ttsActivePlayBtn = btn;
+
+  try {
+    const resp = await fetch('/tts', {
+      method: 'POST',
+      headers: _authHeaders(),
+      body: JSON.stringify({ text }),
+    });
+    if (!resp.ok) throw new Error(resp.status === 503 ? 'No local voice' : 'TTS ' + resp.status);
+    const pcm = await resp.arrayBuffer();
+    if (!pcm.byteLength) throw new Error('TTS empty');
+    if (_ttsActivePlayBtn !== btn) return;          // stopped or replaced while loading
+
+    await resumeP;
+    if (ctx.state === 'suspended') await ctx.resume();
+
+    const int16 = new Int16Array(pcm);
+    const audioBuffer = ctx.createBuffer(1, int16.length, 24000);
+    const ch = audioBuffer.getChannelData(0);
+    for (let i = 0; i < int16.length; i++) ch[i] = int16[i] / 32768.0;
+
+    const source = ctx.createBufferSource();
+    source.buffer = audioBuffer;
+    source.connect(ctx.destination);
+
+    btn.innerHTML = _SVG_STOP;
+    btn.classList.remove('tts-loading');
+    btn.classList.add('tts-playing');
+    btn.setAttribute('aria-label', 'Stop narration');
+    _ttsActiveSource = source;
+
+    source.onended = () => {
+      if (_ttsActiveSource === source) {
+        _ttsActiveSource = null;
+        if (_ttsActivePlayBtn === btn) {
+          _ttsSetIdle(btn);
+          _ttsActivePlayBtn = null;
+        }
+      }
+    };
+    source.start(0);
+  } catch (err) {
+    if (_ttsActivePlayBtn === btn) {
+      btn.textContent = (err.message || 'ERR').slice(0, 14);
+      btn.classList.remove('tts-loading', 'tts-playing');
+      setTimeout(() => {
+        if (!btn.classList.contains('tts-playing') && !btn.classList.contains('tts-loading')) {
+          _ttsSetIdle(btn);
+        }
+      }, 3000);
+      _ttsActivePlayBtn = null;
+    }
+    _ttsActiveSource = null;
+  }
 }
 
 function _addTtsBar(blockEl) {
-  if (!_TTS_HAS_BROWSER || !blockEl) return;
+  if (!_TTS_AVAILABLE || !blockEl) return;
   if (blockEl.querySelector(':scope > .tts-bar')) return;  // already added
 
   const bar = document.createElement('div');
@@ -6617,8 +6565,8 @@ function _addTtsBar(blockEl) {
   }
 }
 
-// Auto-narrate row — only shown if this browser can speak.
-if (_TTS_HAS_BROWSER) {
+// Auto-narrate row — only shown when the local voice is installed.
+if (_TTS_AVAILABLE) {
   const narrateRow = document.getElementById('narrate-row');
   const narrateLabel = document.getElementById('narrate-label');
   if (narrateRow && narrateLabel) {
@@ -6632,6 +6580,12 @@ if (_TTS_HAS_BROWSER) {
       _ttsAutoNarrate = !_ttsAutoNarrate;
       localStorage.setItem('dnd_tts_auto', _ttsAutoNarrate ? '1' : '0');
       refresh();
+      if (_ttsAutoNarrate) {
+        // Prime the AudioContext from this click so auto-narrate works on the
+        // next block without needing a per-block gesture.
+        const ctx = _getTtsCtx();
+        if (ctx.state !== 'running') ctx.resume().catch(() => {});
+      }
     });
   }
 }
