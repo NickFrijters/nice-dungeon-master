@@ -10,6 +10,14 @@ Versions before **1.6.0** are reconstructed retroactively from git history; the 
 
 ## [Unreleased]
 
+## [2.25.0] — 2026-11-15 — Stepped trackers
+
+### Changed — every wait has a stepped tracker
+
+- The turn bar under the story now shows the parts of a turn as chips (**Sent to the DM, DM is writing, Preparing the voice, Narrating**, or three parts without voice), marks finished ones with a tick, and says "step 2 of 4" with the seconds waited. It all turns green when the turn is done.
+- **DM Help** shows its own tracker (Reading the scene, Asking the Dungeon Master, Writing the hint) until the hint arrives, fails or times out.
+- The **Main Menu** shows steps while a campaign is being opened (Asking the Dungeon Master, Opening the campaign, Loading the party) and while Save & exit is saving.
+
 ## [2.24.0] — 2026-11-15 — Compact Party Input
 
 ### Changed — a vertically compact Party Input

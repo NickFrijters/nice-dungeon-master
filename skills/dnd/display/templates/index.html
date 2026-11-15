@@ -1653,6 +1653,19 @@
   #turn-bar.tb-done .tb-fill { background: rgba(110, 190, 120, 0.95); width: 100%; }
   #turn-bar .tb-label { margin-top: 5px; font: 12px/1.4 ui-monospace, Consolas, monospace; letter-spacing: 0.04em; color: rgba(180, 140, 60, 0.75); }
   #turn-bar.tb-fade { opacity: 0; transition: opacity 0.8s ease; }
+  .tb-steps { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 7px; }
+  .tb-step { font: 11px/1.4 ui-monospace, Consolas, monospace; padding: 2px 9px; border-radius: 11px;
+    border: 1px solid rgba(180, 140, 60, 0.25); color: rgba(180, 140, 60, 0.45); white-space: nowrap; }
+  .tb-step.done { color: rgba(110, 190, 120, 0.95); border-color: rgba(110, 190, 120, 0.45); }
+  .tb-step.cur { color: rgba(240, 210, 120, 1); border-color: rgba(220, 185, 100, 0.9); background: rgba(200, 160, 64, 0.12); }
+  #mini-tracker { position: fixed; top: 54px; left: 50%; transform: translateX(-50%); z-index: 450; min-width: 300px; max-width: 90vw;
+    background: rgba(14, 10, 6, 0.94); border: 1px solid rgba(180, 140, 60, 0.45); border-radius: 12px; padding: 10px 16px 12px;
+    box-shadow: 0 8px 36px rgba(0, 0, 0, 0.7); }
+  #mini-tracker[hidden] { display: none; }
+  #mini-tracker .tb-track { height: 4px; border-radius: 2px; background: rgba(180, 140, 60, 0.18); overflow: hidden; }
+  #mini-tracker .tb-fill { height: 100%; width: 30%; background: rgba(220, 185, 100, 0.95); border-radius: 2px; animation: tb-slide 1.3s ease-in-out infinite; }
+  #mini-tracker .tb-label { margin-top: 5px; font: 12px/1.4 ui-monospace, Consolas, monospace; color: rgba(180, 140, 60, 0.85); }
+
   @keyframes tb-slide { 0% { margin-left: 0; } 50% { margin-left: 70%; } 100% { margin-left: 0; } }
   @keyframes tts-slide { 0% { margin-left: 0; } 50% { margin-left: 65%; } 100% { margin-left: 0; } }
 
@@ -4885,7 +4898,7 @@ function _turnEl() {
   if (!el) {
     el = document.createElement('div');
     el.id = 'turn-bar';
-    el.innerHTML = '<div class="tb-track"><div class="tb-fill"></div></div><div class="tb-label"></div>';
+    el.innerHTML = '<div class="tb-track"><div class="tb-fill"></div></div><div class="tb-label"></div><div class="tb-steps"></div>';
     const tc = document.getElementById('text-content');
     tc.insertAdjacentElement('afterend', el);
   }
@@ -4937,7 +4950,34 @@ function _turnFinish() {
   if (!el) return;
   el.classList.remove('tb-indet'); el.classList.add('tb-done');
   el.querySelector('.tb-label').textContent = 'done';
+  const steps = el.querySelector('.tb-steps'); if (steps) { steps.querySelectorAll('.tb-step').forEach(c => { c.className = 'tb-step done'; }); }
   setTimeout(() => { el.classList.add('tb-fade'); setTimeout(() => { if (!_turn && el.parentNode) el.remove(); }, 900); }, 1200);
+}
+
+// The parts of one turn, and which one we are in. Voice steps only when the voice is expected.
+function _turnSteps(t, voiceExpected) {
+  const voice = !!(t.voice || t.phase === 'prep' || voiceExpected);
+  const names = voice ? ['Sent to the DM', 'DM is writing', 'Preparing the voice', 'Narrating']
+                      : ['Sent to the DM', 'DM is writing', 'Writing the text'];
+  let idx;
+  if (t.phase === 'wait') idx = 1;
+  else if (t.phase === 'prep') idx = 2;
+  else idx = voice ? 3 : 2;
+  return { names, idx };
+}
+
+function _renderSteps(container, names, idx) {
+  if (!container) return;
+  const sig = names.join('|') + '#' + idx;
+  if (container.dataset.sig === sig) return;                // nothing changed: leave the DOM alone
+  container.dataset.sig = sig;
+  container.textContent = '';
+  names.forEach((n, i) => {
+    const chip = document.createElement('span');
+    chip.className = 'tb-step ' + (i < idx ? 'done' : i === idx ? 'cur' : 'todo');
+    chip.textContent = (i < idx ? '\u2713 ' : '') + n;
+    container.appendChild(chip);
+  });
 }
 
 function _turnTick() {
@@ -4945,11 +4985,14 @@ function _turnTick() {
   const el = document.getElementById('turn-bar'); if (!el) return;
   const fill = el.querySelector('.tb-fill'), label = el.querySelector('.tb-label');
   const secs = s0 => Math.round((Date.now() - s0) / 1000);
+  const st = _turnSteps(t, _ttsAutoNarrate && _TTS_AVAILABLE);
+  _renderSteps(el.querySelector('.tb-steps'), st.names, st.idx);
+  const lead = 'step ' + (st.idx + 1) + ' of ' + st.names.length + ' \u00b7 ';
   if (t.phase === 'wait') {
-    el.classList.add('tb-indet'); label.textContent = 'waiting for the DM... ' + secs(t.t0) + 's'; return;
+    el.classList.add('tb-indet'); label.textContent = lead + 'waiting for the DM... ' + secs(t.t0) + 's'; return;
   }
   if (t.phase === 'prep') {
-    el.classList.add('tb-indet'); label.textContent = 'preparing voice... ' + secs(t.prepT0 || t.t0) + 's'; return;
+    el.classList.add('tb-indet'); label.textContent = lead + 'preparing voice... ' + secs(t.prepT0 || t.t0) + 's'; return;
   }
   el.classList.remove('tb-indet');
   const typedFrac = t.total ? Math.min(1, t.typed / t.total) : (t.typingDone ? 1 : 0);
@@ -4961,9 +5004,9 @@ function _turnTick() {
   }
   const frac = Math.min(typedFrac, audioFrac);
   fill.style.width = Math.round(frac * 100) + '%';
-  label.textContent = t.voice && !t.audioEnded
+  label.textContent = lead + (t.voice && !t.audioEnded
     ? 'narrating ' + _ttsFmt(cur) + ' / ' + _ttsFmt(t.audioDur)
-    : (t.typingDone ? 'finishing...' : 'writing...');
+    : (t.typingDone ? 'finishing...' : 'writing...'));
   if (t.typingDone && _heldItems.length === 0 && (!t.voice || t.audioEnded)) _turnFinish();
 }
 
@@ -6837,7 +6880,33 @@ function _dmHelpTimeout() {
   _dmHelpReset();
 }
 
+// A tracker for DM Help: reading the scene, asking Claude, writing the hint.
+let _miniTimer = null;
+function _miniTrackerStart(names) {
+  let el = document.getElementById('mini-tracker');
+  if (!el) {
+    el = document.createElement('div'); el.id = 'mini-tracker';
+    el.innerHTML = '<div class="tb-track"><div class="tb-fill"></div></div><div class="tb-label"></div><div class="tb-steps"></div>';
+    document.body.appendChild(el);
+  }
+  el.hidden = false; delete el.dataset.sig;
+  const t0 = Date.now();
+  clearInterval(_miniTimer);
+  const tick = () => {
+    const s = Math.round((Date.now() - t0) / 1000);
+    const idx = s < 2 ? 0 : (s < 6 ? 1 : 2);                // time-based: the helper reports no progress of its own
+    _renderSteps(el.querySelector('.tb-steps'), names, idx);
+    el.querySelector('.tb-label').textContent = 'step ' + (idx + 1) + ' of ' + names.length + ' \u00b7 ' + s + 's';
+  };
+  tick(); _miniTimer = setInterval(tick, 500);
+}
+function _miniTrackerStop() {
+  clearInterval(_miniTimer); _miniTimer = null;
+  const el = document.getElementById('mini-tracker'); if (el) el.hidden = true;
+}
+
 function _dmHelpReset() {
+  _miniTrackerStop();
   _helpPending = false;
   _dmHelpBtn.disabled = false;
   _dmHelpBtn.classList.remove('pending', 'locked');
@@ -6862,6 +6931,7 @@ _dmHelpBtn.addEventListener('click', async () => {
   _dmHelpBtn.classList.add('pending');
   _dmHelpBtn.textContent = '◈ Thinking…';
   _showToast('DM Help requested — thinking…');
+  _miniTrackerStart(['Reading the scene', 'Asking the Dungeon Master', 'Writing the hint']);
 
   try {
     const res = await fetch('/help-request', {

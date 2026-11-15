@@ -26,6 +26,10 @@
   .soon { opacity:.55; }
   #status { margin-top:24px; color:var(--gold); min-height:1.5em; }
   .empty { color:var(--dim); font-style:italic; }
+  .steps { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+  .step { font:12px ui-monospace, Consolas, monospace; padding:2px 10px; border-radius:11px; border:1px solid var(--line); color:var(--dim); }
+  .step.done { color:#7cc88a; border-color:#4a8a56; }
+  .step.cur { color:#f0d278; border-color:var(--gold); background:#2a1d0a; }
   .notice { background:#2a1d12; border:1px solid var(--gold); border-radius:10px; padding:12px 16px; margin-bottom:18px; line-height:1.4; }
   .notice code { color:var(--gold); }
 </style>
@@ -56,6 +60,7 @@
     <button id="quit" class="quiet" onclick="quitAll()">Quit</button></div>
 
   <div id="status" role="status"></div>
+  <div id="steps" class="steps" aria-live="polite"></div>
 </main>
 <script>
 const TOKEN = {{ lan_token|tojson }};
@@ -108,9 +113,23 @@ async function quitAll() {
   setTimeout(() => { statusEl.textContent = 'Stopped. You can close this tab.'; }, 4000);
 }
 
+// A tracker for the waits on this page: which part we are in, and what comes next.
+function showSteps(names, idx) {
+  const box = document.getElementById('steps');
+  box.textContent = '';
+  names.forEach((n, i) => {
+    const s = document.createElement('span');
+    s.className = 'step ' + (i < idx ? 'done' : i === idx ? 'cur' : '');
+    s.textContent = (i < idx ? '\u2713 ' : '') + n;
+    box.appendChild(s);
+  });
+}
+function clearSteps() { document.getElementById('steps').textContent = ''; }
+
 async function load(name, btn) {
   document.querySelectorAll('#campaigns button').forEach(b => b.disabled = true);
   statusEl.textContent = 'Asking the Dungeon Master to open the campaign…';
+  showSteps(['Asking the Dungeon Master', 'Opening the campaign', 'Loading the party'], 0);
   const r = await fetch('/menu/load', {
     method: 'POST',
     headers: {'Content-Type': 'application/json', 'X-DND-Token': TOKEN},
@@ -118,6 +137,7 @@ async function load(name, btn) {
   });
   if (!r.ok) { statusEl.textContent = 'That did not work. Try again.'; document.querySelectorAll('#campaigns button').forEach(b => b.disabled = false); return; }
   waitingFor = name;
+  showSteps(['Asking the Dungeon Master', 'Opening the campaign', 'Loading the party'], 1);
 }
 
 async function refresh() {
@@ -127,6 +147,8 @@ async function refresh() {
     render(data);
     document.getElementById('no-dm').hidden = !!data.dm_listening || !!data.saving;
     document.getElementById('saving').hidden = !data.saving;
+    if (data.saving) showSteps(['Sent to the Dungeon Master', 'Saving the session', 'Ready for the next one'], 1);
+    else if (!waitingFor && !quitting) clearSteps();
     if (data.saving) document.querySelectorAll('#campaigns button').forEach(b => b.disabled = true);
     if (waitingFor && data.active === waitingFor) { location.href = '/'; return; }
   } catch (e) { /* server busy; try again */ }
