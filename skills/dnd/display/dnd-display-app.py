@@ -1207,6 +1207,70 @@ def index():
     )
 
 
+# ─── Main Menu ───────────────────────────────────────────────────────────────
+# The web app is the front door: Claude starts the display, then the player
+# picks what to do here. Menu actions travel to Claude through the same input
+# queue the autorun loop already reads, as a line like "[Menu]: load <name>".
+
+def _list_campaigns() -> list[dict]:
+    """Campaigns on disk, most recently played first."""
+    from paths import campaigns_dir, campaign_ruleset
+    root = campaigns_dir()
+    active = _active_campaign_name()
+    found = []
+    try:
+        entries = list(root.iterdir())
+    except OSError:
+        return []
+    for d in entries:
+        if not d.is_dir() or d.name.startswith("."):
+            continue
+        state = d / "state.md"
+        marker = state if state.exists() else d
+        try:
+            played = marker.stat().st_mtime
+        except OSError:
+            played = 0.0
+        found.append({
+            "name": d.name,
+            "ruleset": campaign_ruleset(d.name),
+            "last_played": played,
+            "active": d.name == active,
+        })
+    found.sort(key=lambda c: c["last_played"], reverse=True)
+    return found
+
+
+@app.route("/menu")
+def menu():
+    return render_template("menu.html", lan_token=_lan_token or "")
+
+
+@app.route("/menu/campaigns")
+def menu_campaigns():
+    return jsonify({"active": _active_campaign_name(),
+                    "campaigns": _list_campaigns()})
+
+
+@app.route("/menu/load", methods=["POST"])
+def menu_load():
+    """Ask Claude to load a campaign. Only names that exist on disk are accepted."""
+    if not _token_ok():
+        return "Forbidden", 403
+    data = request.get_json(force=True, silent=True) or {}
+    name = str(data.get("campaign", ""))
+    if name not in {c["name"] for c in _list_campaigns()}:
+        return "unknown campaign", 404
+    # Straight into the file Claude's wait loop reads (appended, so queued
+    # player actions are not lost).
+    try:
+        with _staged_lock, open(QUEUE_FILE, "a", encoding="utf-8") as f:
+            f.write(f"[Menu]: load {name}\n")
+    except OSError:
+        return "could not queue", 500
+    return "", 204
+
+
 @app.route("/icons/<path:filename>")
 def serve_icon(filename):
     """Serve icons, favicon, and brand assets from display/icons/."""

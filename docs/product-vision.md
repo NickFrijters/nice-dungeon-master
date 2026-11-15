@@ -56,3 +56,16 @@ A running adventure is either **Roleplay** or **Combat**. The screen switches au
 - Menu actions (load campaign, change settings, manage characters) must reach Claude through the input queue. We need to decide which of these the app handles itself and which it passes to Claude.
 - Exact visual design of the two layouts (colors, sizes, how the left panels collapse).
 - Whether Experience is set per character only, or can also apply to the whole session.
+
+## Manual additions done by Nick in this .md file, read this as "next things" or the backlog.
+## -- if I make changes here, always automatically include in the next commit.
+## -- remove items from below here once they are built
+- Always use local TTS, never the remote API anymore
+- 100% of the time I want to play on LAN mode, so that doesn't need to be a question anymore
+- Convert the TV Mode / PC Mode buttons to a TV/PC toggle. The TV mode has no inputs but is a 100% exact mirror (real-time, include typing) of the PC mode. Default mode is TV mode and if one session clicks "PC mode" then all other sessions automatically change to TV mode.
+- Clearer visualization of character sheets, needs investigation and interviewing
+- Performance, waiting for the DM should never take more than 5 seconds (this probably needs data management improvements)
+
+## Status
+- **v1 (done):** `/dm:dnd menu` starts the display. The Main Menu lists your campaigns, and clicking Load hands the request to Claude, who loads it and switches the browser to the play screen. "Manage characters" and "Settings" are placeholders.
+- **Next:** the settings from the table above, then the Roleplay layout, then Combat.

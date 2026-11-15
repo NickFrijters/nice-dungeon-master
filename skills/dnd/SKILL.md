@@ -51,9 +51,9 @@ When the ruleset is `2014` and a player asks about a 2024-only feature, acknowle
 When the skill is invoked **without a clear action** — a bare `/dm:dnd`, or a vague opener like *"let's play D&D"* with no subcommand and no campaign named — **call the `AskUserQuestion` tool** to find out what they want before doing anything else:
 
 > **Question:** "What would you like to do?"
-> **Options:** `Load a campaign` · `Start a new campaign` · `Import a campaign` · `Manage a character`
+> **Options:** `Open the Main Menu (browser)` · `Load a campaign` · `Start a new campaign` · `Import a campaign` · `Manage a character`
 
-Then branch to the matching procedure in `SKILL-commands.md` (`/dm:dnd load`, `/dm:dnd new`, `/dm:dnd import`, `/dm:dnd character …`).
+Then branch to the matching procedure in `SKILL-commands.md` (`/dm:dnd menu`, `/dm:dnd load`, `/dm:dnd new`, `/dm:dnd import`, `/dm:dnd character …`).
 
 **Skip the menu when the intent is already explicit.** If the player typed a subcommand (`/dm:dnd load`, `/dm:dnd new …`) or named a campaign (`/dm:dnd load the-iron-vault`, *"load my pirate campaign"*), go straight to that procedure — do not ask. The menu is for the empty/ambiguous case only; never make a player who already told you what they want pick it from a list.
 
