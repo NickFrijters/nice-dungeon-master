@@ -68,9 +68,14 @@ class StretchTest(unittest.TestCase):
 
 
 class SpeedWiringTest(unittest.TestCase):
+    def setUp(self):
+        env = mock.patch.dict(os.environ, {"DND_TTS_ENGINE": "pocket"})   # kokoro is the default when installed
+        env.start()
+        self.addCleanup(env.stop)
+
     def test_default_is_100_percent(self):
         self.assertEqual(tts.SPEED, 1.0)
-        self.assertEqual(tts.VOICE_ID, "pocket-alba")      # the id clips were stored under at normal speed
+        self.assertEqual(tts._voice_id(tts.SPEED), "pocket-alba")      # the id clips were stored under at normal speed
 
     def test_speed_is_part_of_the_cache_identity(self):
         self.assertNotEqual(tts._voice_id(0.8), tts._voice_id(1.0))

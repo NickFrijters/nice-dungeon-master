@@ -1722,6 +1722,7 @@ def settings_data():
                                 "theme": list(_settings.THEMES),
                                 "skin": list(_settings.SKINS),
                                 "type_speed": list(_settings.TYPE_SPEEDS),
+                                "narrator_voice": list(_settings.NARRATOR_VOICES),
                                 "text_size": {"min": _settings.TEXT_SIZE_MIN,
                                               "max": _settings.TEXT_SIZE_MAX,
                                               "step": _settings.TEXT_SIZE_STEP}},
@@ -1758,6 +1759,40 @@ def settings_save():
     if any(k in data for k in shown):
         _broadcast({"display_settings": shown})    # every screen follows at once
     return jsonify(saved)
+
+
+VOICE_SAMPLE_TEXT = ("The torchlight gutters as you descend the crumbling stairs. "
+                     "Somewhere below, water drips in slow rhythm, and something inside breathes.")
+
+
+@app.route("/settings/voice-sample", methods=["POST"])
+def settings_voice_sample():
+    """The same short narration in one narrator voice, as a WAV, for the Settings
+    page to play so the voices can be compared. Body: {"voice": "am_adam"}."""
+    import settings as _settings
+    if _tts is None:
+        return "TTS module unavailable", 503
+    if not _token_ok():
+        return "Forbidden", 403
+    if not _rate_ok(request.remote_addr or "?"):
+        return "Rate limited", 429
+    data = request.get_json(force=True, silent=True) or {}
+    voice = data.get("voice")
+    if voice not in _settings.NARRATOR_VOICES:
+        return "unknown voice", 400
+    if not _tts.available():
+        return "Local TTS is not installed (see README: Spoken narration)", 503
+    if _tts._engine() != "kokoro":
+        return "These voices need the Kokoro engine (not installed)", 503
+    try:
+        pcm = _tts.synthesize_strict(VOICE_SAMPLE_TEXT, "en", voice)
+    except _tts.TtsError as e:
+        return f"Local TTS failed: {e}", 502
+    import io, wave
+    buf = io.BytesIO()
+    with wave.open(buf, "wb") as w:
+        w.setnchannels(1); w.setsampwidth(2); w.setframerate(24000); w.writeframes(pcm)
+    return Response(buf.getvalue(), mimetype="audio/wav", headers={"Cache-Control": "no-store"})
 
 
 @app.route("/settings/experience", methods=["POST"])
