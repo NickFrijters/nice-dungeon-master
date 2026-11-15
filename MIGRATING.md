@@ -2,7 +2,7 @@
 
 **v2.0.0 makes the D&D skill plugin-only.** The standalone install
 (`~/.claude/skills/dnd`, invoked as `/dnd`) is replaced by the Claude Code
-plugin `dm@neural-initiative`, invoked as **`/dm:dnd`**.
+plugin `dm@nice-dungeon-master`, invoked as **`/dm:dnd`**.
 
 ## TL;DR — your campaigns are safe
 
@@ -16,7 +16,7 @@ Migration is just two steps:
 ```text
 1. Install the plugin
    /plugin marketplace add neuralinitiative/claude-dnd-skill
-   /plugin install dm@neural-initiative
+   /plugin install dm@nice-dungeon-master
 
 2. Run the one-time migration helper
    python3 <plugin>/skills/dnd/scripts/migrate_v1_to_v2.py

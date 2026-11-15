@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """migrate_v1_to_v2.py — one-time helper to move a legacy v1 *standalone* install
 (`~/.claude/skills/dnd`, invoked as `/dnd`) over to the v2 *plugin* install
-(`dm@neural-initiative`, invoked as `/dm:dnd`).
+(`dm@nice-dungeon-master`, invoked as `/dm:dnd`).
 
 Why this is light, not scary
 ----------------------------
@@ -196,7 +196,7 @@ def main() -> int:
         _say("Nothing to migrate — you're either already on the plugin or starting fresh.")
         _say("Install the plugin with:")
         _say("    /plugin marketplace add neuralinitiative/claude-dnd-skill")
-        _say("    /plugin install dm@neural-initiative")
+        _say("    /plugin install dm@nice-dungeon-master")
         return 0
 
     _say(f"• Found a standalone install (version {_read_legacy_version()}) at:")
@@ -237,7 +237,7 @@ def main() -> int:
     _say("Going forward, invoke the DM with  /dm:dnd  (the old /dnd is retired).")
     _say("If you haven't installed the plugin yet:")
     _say("    /plugin marketplace add neuralinitiative/claude-dnd-skill")
-    _say("    /plugin install dm@neural-initiative")
+    _say("    /plugin install dm@nice-dungeon-master")
     return rc
 
 

@@ -119,8 +119,8 @@ The Flask server receives narration text, player actions, dice results, and char
 Install it as a Claude Code plugin:
 
 ```
-/plugin marketplace add neuralinitiative/claude-dnd-skill
-/plugin install dm@neural-initiative
+/plugin marketplace add NickFrijters/nice-dungeon-master
+/plugin install dm@nice-dungeon-master
 ```
 
 Then invoke it as **`/dm:dnd`** (plugin skills are namespaced `plugin:skill` — the `dm` plugin provides the `dnd` skill), or just describe what you want once a campaign is loaded. Update with `/plugin update dm`.

@@ -65,6 +65,7 @@ A running adventure is either **Roleplay** or **Combat**. The screen switches au
 - Convert the TV Mode / PC Mode buttons to a TV/PC toggle. The TV mode has no inputs but is a 100% exact mirror (real-time, include typing) of the PC mode. Default mode is TV mode and if one session clicks "PC mode" then all other sessions automatically change to TV mode.
 - Clearer visualization of character sheets, needs investigation and interviewing
 - Performance, waiting for the DM should never take more than 5 seconds (this probably needs data management improvements)
+- Fade the narration text near the top of the screen so it looks prettier
 
 ## Status
 - **v1 (done):** `/dm:dnd menu` starts the display. The Main Menu lists your campaigns, and clicking Load hands the request to Claude, who loads it and switches the browser to the play screen. "Manage characters" and "Settings" are placeholders.
