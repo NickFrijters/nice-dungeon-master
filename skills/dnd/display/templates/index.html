@@ -613,6 +613,10 @@
      ══════════════════════════════════════════════════════════ */
 
   /* ── Sidebar hide toggle ── */
+  #sound-lock { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); z-index: 500;
+    background: rgba(40, 24, 8, 0.96); color: rgba(240, 210, 120, 1); border: 1px solid rgba(220, 185, 100, 0.8);
+    border-radius: 20px; padding: 9px 20px; font: 600 13px 'Cinzel', serif; letter-spacing: 1px; cursor: pointer;
+    box-shadow: 0 6px 30px rgba(0, 0, 0, 0.7); }
   #settings-cog {
     position: fixed; left: 14px; bottom: 14px; z-index: 60;
     width: 34px; height: 34px; border-radius: 50%;
@@ -7089,6 +7093,36 @@ function _ttsForceRetry(blockEl, fullText) {
   _ttsPlayBlock(btn, blockEl, { force: true, text: fullText });
 }
 
+// -- Sound locked by the browser: ask for one click, then play what was waiting --
+let _ttsWaiting = null;
+function _ttsSoundLocked(btn, blockEl, text) {
+  if (blockEl._syncFail) blockEl._syncFail();              // never hold the story text for sound that cannot start
+  _ttsSetStatus(blockEl, 'err', 'sound is locked: click once on this screen');
+  if (_ttsActivePlayBtn === btn) { _ttsSetIdle(btn); _ttsActivePlayBtn = null; }
+  _ttsWaiting = { blockEl, text };
+  let note = document.getElementById('sound-lock');
+  if (!note) {
+    note = document.createElement('div');
+    note.id = 'sound-lock';
+    note.textContent = '\u{1F507} Sound is off until you click once anywhere on this screen';
+    document.body.appendChild(note);
+  }
+  const unlock = () => {
+    document.removeEventListener('pointerdown', unlock, true);
+    document.removeEventListener('keydown', unlock, true);
+    note.remove();
+    const ctx = _getTtsCtx();
+    ctx.resume().then(() => {
+      const w = _ttsWaiting; _ttsWaiting = null;
+      if (!w || ctx.state !== 'running') return;
+      const bar = w.blockEl.querySelector && w.blockEl.querySelector(':scope > .tts-bar .tts-play-btn');
+      _ttsPlayBlock(bar || document.createElement('button'), w.blockEl, { text: w.text });
+    }).catch(() => {});
+  };
+  document.addEventListener('pointerdown', unlock, true);
+  document.addEventListener('keydown', unlock, true);
+}
+
 async function _ttsPlayBlock(btn, blockEl, opts) {
   const force = !!(opts && opts.force);
   if (btn.classList.contains('tts-playing') || btn.classList.contains('tts-loading')) {
@@ -7116,6 +7150,11 @@ async function _ttsPlayBlock(btn, blockEl, opts) {
     const t = blockEl._ttsStatusEl && blockEl._ttsStatusEl.querySelector('.tts-st-text');
     if (t) t.textContent = 'generating speech... ' + Math.round((Date.now() - _genStart) / 1000) + 's';
   }, 500);
+
+  // The browser keeps audio locked until the page has had one click. Do not wait on it for ever:
+  // release any text held for this voice now, say so, and play it after the next click.
+  await Promise.race([resumeP, new Promise(r => setTimeout(r, 600))]);
+  if (ctx.state !== 'running') { _ttsSoundLocked(btn, blockEl, text); return; }
 
   try {
     const resp = await fetch('/tts', {

@@ -10,6 +10,16 @@ Versions before **1.6.0** are reconstructed retroactively from git history; the 
 
 ## [Unreleased]
 
+## [2.23.0] — 2026-11-15 — DM Help and locked sound
+
+### Fixed — DM Help did nothing
+
+On Windows the real file is `claude.CMD`, which Python cannot start by the bare name `claude`, so the hint never began and the button quietly reset. `dm_help.py` now finds the real file, sends the question on stdin and the instructions in a file (a `.CMD` launcher mangles quotes and symbols on the command line), and **always answers on screen**: a hint, "Nothing to add right now", or the reason it failed, with a trace in `dm_help.log` in the runtime folder. A lock left by a killed helper heals after three minutes, a helper that cannot start no longer leaks its lock, and the button says so if no hint arrives instead of resetting silently. `send.py`, `push_stats.py` and `autorun_wait.py` follow `DND_DISPLAY_PORT` for testing.
+
+### Fixed — narration waiting on sound the browser had locked
+
+Browsers keep audio locked until a page has had one click, and the click that used to unlock it lived in the old settings column. A screen nobody had clicked could hold the story text for 25 seconds waiting for audio that never started. Now the voice gives up waiting after 0.6 seconds, releases the text at once, shows "Sound is off until you click once anywhere on this screen", and plays the waiting narration after that click.
+
 ## [2.22.0] — 2026-11-15 — Party Input rows, equal screens
 
 ### Changed — Party Input is one row per character, and every screen is the same

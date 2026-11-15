@@ -60,7 +60,6 @@ A running adventure is either **Roleplay** or **Combat**. The screen switches au
 ## Manual additions done by Nick in this .md file, read this as "next things" or the backlog.
 ## -- if I make changes here, always automatically include in the next commit.
 ## -- remove items from this list once they are built
-- BUG: "DM HELP" doet helemaal niks.
 - BUG: The most recent created DM narration in test adventure didn't trigger any voice.
 - INTERFACE: De party input moet (verticaal) compacter.
 - PERSISTENCY: When opening a campaign from the main menu, always start with a recap instead of showing the whole history.
@@ -85,6 +84,7 @@ A running adventure is either **Roleplay** or **Combat**. The screen switches au
 - CLEANUP: We will always use the Vellum style instead of the Editorial style. So remove the Editorial style from the interface and code completely.
 - PRETTIFY: The "DM Help" info block that pops up, and the "Save and Exit" error block that pops up (can you check what I mean) doesn't match the rest of the interface style.
 - FLAVOUR: Add ambient sounds to match with the background visuals.
+- INTERFACE: Build the character creation screen
 
 ## Status
 - **v1 (done):** `/dm:dnd menu` starts the display. The Main Menu lists your campaigns, and clicking Load hands the request to Claude, who loads it and switches the browser to the play screen. "Manage characters" and "Settings" are placeholders.
