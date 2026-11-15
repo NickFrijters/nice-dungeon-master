@@ -3773,11 +3773,21 @@
   html.tv-view #phone-mode-btn, html.tv-view #phone-mode-menu, html.tv-view #dm-help-btn{ display:none !important; }
   html.tv-view body #text-scroll{ padding-right:5.5vw !important; }
   html.tv-view body #text-content{ max-width:1500px !important; }
-  #view-toggle{ position:fixed; left:8px; bottom:6px; z-index:80; background:rgba(0,0,0,.35); color:rgba(200,185,150,.55);
-    border:1px solid rgba(180,140,60,.25); border-radius:3px; font:600 9px 'Cinzel',serif; letter-spacing:2px; text-transform:uppercase;
-    padding:3px 8px; cursor:pointer; opacity:.55; }
-  #view-toggle:hover{ opacity:1; }
-  #tv-link{ position:fixed; left:92px; bottom:8px; z-index:80; font:600 9px 'Cinzel',serif; letter-spacing:1.5px; text-transform:uppercase;
+  #view-switch{ position:fixed; left:56px; bottom:14px; z-index:80; height:34px; display:flex; align-items:stretch;
+    border:1px solid rgba(180,140,60,.3); border-radius:17px; overflow:hidden; background:rgba(8,5,2,.55); }
+  #view-switch button{ background:none; border:0; padding:0 13px; cursor:pointer; color:rgba(180,140,60,.55);
+    font:700 11px 'Cinzel',serif; letter-spacing:2px; }
+  #view-switch button:hover{ color:rgba(240,210,120,1); }
+  #view-switch button[aria-pressed="true"]{ background:rgba(200,160,64,.88); color:#1a1208; }
+  #view-switch button + button{ border-left:1px solid rgba(180,140,60,.3); }
+  body.input-only #view-switch{ display:none !important; }
+  /* what is being typed on the PC, mirrored on the TV as it happens */
+  #tv-typing{ display:none; margin:.8em 0 .4em; padding:.5em 1em; border-left:2px solid rgba(120,160,200,.5);
+    color:rgba(220,205,170,.9); font-style:italic; }
+  html.tv-view #tv-typing.show{ display:block; }
+  #tv-typing .tvt-name{ font:700 .72em 'Cinzel',serif; letter-spacing:.15em; text-transform:uppercase; font-style:normal;
+    color:rgba(130,170,210,.9); margin-right:.6em; }
+  #tv-link{ position:fixed; left:150px; bottom:21px; z-index:80; font:600 9px 'Cinzel',serif; letter-spacing:1.5px; text-transform:uppercase;
     color:rgba(120,210,150,.85); display:none; pointer-events:none; }
   #tv-link.warn{ color:rgba(235,190,90,.95); }
   html.tv-view #tv-link{ display:none !important; }
@@ -8847,20 +8857,82 @@ function _initDicePad() {
 }
 </script>
 <span id="tv-link"></span>
-<button id="view-toggle" type="button" title="Switch between TV View and PC View (Alt+V)"></button>
+<div id="view-switch" role="group" aria-label="Screen mode" title="TV: a mirror with no inputs. PC: the one screen you play on (Alt+V)">
+  <button type="button" data-view="tv" aria-pressed="true">TV</button>
+  <button type="button" data-view="pc" aria-pressed="false">PC</button>
+</div>
 <script>
+// TV | PC. TV is a mirror with no inputs and is the default. PC is the screen you play on;
+// only one screen can be the PC: when one switches to PC, every other screen drops to TV.
 (function(){
-  var b=document.getElementById('view-toggle'), r=document.documentElement;
-  function label(){ b.textContent = r.classList.contains('tv-view') ? 'PC view' : 'TV view'; }
-  function flip(){
-    var tv=!r.classList.contains('tv-view');
-    r.classList.toggle('tv-view', tv);
-    try{ sessionStorage.setItem('dnd-view', tv?'tv':'pc'); }catch(e){}
-    label();
+  var r = document.documentElement, sw = document.getElementById('view-switch');
+  if (!sw) return;
+  if (/[?&](view=input|char=|character=)/.test(location.search)) { sw.style.display = 'none'; return; }
+  var ME = Math.random().toString(36).slice(2) + Date.now().toString(36);   // this screen, this load
+  function isTV(){ return r.classList.contains('tv-view'); }
+  function paint(){
+    var tv = isTV();
+    sw.querySelectorAll('button').forEach(function(b){ b.setAttribute('aria-pressed', String((b.dataset.view === 'tv') === tv)); });
   }
-  if (/[?&](view=input|char=|character=)/.test(location.search)) { b.style.display='none'; return; }
-  label(); b.addEventListener('click', flip);
-  document.addEventListener('keydown', function(e){ if(e.altKey && (e.key==='v'||e.key==='V')){ e.preventDefault(); flip(); } });
+  function claim(){ if (window._relaySend) window._relaySend({t:'pc-claim', id:ME}); }
+  function setView(view, silent){
+    var tv = view === 'tv';
+    r.classList.toggle('tv-view', tv);
+    try { sessionStorage.setItem('dnd-view', tv ? 'tv' : 'pc'); } catch(e) {}
+    paint();
+    if (!tv && !silent) claim();
+  }
+  sw.addEventListener('click', function(e){
+    var b = e.target.closest && e.target.closest('button[data-view]');
+    if (b) setView(b.dataset.view);
+  });
+  document.addEventListener('keydown', function(e){
+    if (e.altKey && (e.key === 'v' || e.key === 'V')) { e.preventDefault(); setView(isTV() ? 'pc' : 'tv'); }
+  });
+  window._relayHandlers = window._relayHandlers || [];
+  window._relayHandlers.push(function(m){
+    if (m && m.t === 'pc-claim' && m.id !== ME && !isTV()) {
+      setView('tv', true);                                    // someone else is the PC now
+      try { _showToast('Another screen is now the PC. This one is the TV.', 5000); } catch(_) {}
+    }
+  });
+  paint();
+  // A PC screen that reloads claims the PC role again, so the latest one wins.
+  if (!isTV()) setTimeout(claim, 1500);
+
+  // ── typing mirror: the PC reports what is typed in Party Input; the TV shows it live ──
+  var box = null, last = '';
+  function typingBox(){
+    var tc = document.getElementById('text-content'); if (!tc) return null;
+    if (!box) {
+      box = document.createElement('div'); box.id = 'tv-typing';
+      new MutationObserver(function(){ if (box.classList.contains('show') && tc.lastElementChild !== box) tc.appendChild(box); })
+        .observe(tc, {childList:true});
+    }
+    return box;
+  }
+  function showTyping(name, text){
+    var el = typingBox(); if (!el) return;
+    if (!text) { el.className = ''; el.textContent = ''; return; }
+    el.className = 'show'; el.textContent = '';
+    var n = document.createElement('span'); n.className = 'tvt-name'; n.textContent = (name || 'Everybody') + ':';
+    el.appendChild(n); el.appendChild(document.createTextNode(text));
+    var tc = document.getElementById('text-content'); if (tc && tc.lastElementChild !== el) tc.appendChild(el);
+    var sc = document.getElementById('text-scroll'); if (sc) sc.scrollTop = sc.scrollHeight;
+  }
+  window._relayHandlers.push(function(m){
+    if (m && m.t === 'typing' && isTV()) showTyping(String(m.name || '').slice(0, 50), String(m.text || '').slice(0, 500));
+  });
+  setInterval(function(){                                     // PC side: report changes
+    if (isTV() || !window._tvPeerConnected || !window._relaySend) { last = ''; return; }
+    var ta = document.getElementById('player-input-text'); if (!ta) return;
+    var tab = document.querySelector('#char-tabs .char-tab.active');
+    var name = tab ? (tab.dataset.char || tab.textContent) : 'Everybody';
+    var sig = name + '\u0000' + ta.value;
+    if (sig === last) return;
+    last = sig;
+    window._relaySend({t:'typing', name:name, text:ta.value});
+  }, 150);
 })();
 </script>
 <script>

@@ -10,6 +10,14 @@ Versions before **1.6.0** are reconstructed retroactively from git history; the 
 
 ## [Unreleased]
 
+## [2.17.0] — 2026-11-15 — TV/PC switch
+
+### Changed — one TV | PC switch, next to the cog
+
+- The TV View / PC View text button is now a **TV | PC switch** beside the settings cog (bottom-left). TV is the default.
+- **Only one screen can be the PC.** When a screen switches to PC, every other screen drops to TV by itself (relay message `pc-claim`); a PC screen that reloads claims the role again, so the latest one wins.
+- **The TV mirrors typing as it happens**: what is typed in Party Input on the PC (and for which character) appears live on the TV, and clears when it is sent. Only sent while a TV is connected.
+
 ## [2.16.0] — 2026-11-15 — Settings menu everywhere
 
 ### Changed — all settings live in the Settings menu, reachable from the game

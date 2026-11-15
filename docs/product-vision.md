@@ -60,18 +60,20 @@ A running adventure is either **Roleplay** or **Combat**. The screen switches au
 ## Manual additions done by Nick in this .md file, read this as "next things" or the backlog.
 ## -- if I make changes here, always automatically include in the next commit.
 ## -- remove items from this list once they are built
+- BUG: In de lopende campaign met setting "Dutch" is alles nog Nederlands, in plaats van (zoals de bedoeling) standaard alles Engels en een korte Nederlandse samenvatting. Remember, the Dutch setting is an ADDITION to the default English functionality.
 - TTS: Voorlopig gaan we alleen Engelse TTS ondersteunen.
 - TTS: De leessnelheid is momenteel 80% en moet worden aangepast terug naar 100%.
-- BUG: In de lopende campaign met setting "Dutch" is alles nog Nederlands, in plaats van (zoals de bedoeling) standaard alles Engels en een korte Nederlandse samenvatting. Remember, the Dutch setting is an ADDITION to the default English functionality.
 - INTERFACE: Interview me about the visualization of the text (being typed) in sync with the TTS.
+- INTERFACE: Verplaats alle nog bestaande settings van het speelscherm naar het settings menu. A small cog icon in the corner of the screen should show the settings menu straight form an adventure, instead of just from the main menu.
 - INTERFACE: Loading between DM responses should always visualize what it's doing and how many things it has to do next (loading bar with several parts, or another way to show progress). Because waiting is always annoying for players. Goal is that every waiting time is accompanied by a tracker, always.
 - CLEANUP: No "PHONE" screen will ever be used, remove that function from the screen and code completely.
 - INTERFACE: Fade the narration text near the top of the screen so it looks prettier
 - INTERFACE: The text font that's currently used for narration is flavourful and clear, I want to use that font as the only font used throughout the whole app (do I? interview me first about the consequences)
-- INTERFACE: Convert the TV Mode / PC Mode buttons to a TV/PC toggle. The TV mode has no inputs but is a 100% exact mirror (real-time, include typing) of the PC mode. Default mode is TV mode and if one session clicks "PC mode" then all other sessions automatically change to TV mode.
 - INTERFACE: Clearer visualization of character sheets, needs investigation and interviewing
 - INTERFACE: Build the roleplay screen
 - INTERFACE: Build the combat screen
+- INTERFACE: Screenshot all interfaces and look for graphical inconsistencies or things that don't look nice - fix them (interview me where you think that's necessary).
+- INTERFACE: Interview me about the following: It should not be possible that text scrolls out of the screen without the players confirming that they've read it, or the voice being played. Now on large texts, not everything is visible on TV - which is an issue.
 - CLEANUP: C:\Users\frijt\Documents\Claude\nice-dungeon-master\design-mockups shows a kind of visualization that I really dislike, why do we (still) have this folder with images?
 - PERSISTENCY: When opening a campaign from the main menu, always start with a recap instead of showing the whole history.
 - PERSISTENCY: After every DM input, and after every players-submit, the game state should be processed and saved. So when the browser closes or the app goes back to the main menu, nothing is lost.
@@ -81,6 +83,7 @@ A running adventure is either **Roleplay** or **Combat**. The screen switches au
 - INTERFACE: Als ik "Party input" open klap wil ik onder elkaar een regel per character met elk een tekst invoer veld(bovenaan een regel voor "Everybody"). Geen "stage" knoppen, maar maak het visueel als een veld tekstinvoer bevat. De "GO" knop verstuurt simpelweg alle ingevoerde tekstvelden naar de DM.
 - PERSISTENCY: Do an extremely thorough analysis on the continuity and persistent memory of our data keeping and the DM narration. For example: If a character destroys the door of a local inn, that should have effects when the same character visits the inn again 50 sessions later. The inn keeper won't forget that!
 - PERSISTENCY: Do a full analysis on adventure/campaign persistency. For example: Making sure that we're aiming towards (but not bound to) the general adventure/campaign setting. So that we don't drift off further from it with every session.
+- PERFORMANCE: Persistent image saving and rendering. Keep a very thorough database of previously downloaded images. Save all provided campaign/adventure images and all self-downloaded images from internet. To be able to use those in all future campaigns or on request.
 
 ## Status
 - **v1 (done):** `/dm:dnd menu` starts the display. The Main Menu lists your campaigns, and clicking Load hands the request to Claude, who loads it and switches the browser to the play screen. "Manage characters" and "Settings" are placeholders.
