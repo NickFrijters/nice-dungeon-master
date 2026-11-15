@@ -29,6 +29,7 @@ RULESETS = ("2014", "2024")
 THEMES = ("dark", "light", "auto")
 SKINS = ("vellum", "editorial")
 TYPE_SPEEDS = ("normal", "fast", "instant")
+NARRATOR_VOICES = ("am_adam", "am_fenrir", "am_onyx", "bm_george")   # Kokoro voices; first is the default
 TEXT_SIZE_MIN, TEXT_SIZE_MAX, TEXT_SIZE_STEP = 0.5, 2.0, 0.05
 
 # Story and rules settings come first; the display settings that used to live in
@@ -39,6 +40,7 @@ DEFAULTS = {
     "combat": "medium",
     "explain_dutch": False,
     "narration_audio": False,
+    "narrator_voice": "am_adam",
     "default_ruleset": "2014",
     "theme": "dark",
     "skin": "vellum",
@@ -55,6 +57,7 @@ _CHOICES = {
     "theme": THEMES,
     "skin": SKINS,
     "type_speed": TYPE_SPEEDS,
+    "narrator_voice": NARRATOR_VOICES,
 }
 _BOOLS = ("explain_dutch", "narration_audio", "roll_on_screen", "sound_effects")
 

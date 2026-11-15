@@ -23,7 +23,8 @@ class CacheAndSynthTest(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.env = mock.patch.dict(os.environ, {"DND_TTS_CACHE_DIR": self.tmp.name,
-                                                "DND_TTS_CACHE_MB": "8"})
+                                                "DND_TTS_CACHE_MB": "8",
+                                                "DND_TTS_ENGINE": "pocket"})
         self.env.start()
 
     def tearDown(self):
@@ -92,7 +93,7 @@ class CacheAndSynthTest(unittest.TestCase):
     def test_auto_keeps_the_key_clips_were_stored_under_before_languages(self):
         import hashlib
         h = hashlib.sha256()
-        for part in (tts.VOICE_ID, "Old clip."):
+        for part in (tts._voice_id(tts.SPEED), "Old clip."):
             h.update(part.encode("utf-8")); h.update(b"\x00")
         self.assertEqual(tts.cache_key("Old clip."), h.hexdigest())
         self.assertEqual(tts.cache_key("Old clip.", lang="auto"), h.hexdigest())

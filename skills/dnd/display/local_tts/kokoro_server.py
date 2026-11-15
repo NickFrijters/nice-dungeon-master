@@ -16,7 +16,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 PORT = int(os.environ.get("DND_LOCAL_TTS_PORT", "8767"))
-VOICE = os.environ.get("DND_KOKORO_VOICE", "bm_george")
+VOICE = os.environ.get("DND_KOKORO_VOICE", "am_adam")
 MODEL_DIR = os.path.join(os.path.expanduser("~"), ".cache", "claude-dnd", "tts-kokoro", "models")
 #: The int8 file is the default (3.5x smaller, ~25% faster); the fp32 file is used if int8 is absent.
 _INT8 = os.path.join(MODEL_DIR, "kokoro-v1.0.int8.onnx")

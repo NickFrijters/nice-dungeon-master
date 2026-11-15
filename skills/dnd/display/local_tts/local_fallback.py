@@ -2,7 +2,7 @@
 
 synthesize(text) -> raw 16-bit mono 24 kHz PCM bytes, or raises RuntimeError.
 Starts the engine's server (in its own venv) on demand and waits for it.
-Engine: DND_TTS_ENGINE=pocket (default) or kokoro. Disable with DND_LOCAL_TTS=off.
+Engine: kokoro when installed (default), else pocket; DND_TTS_ENGINE=pocket|kokoro forces one. Disable with DND_LOCAL_TTS=off.
 """
 import json, os, subprocess, sys, time, urllib.request
 from pathlib import Path
@@ -20,9 +20,12 @@ ENGINES = {
 
 
 def engine() -> str:
-    """The chosen engine. Anything unknown means pocket, the default."""
-    e = os.environ.get("DND_TTS_ENGINE", "pocket").strip().lower()
-    return e if e in ENGINES else "pocket"
+    """The chosen engine: DND_TTS_ENGINE if set, else kokoro when it is
+    installed, else pocket. Anything unknown means that same default."""
+    e = os.environ.get("DND_TTS_ENGINE", "").strip().lower()
+    if e in ENGINES:
+        return e
+    return "kokoro" if venv_python("kokoro").exists() else "pocket"
 
 
 def venv_python(eng: str = "") -> Path:

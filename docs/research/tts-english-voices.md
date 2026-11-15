@@ -4,7 +4,7 @@ Backlog item: a more realistic, still super fast, fully local English voice for 
 
 ## Result in one line
 
-Kokoro-82M (ONNX, int8) is **as fast as Pocket or a bit faster** on this CPU-only machine, uses **~35% less memory**, loads in **~1 s instead of ~4 s**, and has a much larger choice of English voices, including several male British and American narrator voices. It is shipped as an **optional engine** (`DND_TTS_ENGINE=kokoro`); the default is still Pocket until Nick has listened to the samples.
+Kokoro-82M (ONNX, int8) is **as fast as Pocket or a bit faster** on this CPU-only machine, uses **~35% less memory**, loads in **~1 s instead of ~4 s**, and has a much larger choice of English voices, including several male British and American narrator voices. **Update:** after listening, Nick chose Kokoro. It is now the default engine whenever it is installed (Pocket otherwise; `DND_TTS_ENGINE=pocket` forces Pocket). Default voice `am_adam`; Settings > Narrator voice offers Adam, Fenrir, Onyx and George, each with a play button for the same sample lines.
 
 ## Measurements (this machine: Windows 11, CPU only, Python 3.12, onnxruntime 1.32)
 
@@ -37,7 +37,7 @@ Same ~9 s of narration in each voice, 16 kHz mono WAV, about 2.5 MB in total:
 2. **`bm_fable`**: British male, the one the model card describes as the storyteller voice; slightly lighter.
 3. **`am_onyx`** or **`am_adam`**: darker American male, if a British accent is not wanted. `am_fenrir` and `am_michael` are the other American choices.
 
-Switch with `DND_KOKORO_VOICE=bm_fable`. The voice is part of the clip cache key, so changing it never replays old clips.
+Switch in Settings, or with `DND_KOKORO_VOICE=am_onyx` (env wins). The voice is part of the clip cache key, so changing it never replays old clips.
 
 ## How to use it
 

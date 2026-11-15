@@ -70,6 +70,13 @@
     <div class="seg" data-key="narration_audio" data-bool="1"></div>
   </div>
 
+  <div class="row">
+    <div class="label">Narrator voice</div>
+    <div class="hint">Who reads the story aloud. Press ▶ to hear the same lines in each voice.</div>
+    <div class="seg" data-key="narrator_voice"></div>
+    <div class="seg" id="voice-samples"></div>
+  </div>
+
   <h2>Display (every screen)</h2>
   <div class="row">
     <div class="label">Theme</div>
@@ -144,7 +151,37 @@ async function post(url, body) {
   flash(); return true;
 }
 
-function pretty(v) { return v === true ? 'On' : v === false ? 'Off' : v.charAt(0).toUpperCase() + v.slice(1); }
+const VOICE_NAMES = {am_adam: 'Adam', am_fenrir: 'Fenrir', am_onyx: 'Onyx', bm_george: 'George (British)'};
+function pretty(v) {
+  if (VOICE_NAMES[v]) return VOICE_NAMES[v];
+  return v === true ? 'On' : v === false ? 'Off' : v.charAt(0).toUpperCase() + v.slice(1);
+}
+
+let sampleAudio = null;
+function renderVoiceSamples() {
+  const box = document.getElementById('voice-samples');
+  box.textContent = '';
+  for (const v of data.options.narrator_voice) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = '▶ ' + pretty(v);
+    b.setAttribute('aria-label', 'Play a sample in the ' + pretty(v) + ' voice');
+    b.onclick = async () => {
+      errEl.textContent = '';
+      if (sampleAudio) { sampleAudio.pause(); sampleAudio = null; }
+      b.disabled = true;
+      try {
+        const r = await fetch('/settings/voice-sample', {method: 'POST',
+          headers: {'Content-Type': 'application/json', 'X-DND-Token': TOKEN}, body: JSON.stringify({voice: v})});
+        if (!r.ok) { errEl.textContent = 'Could not play the sample: ' + await r.text(); return; }
+        sampleAudio = new Audio(URL.createObjectURL(await r.blob()));
+        await sampleAudio.play();
+      } catch (e) { errEl.textContent = 'Could not play the sample.'; }
+      finally { b.disabled = false; }
+    };
+    box.appendChild(b);
+  }
+}
 
 function segment(el, options, current, onPick) {
   el.textContent = '';
@@ -176,6 +213,7 @@ function renderTextSize() {
 
 function render() {
   renderTextSize();
+  renderVoiceSamples();
   for (const el of document.querySelectorAll('.seg[data-key]')) {
     const key = el.dataset.key;
     const options = el.dataset.bool ? [false, true] : data.options[key];

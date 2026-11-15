@@ -24,6 +24,9 @@ import sys
 from pathlib import Path
 from typing import Optional
 
+HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE / "local_tts"))
+
 #: Text longer than this is cut; the narration path chunks at block flush.
 MAX_TEXT_CHARS = 2000
 
@@ -41,26 +44,38 @@ SPEED = _speed()
 
 #: Changing the voice, the model or the speed must not replay old clips.
 def _engine() -> str:
-    e = os.environ.get("DND_TTS_ENGINE", "pocket").strip().lower()
-    return e if e in ("pocket", "kokoro") else "pocket"
+    import local_fallback
+    return local_fallback.engine()
 
 
-#: Kokoro voice (DND_KOKORO_VOICE, default bm_george). Only used by the kokoro engine.
-KOKORO_VOICE = "".join(c for c in os.environ.get("DND_KOKORO_VOICE", "bm_george").lower()
-                       if c.isalpha() or c == "_") or "bm_george"
+#: Narrator voices the Settings menu offers (Kokoro). The first is the default.
+KOKORO_VOICES = ("am_adam", "am_fenrir", "am_onyx", "bm_george")
 
 
-def _voice_id(speed: float, engine: str = "") -> str:
+def _kokoro_voice() -> str:
+    """DND_KOKORO_VOICE, else the voice chosen in Settings, else am_adam."""
+    raw = os.environ.get("DND_KOKORO_VOICE", "").strip().lower()
+    if not raw:
+        try:
+            import settings
+            raw = str(settings.load().get("narrator_voice", ""))
+        except Exception:
+            raw = ""
+    raw = "".join(c for c in raw if c.isalpha() or c == "_")
+    return raw or KOKORO_VOICES[0]
+
+
+def _voice_id(speed: float, engine: str = "", voice: str = "") -> str:
     """Names engine, voice and speed. The pocket id is unchanged from before
     engines existed, so its cached clips still play."""
-    base = f"kokoro-{KOKORO_VOICE}" if (engine or _engine()) == "kokoro" else "pocket-alba"
+    if (engine or _engine()) == "kokoro":
+        base = f"kokoro-{voice or _kokoro_voice()}"
+    else:
+        base = "pocket-alba"
     return base if speed == 1.0 else f"{base}-{round(speed * 100)}"
 
 
 VOICE_ID = _voice_id(SPEED)
-
-HERE = Path(__file__).resolve().parent
-sys.path.insert(0, str(HERE / "local_tts"))
 
 
 class TtsError(Exception):
@@ -98,12 +113,13 @@ def clean_lang(lang) -> str:
     return lang if lang in SUPPORTED_LANGUAGES else SUPPORTED_LANGUAGES[0]
 
 
-def cache_key(text: str, voice: str = VOICE_ID, lang: str = "en") -> str:
+def cache_key(text: str, voice: str = "", lang: str = "en") -> str:
     """Hash of everything that changes the audio. The text is never a filename.
 
     English keeps the key the clips were stored under before languages could be
     chosen, so existing cached clips still play."""
     h = hashlib.sha256()
+    voice = voice or _voice_id(SPEED)
     lang = clean_lang(lang)
     parts = (voice, text) if lang == "en" else (voice, text, lang)
     for part in parts:
@@ -166,20 +182,22 @@ def available() -> bool:
         return False
 
 
-def synthesize_strict(text: str, lang: str = "en") -> bytes:
+def synthesize_strict(text: str, lang: str = "en", voice: str = "") -> bytes:
     """PCM for `text`, from the cache or the local model. Raises TtsError."""
     text = (text or "").strip()[:MAX_TEXT_CHARS]
     if not text:
         raise TtsError("empty text")
     lang = clean_lang(lang)
-    key = cache_key(text, voice=_voice_id(SPEED), lang=lang)
+    kokoro = _engine() == "kokoro"
+    voice = (voice if voice in KOKORO_VOICES else "") or _kokoro_voice()
+    key = cache_key(text, voice=_voice_id(SPEED, voice=voice), lang=lang)
     hit = cache_get(key)
     if hit:
         return hit
     try:
         import local_fallback
-        if _engine() == "kokoro":
-            pcm = local_fallback.synthesize(text, lang, SPEED, KOKORO_VOICE)
+        if kokoro:
+            pcm = local_fallback.synthesize(text, lang, SPEED, voice)
         else:
             pcm = local_fallback.synthesize(text, lang, SPEED)
     except Exception as e:
