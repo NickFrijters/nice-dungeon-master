@@ -28,6 +28,14 @@
   .empty { color:var(--dim); font-style:italic; }
   .notice { background:#2a1d12; border:1px solid var(--gold); border-radius:10px; padding:12px 16px; margin-bottom:18px; line-height:1.4; }
   .notice code { color:var(--gold); }
+  .panel { background:var(--panel); border:1px solid var(--gold); border-radius:10px; padding:16px 18px; margin-bottom:10px; }
+  .panel label { display:block; margin:10px 0 4px; color:var(--dim); font-size:.9rem; }
+  .panel input[type=text], .panel input[type=number], .panel select, .panel textarea {
+    width:100%; background:var(--bg); color:var(--text); border:1px solid var(--line); border-radius:6px;
+    padding:8px 10px; font:inherit; }
+  .panel .row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .panel .actions { margin-top:16px; display:flex; gap:10px; }
+  .error { color:#e58a7a; min-height:1.2em; margin-top:10px; }
 </style>
 </head>
 <body>
@@ -44,6 +52,41 @@
 
   <h2>Campaigns</h2>
   <div id="campaigns"><p class="empty">Looking for campaigns…</p></div>
+
+  <h2>New campaign</h2>
+  <div class="card"><div class="info"><div class="name">Let the Dungeon Master create one</div>
+    <div class="meta">Answer a few questions; Claude builds the world</div></div>
+    <button id="open-create" onclick="togglePanel('create')">Start</button></div>
+  <form id="panel-create" class="panel" hidden onsubmit="submitCreate(event)">
+    <label for="c-name">Campaign name</label>
+    <input type="text" id="c-name" maxlength="60" required>
+    <label for="c-premise">Theme or premise, in a sentence (optional)</label>
+    <textarea id="c-premise" rows="2" maxlength="300"></textarea>
+    <div class="row">
+      <div><label for="c-players">Number of players</label><input type="number" id="c-players" min="1" max="8" value="4"></div>
+      <div><label for="c-level">Starting level</label><input type="number" id="c-level" min="1" max="20" value="1"></div>
+      <div><label for="c-tone">Tone</label><select id="c-tone"></select></div>
+      <div><label for="c-magic">Magic level</label><select id="c-magic"></select></div>
+      <div><label for="c-setting">Setting</label><select id="c-setting"></select></div>
+      <div><label for="c-danger">Danger level</label><select id="c-danger"></select></div>
+      <div><label for="c-ruleset">Ruleset</label><select id="c-ruleset"></select></div>
+    </div>
+    <div class="error" id="create-error" role="alert"></div>
+    <div class="actions"><button type="submit">Create campaign</button>
+      <button type="button" class="quiet" onclick="togglePanel('create')">Cancel</button></div>
+  </form>
+  <div class="card"><div class="info"><div class="name">Import a published adventure</div>
+    <div class="meta">Upload a PDF, DOCX, MD or TXT file</div></div>
+    <button id="open-import" onclick="togglePanel('import')">Choose</button></div>
+  <form id="panel-import" class="panel" hidden onsubmit="submitImport(event)">
+    <label for="i-file">Adventure file</label>
+    <input type="file" id="i-file" accept=".pdf,.docx,.md,.markdown,.txt" required>
+    <label for="i-name">Campaign name (optional; the book's title is used otherwise)</label>
+    <input type="text" id="i-name" maxlength="60">
+    <div class="error" id="import-error" role="alert"></div>
+    <div class="actions"><button type="submit">Import adventure</button>
+      <button type="button" class="quiet" onclick="togglePanel('import')">Cancel</button></div>
+  </form>
 
   <h2>More</h2>
   <div class="card soon"><div class="info"><div class="name">Manage characters</div>
@@ -120,17 +163,85 @@ async function load(name, btn) {
   waitingFor = name;
 }
 
+let pending = null;    // {before: Set of names, expected: name or null} while Claude builds a campaign
+
+function togglePanel(which) {
+  for (const w of ['create', 'import']) {
+    const p = document.getElementById('panel-' + w);
+    p.hidden = w === which ? !p.hidden : true;
+  }
+}
+
+async function loadOptions() {
+  try {
+    const o = await (await fetch('/menu/new-options')).json();
+    for (const k of ['tone', 'magic', 'setting', 'danger', 'ruleset']) {
+      const sel = document.getElementById('c-' + k);
+      sel.textContent = '';
+      for (const v of o[k]) {
+        const opt = document.createElement('option'); opt.value = opt.textContent = v;
+        if (v === o.defaults[k]) opt.selected = true;
+        sel.appendChild(opt);
+      }
+    }
+  } catch (e) { /* the form still works with the server's own defaults */ }
+}
+
+async function startNew(kind, body, headers, errEl, expected) {
+  errEl.textContent = '';
+  const beforeRaw = new Set((window.lastCampaigns || []).map(c => c.name));
+  let r, j = {};
+  try {
+    r = await fetch('/menu/' + kind, {method: 'POST', headers: Object.assign({'X-DND-Token': TOKEN}, headers), body});
+    j = await r.json().catch(() => ({}));
+  } catch (e) { errEl.textContent = 'Could not reach the display. Try again.'; return; }
+  if (!r.ok) { errEl.textContent = j.error || 'That did not work. Try again.'; return; }
+  document.getElementById('panel-create').hidden = true;
+  document.getElementById('panel-import').hidden = true;
+  pending = {before: beforeRaw, expected: j.campaign || null};
+  statusEl.textContent = kind === 'new' ? 'Claude is creating your campaign…' : 'Claude is reading your adventure…';
+}
+
+function submitCreate(ev) {
+  ev.preventDefault();
+  const v = id => document.getElementById(id).value;
+  startNew('new', JSON.stringify({name: v('c-name'), premise: v('c-premise'), players: v('c-players'),
+    level: v('c-level'), tone: v('c-tone'), magic: v('c-magic'), setting: v('c-setting'),
+    danger: v('c-danger'), ruleset: v('c-ruleset')}),
+    {'Content-Type': 'application/json'}, document.getElementById('create-error'));
+}
+
+function submitImport(ev) {
+  ev.preventDefault();
+  const fd = new FormData();
+  const f = document.getElementById('i-file').files[0];
+  if (!f) return;
+  fd.append('file', f); fd.append('name', document.getElementById('i-name').value);
+  statusEl.textContent = 'Uploading…';
+  startNew('import', fd, {}, document.getElementById('import-error'));
+}
+
 async function refresh() {
   if (quitting) return;
   try {
     const data = await (await fetch('/menu/campaigns')).json();
+    window.lastCampaigns = data.campaigns;
     render(data);
+    if (pending) {
+      const fresh = data.campaigns.filter(c => !pending.before.has(c.name));
+      const hit = fresh.find(c => c.name === pending.expected) || fresh[0];
+      if (hit) {
+        statusEl.textContent = `Your campaign "${hit.name.replace(/-/g, ' ')}" is ready. Press Load to begin.`;
+        pending = null;
+      }
+    }
     document.getElementById('no-dm').hidden = !!data.dm_listening || !!data.saving;
     document.getElementById('saving').hidden = !data.saving;
     if (data.saving) document.querySelectorAll('#campaigns button').forEach(b => b.disabled = true);
     if (waitingFor && data.active === waitingFor) { location.href = '/'; return; }
   } catch (e) { /* server busy; try again */ }
 }
+loadOptions();
 refresh();
 setInterval(() => { if (waitingFor) refresh(); }, 2000);
 setInterval(() => { if (!waitingFor && !quitting) refresh(); }, 2500);   // keeps the 'no Dungeon Master' notice honest

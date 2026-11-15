@@ -1470,6 +1470,165 @@ def menu_quit():
     return "", 204
 
 
+# ─── New campaign (reached from the Main Menu) ───────────────────────────────
+# Two ways in: the Dungeon Master creates one from a short form, or the player
+# uploads a published adventure. Both queue a "[Menu]:" line for Claude, like
+# /menu/load does. Choices mirror the `/dm:dnd new` wizard in SKILL-commands.md.
+
+_NEW_CHOICES = {
+    "tone": ["grimdark", "dark fantasy", "heroic", "horror", "political", "swashbuckling", "cosmic"],
+    "magic": ["none", "low", "medium", "high"],
+    "setting": ["medieval", "renaissance", "ancient", "nautical", "underground"],
+    "danger": ["lethal", "gritty", "standard", "heroic"],
+    "ruleset": ["2014", "2024"],
+}
+_NEW_DEFAULTS = {"tone": "heroic", "magic": "medium", "setting": "medieval",
+                 "danger": "standard", "players": 4, "level": 1}
+_IMPORT_EXTENSIONS = (".pdf", ".docx", ".md", ".markdown", ".txt")
+_IMPORT_MAX_BYTES = 100 * 1024 * 1024
+_CAMPAIGN_SLUG = re.compile(r"^[a-z0-9][a-z0-9-]{0,47}$")
+
+
+def _campaign_slug(raw: str) -> str:
+    """'The Lost Mine!' -> 'the-lost-mine'. Empty when nothing usable is left."""
+    text = unicodedata.normalize("NFKD", str(raw)).encode("ascii", "ignore").decode()
+    return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")[:48].strip("-")
+
+
+def _menu_new_guard():
+    """None when the caller may use the new-campaign routes, else the error response."""
+    if not _token_ok():
+        return "Forbidden", 403
+    if not _from_this_machine():
+        return _THIS_MACHINE_ONLY
+    return None
+
+
+def _queue_menu_line(line: str) -> bool:
+    try:
+        with _staged_lock, open(QUEUE_FILE, "a", encoding="utf-8") as f:
+            f.write(line + "\n")
+        return True
+    except OSError:
+        return False
+
+
+def _new_campaign_name(raw: str):
+    """(slug, error). The slug is checked against the campaigns already on disk."""
+    slug = _campaign_slug(raw)
+    if not slug or not _CAMPAIGN_SLUG.match(slug):
+        return "", "Give the campaign a name (letters and numbers)."
+    if slug in {c["name"] for c in _list_campaigns()}:
+        return "", f"A campaign called '{slug}' already exists. Pick another name."
+    return slug, ""
+
+
+@app.route("/menu/new-options")
+def menu_new_options():
+    default_ruleset = "2014"
+    try:
+        import settings as _settings
+        default_ruleset = str(_settings.load().get("default_ruleset", "2014"))
+    except Exception:
+        pass
+    return jsonify({**_NEW_CHOICES, "defaults": {**_NEW_DEFAULTS, "ruleset": default_ruleset},
+                    "extensions": list(_IMPORT_EXTENSIONS),
+                    "max_mb": _IMPORT_MAX_BYTES // (1024 * 1024)})
+
+
+@app.route("/menu/new", methods=["POST"])
+def menu_new():
+    """Ask the Dungeon Master to create a campaign from the form's answers."""
+    denied = _menu_new_guard()
+    if denied:
+        return denied
+    data = request.get_json(force=True, silent=True)
+    if not isinstance(data, dict):
+        return jsonify(error="That did not arrive as a form. Try again."), 400
+    slug, err = _new_campaign_name(data.get("name", ""))
+    if err:
+        return jsonify(error=err), 400
+    premise = " ".join(str(data.get("premise", "")).split())
+    if len(premise) > 300:
+        return jsonify(error="Keep the theme to 300 characters or fewer."), 400
+    answers: dict = {"name": slug, "premise": premise}
+    for key in ("tone", "magic", "setting", "danger", "ruleset"):
+        value = str(data.get(key, "")).strip()
+        if value and value not in _NEW_CHOICES[key]:
+            return jsonify(error=f"'{value}' is not a choice for {key}."), 400
+        answers[key] = value        # blank means: the Dungeon Master picks
+    for key, low, high in (("players", 1, 8), ("level", 1, 20)):
+        try:
+            given = data.get(key)
+            number = _NEW_DEFAULTS[key] if given in (None, "") else int(given)
+        except (TypeError, ValueError):
+            return jsonify(error=f"{key.capitalize()} must be a number."), 400
+        if not low <= number <= high:
+            return jsonify(error=f"{key.capitalize()} must be between {low} and {high}."), 400
+        answers[key] = number
+    if not _queue_menu_line("[Menu]: new " + json.dumps(answers, ensure_ascii=False)):
+        return jsonify(error="Could not reach the Dungeon Master's queue."), 500
+    return jsonify(ok=True, campaign=slug), 200
+
+
+def _safe_upload_name(filename: str):
+    """A file name made only of letters, digits, dot, dash, underscore; '' if the type is not allowed."""
+    base = os.path.basename(str(filename).replace("\\", "/"))
+    stem, ext = os.path.splitext(base)
+    ext = ext.lower()
+    if ext not in _IMPORT_EXTENSIONS:
+        return ""
+    stem = re.sub(r"[^A-Za-z0-9_-]+", "-", unicodedata.normalize("NFKD", stem).encode("ascii", "ignore").decode())
+    return (stem.strip("-")[:60] or "adventure") + ext
+
+
+@app.route("/menu/import", methods=["POST"])
+def menu_import():
+    """Save an uploaded adventure under the runtime uploads folder and ask Claude to import it."""
+    denied = _menu_new_guard()
+    if denied:
+        return denied
+    if (request.content_length or 0) > _IMPORT_MAX_BYTES + 1024 * 1024:
+        return jsonify(error=f"That file is too big (limit {_IMPORT_MAX_BYTES // (1024 * 1024)} MB)."), 413
+    upload = request.files.get("file")
+    if upload is None or not upload.filename:
+        return jsonify(error="Choose a file to import."), 400
+    safe = _safe_upload_name(upload.filename)
+    if not safe:
+        return jsonify(error="That file type is not supported. Use PDF, DOCX, MD or TXT."), 400
+    name = ""
+    if str(request.form.get("name", "")).strip():
+        name, err = _new_campaign_name(request.form.get("name", ""))
+        if err:
+            return jsonify(error=err), 400
+    folder = rt("uploads")
+    os.makedirs(folder, exist_ok=True)
+    target = os.path.join(folder, f"{int(_time.time())}-{safe}")
+    size = 0
+    try:
+        with open(target, "wb") as out:          # saved as data only; never executed
+            while True:
+                chunk = upload.stream.read(1024 * 1024)
+                if not chunk:
+                    break
+                size += len(chunk)
+                if size > _IMPORT_MAX_BYTES:
+                    raise ValueError("too big")
+                out.write(chunk)
+    except ValueError:
+        os.remove(target)
+        return jsonify(error=f"That file is too big (limit {_IMPORT_MAX_BYTES // (1024 * 1024)} MB)."), 413
+    except OSError:
+        return jsonify(error="Could not save the file."), 500
+    if size == 0:
+        os.remove(target)
+        return jsonify(error="That file is empty."), 400
+    line = f"[Menu]: import {target}" + (f" {name}" if name else "")
+    if not _queue_menu_line(line):
+        return jsonify(error="Could not reach the Dungeon Master's queue."), 500
+    return jsonify(ok=True, campaign=name or None), 200
+
+
 # ─── Settings (reached from the Main Menu) ───────────────────────────────────
 
 @app.route("/settings")
