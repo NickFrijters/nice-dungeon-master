@@ -10,6 +10,20 @@ Versions before **1.6.0** are reconstructed retroactively from git history; the 
 
 ## [Unreleased]
 
+## [2.27.0] — 2026-11-15 — New campaign from the menu, image library, neutral branding
+
+### Added — start a new campaign from the Main Menu
+
+A "New campaign" card lets you create one with Claude or import a published adventure (PDF). The menu hands the request to Claude as `[Menu]: new` / `[Menu]: import`, handled in the `/dm:dnd menu` procedure.
+
+### Added — a persistent image library
+
+`scripts/image_library.py` keeps every campaign image and every downloaded image, so they can be reused in any future campaign or on request.
+
+### Changed — neutral branding
+
+Upstream branding, icons and the design-mockups folder are removed; `NOTICE.md` credits the original project and the licence is kept.
+
 ## [2.26.0] — 2026-11-15 — Consequence ledger and drift check
 
 ### Added — a consequence ledger, so the world remembers (continuity and persistent memory)
