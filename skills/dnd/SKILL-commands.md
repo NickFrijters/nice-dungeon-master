@@ -97,6 +97,7 @@ Open the web **Main Menu**. After this, the player works in the browser and you 
    - **Session tail replay:** before clearing the display, check if the campaign's `session_tail.json` exists. The campaign-side path is the authoritative one — `~/.claude/dnd/campaigns/<name>/session_tail.json`. **Do NOT read** the legacy/fallback at `${CLAUDE_SKILL_DIR}/display/session_tail.json`; that file may exist from older sessions or other campaigns and will mislead the replay. If the campaign-side file does not exist, skip replay (display starts blank). If it does, read it. After `--clear` and full stats push (step 4 below), replay the tail by sending each entry via the appropriate `send.py` flag. Entry type → flag mapping:
      - `player` key present → `send.py --player <name>` with text via stdin
      - `npc` key present → `send.py --npc <name>` with text via stdin
+     - `dutch` key present → `send.py --dutch` with text via stdin
      - `dice` key present → `send.py --dice` with text via stdin
      - `xp_award` key present → `send.py --xp-award '<json of the xp_award sub-dict>'`
      - `inspiration_award` key present → `send.py --inspiration-award '<name>'`

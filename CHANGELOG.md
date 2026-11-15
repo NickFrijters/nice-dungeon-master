@@ -10,6 +10,14 @@ Versions before **1.6.0** are reconstructed retroactively from git history; the 
 
 ## [Unreleased]
 
+## [2.13.0] — 2026-11-15 — Voice controls and Dutch summary
+
+### Changed — voice controls, and a Dutch summary you can play
+
+- The voice button is now a clear **Play** (triangle) when idle and **Stop** (square) while the voice is speaking, and goes back to Play when stopped or finished; replaying a stored clip starts almost instantly. Clicking while a clip is still being generated cancels it, and frees any text held back for that voice.
+- **Dutch summaries are their own block** (`send.py --dutch`): labelled "Nederlands", with its own Play/Stop and the Dutch voice, and it never starts by itself. It is stored with the session, so it survives a reload. The "Explain in Dutch" setting now tells Claude to send it this way.
+- `/tts` and `/tts-cached` take a language (`en`, `nl` or `auto`); clips are cached per language, and clips stored before languages existed still play.
+
 ## [2.12.0] — 2026-11-15 — Quit button
 
 ### Added — Quit button

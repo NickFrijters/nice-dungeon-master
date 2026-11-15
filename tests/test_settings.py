@@ -100,6 +100,7 @@ class DirectiveTest(SettingsCase):
         settings.save({"explain_dutch": True})
         self.assertIn("Dutch", self._text())
         self.assertIn("Never shorten or replace the English", self._text())
+        self.assertIn("send.py --dutch", self._text())
 
     def test_combat_none_is_spelled_out(self):
         settings.save({"combat": "none"})

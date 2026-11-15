@@ -57,10 +57,23 @@ def _cache_limit_bytes() -> int:
     return max(0, int(mb * 1024 * 1024))
 
 
-def cache_key(text: str, voice: str = VOICE_ID) -> str:
-    """Hash of everything that changes the audio. The text is never a filename."""
+LANGUAGES = ("auto", "en", "nl")
+
+
+def clean_lang(lang) -> str:
+    """'en', 'nl', or 'auto' (the voice server picks from the text)."""
+    lang = str(lang or "auto").lower()
+    return lang if lang in LANGUAGES else "auto"
+
+
+def cache_key(text: str, voice: str = VOICE_ID, lang: str = "auto") -> str:
+    """Hash of everything that changes the audio. The text is never a filename.
+
+    'auto' keeps the key the clips were stored under before languages could be
+    chosen, so existing cached clips still play."""
     h = hashlib.sha256()
-    for part in (voice, text):
+    parts = (voice, text) if lang in ("", "auto") else (voice, text, lang)
+    for part in parts:
         h.update(part.encode("utf-8"))
         h.update(b"\0")
     return h.hexdigest()
@@ -120,18 +133,19 @@ def available() -> bool:
         return False
 
 
-def synthesize_strict(text: str) -> bytes:
+def synthesize_strict(text: str, lang: str = "auto") -> bytes:
     """PCM for `text`, from the cache or the local model. Raises TtsError."""
     text = (text or "").strip()[:MAX_TEXT_CHARS]
     if not text:
         raise TtsError("empty text")
-    key = cache_key(text)
+    lang = clean_lang(lang)
+    key = cache_key(text, lang=lang)
     hit = cache_get(key)
     if hit:
         return hit
     try:
         import local_fallback
-        pcm = local_fallback.synthesize(text)
+        pcm = local_fallback.synthesize(text, lang)
     except Exception as e:
         raise TtsError(str(e)) from e
     cache_put(key, pcm)
@@ -158,9 +172,9 @@ def warm_up() -> None:
         synthesize(phrase)
 
 
-def synthesize(text: str) -> Optional[bytes]:
+def synthesize(text: str, lang: str = "auto") -> Optional[bytes]:
     """Like synthesize_strict, but returns None instead of raising."""
     try:
-        return synthesize_strict(text)
+        return synthesize_strict(text, lang)
     except TtsError:
         return None

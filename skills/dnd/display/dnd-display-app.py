@@ -1573,6 +1573,7 @@ def chunk():
     is_action      = bool(data.get("action"))
     is_player      = bool(data.get("player"))
     is_npc         = bool(data.get("npc"))
+    is_dutch       = bool(data.get("dutch"))
     is_dice        = bool(data.get("dice"))
     is_tutor       = bool(data.get("tutor"))
     is_inspiration = bool(data.get("inspiration_award"))
@@ -1683,6 +1684,8 @@ def chunk():
         payload["player"] = data["player"]
     elif is_npc:
         payload["npc"] = data["npc"]
+    elif is_dutch:
+        payload["dutch"] = True
     elif is_dice:
         payload["dice"] = True
     elif is_tutor:
@@ -1706,6 +1709,8 @@ def chunk():
         log_entry["player"] = data["player"]
     elif is_npc:
         log_entry["npc"] = data["npc"]
+    elif is_dutch:
+        log_entry["dutch"] = True
     elif is_dice:
         log_entry["dice"] = True
     elif is_tutor:
@@ -2202,9 +2207,11 @@ def tts_cached():
     data = request.get_json(silent=True) or {}
     d = _tts.cache_dir()
     out = []
-    for t in (data.get("texts") or [])[:100]:
+    langs = data.get("langs") or []
+    for i, t in enumerate((data.get("texts") or [])[:100]):
         t = str(t or "").strip()[: _tts.MAX_TEXT_CHARS].strip()
-        out.append(bool(t) and (d / f"{_tts.cache_key(t)}.pcm").is_file())
+        lang = _tts.clean_lang(langs[i] if i < len(langs) else "auto")
+        out.append(bool(t) and (d / f"{_tts.cache_key(t, lang=lang)}.pcm").is_file())
     return jsonify({"cached": out})
 
 
@@ -2230,7 +2237,7 @@ def tts_synthesize():
     if not _tts.available():
         return "Local TTS is not installed (see README: Spoken narration)", 503
     try:
-        pcm = _tts.synthesize_strict(text)
+        pcm = _tts.synthesize_strict(text, data.get("lang"))
     except _tts.TtsError as e:
         return f"Local TTS failed: {e}", 502
     return Response(pcm, mimetype="audio/L16;codec=pcm;rate=24000",

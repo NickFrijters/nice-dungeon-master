@@ -1,6 +1,6 @@
 ---
 name: dnd
-description: "v2.12.0 · Dungeon Master assistant for running persistent D&D 5e campaigns. Handles campaign creation/loading, character management, combat tracking, NPC generation, dice rolling, and session state — all persisted across sessions. Invoke with /dm:dnd followed by a subcommand, or just speak naturally once a campaign is loaded."
+description: "v2.13.0 · Dungeon Master assistant for running persistent D&D 5e campaigns. Handles campaign creation/loading, character management, combat tracking, NPC generation, dice rolling, and session state — all persisted across sessions. Invoke with /dm:dnd followed by a subcommand, or just speak naturally once a campaign is loaded."
 tools: Read, Write, Edit, Glob, Bash, AskUserQuestion
 ---
 
@@ -72,7 +72,7 @@ Player input that arrives from the display starts with `[[Table settings - ...]]
 
 - **Flavour:** never exceed the stated word limit for a DM step (100 / 250 / 500).
 - **Combat:** shapes how often fights come up. `none` means resolve conflict through roleplay, exploration and puzzles; `low` means few fights; `medium` follows the module; `high` means frequent combat with little roleplay between.
-- **Explain in Dutch:** when present, write the full English text as usual, then one short, simple Dutch summary (two sentences at most). The English is never shortened or replaced.
+- **Explain in Dutch:** when present, write the full English text as usual, then send one short, simple Dutch summary (two sentences at most) as its own block with `send.py --dutch` (see below). The English is never shortened or replaced.
 - **Experience:** for characters marked *New*, offer simple choices, plain words and clear explanations; for *Experienced*, give full options with brief explanations. When the line names players, apply it to those characters' choices.
 
 When there is no display, run `python3 ${CLAUDE_SKILL_DIR}/scripts/settings.py directives <campaign>` once at load to read the same settings.
@@ -359,6 +359,13 @@ DNDEND
 ```
 Brief NPC interjections within narration don't need a separate block.
 
+*Dutch summary* — when **Explain in Dutch** is on, send the short Dutch summary right after the English narration as its own block. It gets its own Play button and is spoken by the Dutch voice; it never plays by itself:
+```bash
+python3 ${CLAUDE_SKILL_DIR}/display/send.py --dutch << 'DNDEND'
+De deur zwaait open en een koude wind blaast de kamer in.
+DNDEND
+```
+
 *DM narration* — **CRITICAL:** compose the complete narration first, then call `send.py` as the very last action. Never call `send.py` mid-response. The send must contain the **complete, unabridged text** — do not summarize or condense. **Bundle all stat changes (HP, spell slots, conditions, concentration, inventory) into this same send.py call** using `--stat-*` flags — no separate `push_stats.py` call needed for turn-resolution state:
 ```bash
 # With stat changes (any HP/slot/condition that changed this turn):
@@ -419,7 +426,7 @@ python3 ${CLAUDE_SKILL_DIR}/display/send.py --npc "Innkeeper" << 'DNDEND'
 DNDEND
 ```
 
-**Block order:** `--player` → `--dice` → plain narration (with `--stat-*` flags) → `--npc` → `--tutor` (if tutor mode active)
+**Block order:** `--player` → `--dice` → plain narration (with `--stat-*` flags) → `--npc` → `--dutch` (if Explain in Dutch is on) → `--tutor` (if tutor mode active)
 
 **Per-turn combat sequence (follow exactly):**
 ```

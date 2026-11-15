@@ -149,8 +149,9 @@ def directive_lines(campaign: str | None = None) -> list[str]:
     ]
     if s["explain_dutch"]:
         lines.append("[[Table settings - Explain in Dutch is ON: write the full English text "
-                     "as usual, then add one short, simple Dutch summary (two sentences at "
-                     "most) after it. Never shorten or replace the English.]]")
+                     "as usual. Then send one short, simple Dutch summary (two sentences at "
+                     "most) as its own block with send.py --dutch; it gets its own Play "
+                     "button and the Dutch voice. Never shorten or replace the English.]]")
     if campaign:
         exp = load_experience(campaign)
         new = [n for n, lvl in exp.items() if lvl == "New"]

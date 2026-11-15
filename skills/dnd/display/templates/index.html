@@ -404,6 +404,13 @@
     padding-left: 1.2em;
   }
 
+  .nl-block { border-left: 2px solid rgba(120, 160, 200, 0.4); padding-left: 1.2em; margin-top: -0.6em; }
+  .nl-block p { font-size: 0.9em; font-style: italic; opacity: 0.9; }
+  .nl-label { font-family: 'Cinzel', serif; font-size: 9px; letter-spacing: 3px; text-transform: uppercase;
+    color: rgba(130, 170, 210, 0.85); margin-bottom: 0.3em; }
+  :root[data-theme="light"] .nl-block { border-left-color: rgba(60, 100, 150, 0.5); }
+  :root[data-theme="light"] .nl-label { color: rgba(50, 90, 140, 0.9); }
+
   .npc-name {
     font-family: 'Cinzel', serif;
     font-size: 10px;
@@ -5336,6 +5343,35 @@ function _renderNPCBlockNow(name, text, isReplay) {
   _reanchorCursor();
 }
 
+// ── Dutch summary block ───────────────────────────────────────────────
+// The short Dutch version of the narration just shown. Its own Play/Stop,
+// spoken by the Dutch voice. Never starts by itself: the English plays first.
+function renderDutchBlock(text, isReplay) {
+  _deferBlock(() => _renderDutchBlockNow(text, isReplay), isReplay);
+}
+
+function _renderDutchBlockNow(text, isReplay) {
+  _flushForBlock();
+  const block = document.createElement('div');
+  block.className = 'dm-block nl-block';
+  block.dataset.lang = 'nl';
+  if (isReplay) block.style.opacity = '0.75';
+  const label = document.createElement('div');
+  label.className = 'nl-label';
+  label.textContent = 'Nederlands';
+  block.appendChild(label);
+  String(text).replace(/[\x00-\x08\x0b-\x1f\x7f]/g, '').replace(/\r/g, '').trim().split('\n').forEach(line => {
+    const trimmed = line.trim();
+    if (!trimmed) return;
+    const p = document.createElement('p');
+    p.textContent = trimmed;
+    block.appendChild(p);
+  });
+  _addTtsBar(block, true);   // never auto-narrate the Dutch summary
+  textContent.appendChild(block);
+  _reanchorCursor();
+}
+
 // ── Dice block icon detection ─────────────────────────────────────────
 function _diceRollIcon(text) {
   const t = text.toLowerCase();
@@ -5618,6 +5654,8 @@ function renderReplayBatch(items) {
       renderPlayerBlock(item.player, item.text, true);
     } else if (item.npc) {
       renderNPCBlock(item.npc, item.text, true);
+    } else if (item.dutch) {
+      renderDutchBlock(item.text, true);
     } else if (item.dice) {
       renderDiceBlock(item.text, true);
     } else if (item.tutor) {
@@ -6960,14 +6998,14 @@ function _getTtsCtx() {
   return _ttsCtx;
 }
 
-const _SVG_SPEAKER = '<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 5.5h3l4-3v11l-4-3H3v-5z" fill="currentColor"/><path d="M10.5 5.2c.9.8 1.5 1.8 1.5 2.8s-.6 2-1.5 2.8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><path d="M12.2 3.4c1.5 1.2 2.3 2.7 2.3 4.6s-.8 3.4-2.3 4.6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>';
+const _SVG_PLAY    = '<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M4.5 2.8v10.4L13 8z" fill="currentColor"/></svg>';
 const _SVG_STOP    = '<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 12 12" fill="none" aria-hidden="true"><rect x="2" y="2" width="8" height="8" rx="1.5" fill="currentColor"/></svg>';
 const _SVG_SPIN    = '<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" class="tts-spin" aria-hidden="true"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" stroke-dasharray="31.4 31.4" stroke-linecap="round"/></svg>';
 
 function _ttsSetIdle(btn) {
-  btn.innerHTML = _SVG_SPEAKER;
+  btn.innerHTML = _SVG_PLAY;
   btn.classList.remove('tts-playing', 'tts-loading');
-  btn.setAttribute('aria-label', 'Listen to narration');
+  btn.setAttribute('aria-label', 'Play narration');
 }
 
 function _ttsStopActive() {
@@ -6988,7 +7026,7 @@ function _ttsStopActive() {
 
 function _ttsExtractText(blockEl) {
   const clone = blockEl.cloneNode(true);
-  clone.querySelectorAll('.tts-bar, .tts-status').forEach(n => n.remove());
+  clone.querySelectorAll('.tts-bar, .tts-status, .nl-label').forEach(n => n.remove());
   return (clone.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 2000);
 }
 
@@ -7073,7 +7111,11 @@ function _ttsForceRetry(blockEl, fullText) {
 
 async function _ttsPlayBlock(btn, blockEl, opts) {
   const force = !!(opts && opts.force);
-  if (btn.classList.contains('tts-playing')) { _ttsStopActive(); return; }
+  if (btn.classList.contains('tts-playing') || btn.classList.contains('tts-loading')) {
+    if (btn.classList.contains('tts-loading') && blockEl._syncFail) blockEl._syncFail();   // cancelled while generating
+    _ttsStopActive();
+    return;
+  }
   _ttsStopActive();
   const text = (opts && opts.text) || _ttsExtractText(blockEl);
   if (!text) return;
@@ -7099,7 +7141,7 @@ async function _ttsPlayBlock(btn, blockEl, opts) {
     const resp = await fetch('/tts', {
       method: 'POST',
       headers: _authHeaders(),
-      body: JSON.stringify({ text }),
+      body: JSON.stringify({ text, lang: blockEl.dataset.lang || 'auto' }),
     });
     if (!resp.ok) {
       const e = new Error(resp.status === 503 ? 'No local voice' : 'TTS ' + resp.status);
@@ -7178,7 +7220,7 @@ async function _ttsRefreshCacheBadges() {
   if (!bars.length) return;
   const texts = bars.map(b => _ttsExtractText(b.parentElement));
   try {
-    const r = await fetch('/tts-cached', { method: 'POST', headers: _authHeaders(), body: JSON.stringify({ texts }) });
+    const r = await fetch('/tts-cached', { method: 'POST', headers: _authHeaders(), body: JSON.stringify({ texts, langs: bars.map(b => b.parentElement.dataset.lang || 'auto') }) });
     if (!r.ok) return;
     const j = await r.json();
     bars.forEach((b, i) => {
@@ -7202,8 +7244,9 @@ function _addTtsBar(blockEl, noAutoNarrate) {
 
   const playBtn = document.createElement('button');
   playBtn.className = 'tts-play-btn';
-  playBtn.innerHTML = _SVG_SPEAKER;
-  playBtn.setAttribute('aria-label', 'Listen to narration');
+  playBtn.innerHTML = _SVG_PLAY;
+  playBtn.setAttribute('aria-label', 'Play narration');
+  playBtn.title = blockEl.dataset.lang === 'nl' ? 'Play in Dutch' : 'Play';
   playBtn.addEventListener('click', e => { e.stopPropagation(); _ttsPlayBlock(playBtn, blockEl); });
   bar.appendChild(playBtn);
 
@@ -8213,6 +8256,8 @@ function connect() {
         renderPlayerBlock(payload.player, payload.text);
       } else if (payload.npc) {
         renderNPCBlock(payload.npc, payload.text);
+      } else if (payload.dutch) {
+        renderDutchBlock(payload.text);
       } else if (payload.dice) {
         renderDiceBlock(payload.text);
       } else if (payload.tutor) {

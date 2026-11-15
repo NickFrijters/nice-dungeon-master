@@ -57,14 +57,14 @@ class CacheAndSynthTest(unittest.TestCase):
 
     def test_cache_is_bounded(self):
         with mock.patch.dict(os.environ, {"DND_TTS_CACHE_MB": "0.0003"}):  # ~300 bytes
-            with mock.patch("local_fallback.synthesize", side_effect=lambda t: b"x" * 200):
+            with mock.patch("local_fallback.synthesize", side_effect=lambda t, lang="auto": b"x" * 200):
                 for i in range(5):
                     tts.synthesize_strict(f"line {i}")
             total = sum(f.stat().st_size for f in Path(self.tmp.name).glob("*.pcm"))
             self.assertLessEqual(total, 300)
 
     def test_warm_up_loads_both_languages_and_never_raises(self):
-        fake = mock.Mock(return_value=b"" * 10)
+        fake = mock.Mock(return_value=b"\x01\x02" * 10)
         with mock.patch("local_fallback.enabled", return_value=True),              mock.patch("local_fallback.synthesize", fake):
             tts.warm_up()
         self.assertEqual(fake.call_count, 2)
@@ -76,6 +76,28 @@ class CacheAndSynthTest(unittest.TestCase):
         with mock.patch("local_fallback.enabled", return_value=False),              mock.patch("local_fallback.synthesize", fake):
             tts.warm_up()
         fake.assert_not_called()
+
+    def test_language_is_passed_to_the_voice_and_kept_in_the_cache_key(self):
+        fake = mock.Mock(return_value=b"\x01\x02" * 20)
+        with mock.patch("local_fallback.synthesize", fake):
+            tts.synthesize_strict("Goedemorgen allemaal.", "nl")
+            tts.synthesize_strict("Goedemorgen allemaal.", "nl")      # cached
+            tts.synthesize_strict("Goedemorgen allemaal.", "en")      # other voice, new clip
+        self.assertEqual([c.args[1] for c in fake.call_args_list], ["nl", "en"])
+        self.assertNotEqual(tts.cache_key("x", lang="nl"), tts.cache_key("x", lang="en"))
+
+    def test_auto_keeps_the_key_clips_were_stored_under_before_languages(self):
+        import hashlib
+        h = hashlib.sha256()
+        for part in (tts.VOICE_ID, "Old clip."):
+            h.update(part.encode("utf-8")); h.update(b"\x00")
+        self.assertEqual(tts.cache_key("Old clip."), h.hexdigest())
+        self.assertEqual(tts.cache_key("Old clip.", lang="auto"), h.hexdigest())
+
+    def test_unknown_language_falls_back_to_auto(self):
+        self.assertEqual(tts.clean_lang("klingon"), "auto")
+        self.assertEqual(tts.clean_lang("NL"), "nl")
+        self.assertEqual(tts.clean_lang(None), "auto")
 
     def test_stop_voice_asks_a_running_server_to_exit_and_never_raises(self):
         import local_fallback
@@ -143,6 +165,11 @@ class RouteTest(unittest.TestCase):
                                side_effect=self.mod._tts.TtsError("boom")):
             r = self.client.post("/tts", json={"text": "Hello there."})
         self.assertEqual(r.status_code, 502)
+
+    def test_route_passes_the_language_through(self):
+        with mock.patch.object(self.mod._tts, "available", return_value=True),              mock.patch.object(self.mod._tts, "synthesize_strict", return_value=b"\x00\x01") as syn:
+            self.client.post("/tts", json={"text": "Hallo daar.", "lang": "nl"})
+        syn.assert_called_once_with("Hallo daar.", "nl")
 
     def test_empty_text_is_400(self):
         self.assertEqual(self.client.post("/tts", json={"text": " "}).status_code, 400)

@@ -72,6 +72,23 @@ class PortedRoutesTest(unittest.TestCase):
             r = self.client.post("/input-gate", json={"allowed": None})
         self.assertIsNone(r.get_json()["allowed"])
 
+    def test_a_dutch_block_is_broadcast_and_logged_as_its_own_type(self):
+        sent = []
+        with mock.patch.object(self.mod, "_broadcast", side_effect=sent.append):
+            r = self.client.post("/chunk", json={"text": "De deur gaat open.", "dutch": True})
+        self.assertIn(r.status_code, (200, 204))
+        payloads = [m for m in sent if m.get("text")]
+        self.assertTrue(payloads and payloads[0].get("dutch") is True)
+        self.assertNotIn("npc", payloads[0])
+        self.assertNotIn("scene", payloads[0])     # not scanned as DM narration
+
+    def test_tts_cached_looks_up_each_clip_under_its_own_language(self):
+        tts = self.mod._tts
+        tts.cache_put(tts.cache_key("Hallo daar.", lang="nl"), b"\x01\x02" * 50)
+        r = self.client.post("/tts-cached", json={"texts": ["Hallo daar.", "Hallo daar."],
+                                                    "langs": ["nl", "en"]})
+        self.assertEqual(r.get_json(), {"cached": [True, False]})
+
     def test_tts_cached_reports_which_clips_are_stored(self):
         tts = self.mod._tts
         tts.cache_put(tts.cache_key("A stored line."), b"\x01\x02" * 50)
@@ -91,6 +108,22 @@ class PlayScreenTest(unittest.TestCase):
     def test_status_line_and_turn_bar_exist(self):
         for needle in ("tts-status", "turn-bar", "_ttsMakeStatus", "_ttsForceRetry"):
             self.assertIn(needle, self.html)
+
+    def test_dutch_summary_has_its_own_block_with_a_dutch_voice_request(self):
+        self.assertIn("function renderDutchBlock", self.html)
+        self.assertIn("payload.dutch", self.html)
+        self.assertIn("item.dutch", self.html)       # and it survives a reload
+        self.assertIn("blockEl.dataset.lang || 'auto'", self.html)
+        self.assertIn("never auto-narrate the Dutch summary", self.html)
+
+    def test_buttons_read_as_play_and_stop(self):
+        self.assertIn("_SVG_PLAY", self.html)
+        self.assertNotIn("_SVG_SPEAKER", self.html)
+        self.assertNotIn("Listen to narration", self.html)
+        self.assertIn("Stop narration", self.html)
+
+    def test_clicking_while_generating_cancels(self):
+        self.assertRegex(self.html, r"classList\.contains\('tts-playing'\) \|\| btn\.classList\.contains\('tts-loading'\)")
 
     def test_no_remote_voice_wording_is_left(self):
         for needle in ("Gemini", "gemini", "API call", "Retry Gemini", "_ttsServerOk"):

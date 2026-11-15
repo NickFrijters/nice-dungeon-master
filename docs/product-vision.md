@@ -60,25 +60,26 @@ A running adventure is either **Roleplay** or **Combat**. The screen switches au
 ## Manual additions done by Nick in this .md file, read this as "next things" or the backlog.
 ## -- if I make changes here, always automatically include in the next commit.
 ## -- remove items from this list once they are built
-- This is how voice should work: Always play as soon as the TTS is done; Show a STOP button as soon as the voice starts; When stopped or done, show a PLAY button so I can play it again (it's cached); Specifically for short Dutch translations, the ability to also play the TTS in Dutch, with the same functions.
-- Loading between DM responses should always visualize what it's doing and how many things it has to do next (loading bar with several parts, or another way to show progress). Because waiting is always annoying for players.
-- Fade the narration text near the top of the screen so it looks prettier
-- The text font that's currently used for narration is flavourful and clear, I want to use that font as the only font used throughout the whole app (do I? interview me first about the consequences)
-- 100% of the time I want to play on LAN mode, so that doesn't need to be a question anymore
-- A small cog icon in the corner of the screen should show the settings menu straight form an adventure, instead of just from the main menu.
-- Convert the TV Mode / PC Mode buttons to a TV/PC toggle. The TV mode has no inputs but is a 100% exact mirror (real-time, include typing) of the PC mode. Default mode is TV mode and if one session clicks "PC mode" then all other sessions automatically change to TV mode.
-- Clearer visualization of character sheets, needs investigation and interviewing
-- Build the roleplay screen
-- Build the combat screen
-- C:\Users\frijt\Documents\Claude\nice-dungeon-master\design-mockups shows a kind of visualization that I really dislike, why do we (still) have this folder with images?
-- When opening a campaign from the main menu, always start with a recap instead of showing the whole history
-- After every DM input, and after every players-submit, the game state should be processed and saved. So when the browser closes or the app goes back to the main menu, nothing is lost.
-- Add the option to save and exit. This quits the running session and returns to the main menu.
-- I believe the current local TTS that we're using is the best (fast) available for Dutch. But please do further research of we can use another one (requirements: super fast) for a more realistic English voice, preferably a voice that would be great for a DM. Try Kokoro-82M (hexgrad/Kokoro-82M) first.
-- Waiting for the DM should never take more than 5 seconds (this probably needs data management improvements).
-- Als ik "Party input" open klap wil ik onder elkaar een regel per character met elk een tekst invoer veld(bovenaan een regel voor "Everybody"). Geen "stage" knoppen, maar maak het visueel als een veld tekstinvoer bevat. De "GO" knop verstuurt simpelweg alle ingevoerde tekstvelden naar de DM.
-- ANALYSE AND IMPROVE: Do an extremely thorough analysis on the continuity and persistent memory of our data keeping and the DM narration. For example: If a character destroys the door of a local inn, that should have effects when the same character visits the inn again 50 sessions later. The inn keeper won't forget that!
-- ANALYSE AND IMPROVE: Do a full analysis on adventure/campaign persistency. For example: Making sure that we're aiming towards (but not bound to) the general adventure/campaign setting. So that we don't drift off further from it with every session.
+- TTS: De snelheid van de stem moet 80% zijn.
+- INTERFACE: Verplaats alle nog bestaande settings van het speelscherm naar het settings menu. A small cog icon in the corner of the screen should show the settings menu straight form an adventure, instead of just from the main menu.
+- INTERFACE: Loading between DM responses should always visualize what it's doing and how many things it has to do next (loading bar with several parts, or another way to show progress). Because waiting is always annoying for players.
+- CLEANUP: No "PHONE" screen will ever be used, remove that function from the screen and code completely.
+- INTERFACE: Fade the narration text near the top of the screen so it looks prettier
+- INTERFACE: The text font that's currently used for narration is flavourful and clear, I want to use that font as the only font used throughout the whole app (do I? interview me first about the consequences)
+- CLEANUP: 100% of the time I want to play on LAN mode, so that doesn't need to be a question anymore
+- INTERFACE: Convert the TV Mode / PC Mode buttons to a TV/PC toggle. The TV mode has no inputs but is a 100% exact mirror (real-time, include typing) of the PC mode. Default mode is TV mode and if one session clicks "PC mode" then all other sessions automatically change to TV mode.
+- INTERFACE: Clearer visualization of character sheets, needs investigation and interviewing
+- INTERFACE: Build the roleplay screen
+- INTERFACE: Build the combat screen
+- CLEANUP: C:\Users\frijt\Documents\Claude\nice-dungeon-master\design-mockups shows a kind of visualization that I really dislike, why do we (still) have this folder with images?
+- PERSISTENCY: When opening a campaign from the main menu, always start with a recap instead of showing the whole history.
+- PERSISTENCY: After every DM input, and after every players-submit, the game state should be processed and saved. So when the browser closes or the app goes back to the main menu, nothing is lost.
+- INTERFACE: Add the option to save and exit. This quits the running session and returns to the main menu.
+- TTS: I believe the current local TTS that we're using is the best (fast) available for Dutch. But please do further research of we can use another one (requirements: super fast) for a more realistic English voice, preferably a voice that would be great for a DM. Try Kokoro-82M (hexgrad/Kokoro-82M) first.
+- PERFORMANCE: Waiting for the DM should never take more than 5 seconds (this probably needs data management improvements).
+- INTERFACE: Als ik "Party input" open klap wil ik onder elkaar een regel per character met elk een tekst invoer veld(bovenaan een regel voor "Everybody"). Geen "stage" knoppen, maar maak het visueel als een veld tekstinvoer bevat. De "GO" knop verstuurt simpelweg alle ingevoerde tekstvelden naar de DM.
+- PERSISTENCY: Do an extremely thorough analysis on the continuity and persistent memory of our data keeping and the DM narration. For example: If a character destroys the door of a local inn, that should have effects when the same character visits the inn again 50 sessions later. The inn keeper won't forget that!
+- PERSISTENCY: Do a full analysis on adventure/campaign persistency. For example: Making sure that we're aiming towards (but not bound to) the general adventure/campaign setting. So that we don't drift off further from it with every session.
 
 ## Status
 - **v1 (done):** `/dm:dnd menu` starts the display. The Main Menu lists your campaigns, and clicking Load hands the request to Claude, who loads it and switches the browser to the play screen. "Manage characters" and "Settings" are placeholders.

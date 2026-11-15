@@ -186,7 +186,7 @@ def _validate_payload(payload: dict, endpoint: str) -> "list[str]":
         if not has_text and not has_award:
             issues.append("chunk payload has no text and no award flag")
         # Mutually exclusive content tags
-        content_tags = [k for k in ("player", "npc", "dice", "tutor", "action") if payload.get(k)]
+        content_tags = [k for k in ("player", "npc", "dutch", "dice", "tutor", "action") if payload.get(k)]
         if len(content_tags) > 1:
             issues.append(f"chunk payload has multiple content tags: {content_tags}")
     elif endpoint == "stats":
@@ -383,6 +383,10 @@ def main() -> None:
         help="Send as NPC dialogue with amber styling and character name header",
     )
     parser.add_argument(
+        "--dutch", action="store_true",
+        help="Send as the short Dutch summary of the narration just sent (own block, own Play button, Dutch voice)",
+    )
+    parser.add_argument(
         "--dice", action="store_true",
         help="Send as a dice result (inline gold styling)",
     )
@@ -556,14 +560,14 @@ def main() -> None:
                     sys.exit(2)
 
         # If no other action requested, exit clean (don't fall through to stdin read).
-        _other = (args.player or args.npc or args.dice or args.tutor or args.action
+        _other = (args.player or args.npc or args.dutch or args.dice or args.tutor or args.action
                   or args.inspiration_award or args.inspiration_spend
                   or args.milestone_award or args.milestone_spend or args.xp_award
                   or args.image or args.verify)
         if not _other:
             return
 
-    _has_content_flag = bool(args.player or args.npc or args.dice or args.tutor or args.action)
+    _has_content_flag = bool(args.player or args.npc or args.dutch or args.dice or args.tutor or args.action)
     if _has_content_flag:
         text = sys.stdin.read()
     else:
@@ -661,6 +665,7 @@ def main() -> None:
         flag = (
             "--player" if args.player else
             "--npc"    if args.npc    else
+            "--dutch"  if args.dutch  else
             "--dice"   if args.dice   else
             "--tutor"  if args.tutor  else
             "--action"
@@ -681,6 +686,8 @@ def main() -> None:
                 payload["player"] = args.player
             elif args.npc:
                 payload["npc"] = args.npc
+            elif args.dutch:
+                payload["dutch"] = True
             elif args.dice:
                 payload["dice"] = True
             elif args.tutor:
