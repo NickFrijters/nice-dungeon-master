@@ -2263,7 +2263,7 @@ def tts_cached():
     langs = data.get("langs") or []
     for i, t in enumerate((data.get("texts") or [])[:100]):
         t = str(t or "").strip()[: _tts.MAX_TEXT_CHARS].strip()
-        lang = _tts.clean_lang(langs[i] if i < len(langs) else "auto")
+        lang = _tts.clean_lang(langs[i] if i < len(langs) else "en")
         out.append(bool(t) and (d / f"{_tts.cache_key(t, lang=lang)}.pcm").is_file())
     return jsonify({"cached": out})
 

@@ -5354,8 +5354,8 @@ function _renderNPCBlockNow(name, text, isReplay) {
 }
 
 // ── Dutch summary block ───────────────────────────────────────────────
-// The short Dutch version of the narration just shown. Its own Play/Stop,
-// spoken by the Dutch voice. Never starts by itself: the English plays first.
+// The short Dutch version of the narration just shown. Text only: only English
+// is spoken for now, so it has no Play button.
 function renderDutchBlock(text, isReplay) {
   _deferBlock(() => _renderDutchBlockNow(text, isReplay), isReplay);
 }
@@ -5364,7 +5364,6 @@ function _renderDutchBlockNow(text, isReplay) {
   _flushForBlock();
   const block = document.createElement('div');
   block.className = 'dm-block nl-block';
-  block.dataset.lang = 'nl';
   if (isReplay) block.style.opacity = '0.75';
   const label = document.createElement('div');
   label.className = 'nl-label';
@@ -5377,7 +5376,6 @@ function _renderDutchBlockNow(text, isReplay) {
     p.textContent = trimmed;
     block.appendChild(p);
   });
-  _addTtsBar(block, true);   // never auto-narrate the Dutch summary
   textContent.appendChild(block);
   _reanchorCursor();
 }
@@ -7089,7 +7087,7 @@ async function _ttsPlayBlock(btn, blockEl, opts) {
     const resp = await fetch('/tts', {
       method: 'POST',
       headers: _authHeaders(),
-      body: JSON.stringify({ text, lang: blockEl.dataset.lang || 'auto' }),
+      body: JSON.stringify({ text }),
     });
     if (!resp.ok) {
       const e = new Error(resp.status === 503 ? 'No local voice' : 'TTS ' + resp.status);
@@ -7168,7 +7166,7 @@ async function _ttsRefreshCacheBadges() {
   if (!bars.length) return;
   const texts = bars.map(b => _ttsExtractText(b.parentElement));
   try {
-    const r = await fetch('/tts-cached', { method: 'POST', headers: _authHeaders(), body: JSON.stringify({ texts, langs: bars.map(b => b.parentElement.dataset.lang || 'auto') }) });
+    const r = await fetch('/tts-cached', { method: 'POST', headers: _authHeaders(), body: JSON.stringify({ texts }) });
     if (!r.ok) return;
     const j = await r.json();
     bars.forEach((b, i) => {
@@ -7194,7 +7192,7 @@ function _addTtsBar(blockEl, noAutoNarrate) {
   playBtn.className = 'tts-play-btn';
   playBtn.innerHTML = _SVG_PLAY;
   playBtn.setAttribute('aria-label', 'Play narration');
-  playBtn.title = blockEl.dataset.lang === 'nl' ? 'Play in Dutch' : 'Play';
+  playBtn.title = 'Play';
   playBtn.addEventListener('click', e => { e.stopPropagation(); _ttsPlayBlock(playBtn, blockEl); });
   bar.appendChild(playBtn);
 

@@ -28,18 +28,22 @@ MAX_TEXT_CHARS = 2000
 
 def _speed() -> float:
     try:
-        s = float(os.environ.get("DND_TTS_SPEED", "0.8"))
+        s = float(os.environ.get("DND_TTS_SPEED", "1.0"))
     except ValueError:
-        s = 0.8
+        s = 1.0
     return min(1.5, max(0.5, s))
 
 
-#: How fast the narrator talks, as a fraction of the model's natural pace.
-#: 0.8 = 80%. Pitch is kept. DND_TTS_SPEED overrides it.
+#: How fast the narrator talks, as a fraction of the model's natural pace (1.0 = 100%).
+#: Pitch is kept when it is changed. DND_TTS_SPEED overrides it.
 SPEED = _speed()
 
 #: Changing the voice, the model or the speed must not replay old clips.
-VOICE_ID = "pocket-alba" if SPEED == 1.0 else f"pocket-alba-{round(SPEED * 100)}"
+def _voice_id(speed: float) -> str:
+    return "pocket-alba" if speed == 1.0 else f"pocket-alba-{round(speed * 100)}"
+
+
+VOICE_ID = _voice_id(SPEED)
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE / "local_tts"))
@@ -69,22 +73,25 @@ def _cache_limit_bytes() -> int:
     return max(0, int(mb * 1024 * 1024))
 
 
-LANGUAGES = ("auto", "en", "nl")
+#: Only English is spoken for now. The voice server can also do Dutch; to switch
+#: it on again, add "nl" here and give the Dutch summary block its Play button back.
+SUPPORTED_LANGUAGES = ("en",)
 
 
 def clean_lang(lang) -> str:
-    """'en', 'nl', or 'auto' (the voice server picks from the text)."""
-    lang = str(lang or "auto").lower()
-    return lang if lang in LANGUAGES else "auto"
+    """The language the voice speaks. Anything asked for maps to a supported one."""
+    lang = str(lang or "en").lower()
+    return lang if lang in SUPPORTED_LANGUAGES else SUPPORTED_LANGUAGES[0]
 
 
-def cache_key(text: str, voice: str = VOICE_ID, lang: str = "auto") -> str:
+def cache_key(text: str, voice: str = VOICE_ID, lang: str = "en") -> str:
     """Hash of everything that changes the audio. The text is never a filename.
 
-    'auto' keeps the key the clips were stored under before languages could be
+    English keeps the key the clips were stored under before languages could be
     chosen, so existing cached clips still play."""
     h = hashlib.sha256()
-    parts = (voice, text) if lang in ("", "auto") else (voice, text, lang)
+    lang = clean_lang(lang)
+    parts = (voice, text) if lang == "en" else (voice, text, lang)
     for part in parts:
         h.update(part.encode("utf-8"))
         h.update(b"\0")
@@ -145,7 +152,7 @@ def available() -> bool:
         return False
 
 
-def synthesize_strict(text: str, lang: str = "auto") -> bytes:
+def synthesize_strict(text: str, lang: str = "en") -> bytes:
     """PCM for `text`, from the cache or the local model. Raises TtsError."""
     text = (text or "").strip()[:MAX_TEXT_CHARS]
     if not text:
@@ -174,17 +181,16 @@ def stop_voice() -> None:
 
 
 def warm_up() -> None:
-    """Load the English and Dutch models ahead of the first narration block.
+    """Load the English model ahead of the first narration block.
 
     Runs in a background thread at display start. Silent on any failure: the
     first real request reports a problem if there is one."""
     if not available():
         return
-    for phrase in ("Ready.", "Klaar."):
-        synthesize(phrase)
+    synthesize("Ready.")
 
 
-def synthesize(text: str, lang: str = "auto") -> Optional[bytes]:
+def synthesize(text: str, lang: str = "en") -> Optional[bytes]:
     """Like synthesize_strict, but returns None instead of raising."""
     try:
         return synthesize_strict(text, lang)

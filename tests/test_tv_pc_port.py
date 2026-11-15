@@ -82,12 +82,12 @@ class PortedRoutesTest(unittest.TestCase):
         self.assertNotIn("npc", payloads[0])
         self.assertNotIn("scene", payloads[0])     # not scanned as DM narration
 
-    def test_tts_cached_looks_up_each_clip_under_its_own_language(self):
+    def test_tts_cached_finds_a_stored_clip_whatever_language_label_it_is_asked_with(self):
         tts = self.mod._tts
-        tts.cache_put(tts.cache_key("Hallo daar.", lang="nl"), b"\x01\x02" * 50)
-        r = self.client.post("/tts-cached", json={"texts": ["Hallo daar.", "Hallo daar."],
+        tts.cache_put(tts.cache_key("Hello there, friend."), b"\x01\x02" * 50)
+        r = self.client.post("/tts-cached", json={"texts": ["Hello there, friend.", "Hello there, friend."],
                                                     "langs": ["nl", "en"]})
-        self.assertEqual(r.get_json(), {"cached": [True, False]})
+        self.assertEqual(r.get_json(), {"cached": [True, True]})
 
     def test_tts_cached_reports_which_clips_are_stored(self):
         tts = self.mod._tts
@@ -109,12 +109,18 @@ class PlayScreenTest(unittest.TestCase):
         for needle in ("tts-status", "turn-bar", "_ttsMakeStatus", "_ttsForceRetry"):
             self.assertIn(needle, self.html)
 
-    def test_dutch_summary_has_its_own_block_with_a_dutch_voice_request(self):
+    def test_dutch_summary_is_its_own_text_only_block(self):
         self.assertIn("function renderDutchBlock", self.html)
         self.assertIn("payload.dutch", self.html)
         self.assertIn("item.dutch", self.html)       # and it survives a reload
-        self.assertIn("blockEl.dataset.lang || 'auto'", self.html)
-        self.assertIn("never auto-narrate the Dutch summary", self.html)
+        body = self.html[self.html.index("function _renderDutchBlockNow"):]
+        body = body[:body.index("\n}\n")]
+        self.assertNotIn("_addTtsBar", body)         # only English is spoken for now
+        self.assertIn("textContent.appendChild(block)", body)
+
+    def test_the_page_asks_the_voice_for_text_only(self):
+        self.assertIn("body: JSON.stringify({ text }),", self.html)
+        self.assertNotIn("dataset.lang", self.html)
 
     def test_buttons_read_as_play_and_stop(self):
         self.assertIn("_SVG_PLAY", self.html)

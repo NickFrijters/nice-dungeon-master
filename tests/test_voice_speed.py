@@ -1,4 +1,4 @@
-"""The narrator talks at 80% speed, with the pitch unchanged."""
+"""The narrator talks at normal speed by default; a slower speed keeps the pitch."""
 
 from __future__ import annotations
 
@@ -68,21 +68,23 @@ class StretchTest(unittest.TestCase):
 
 
 class SpeedWiringTest(unittest.TestCase):
-    def test_default_is_80_percent(self):
-        self.assertEqual(tts.SPEED, 0.8)
+    def test_default_is_100_percent(self):
+        self.assertEqual(tts.SPEED, 1.0)
+        self.assertEqual(tts.VOICE_ID, "pocket-alba")      # the id clips were stored under at normal speed
 
     def test_speed_is_part_of_the_cache_identity(self):
-        self.assertIn("80", tts.VOICE_ID)
-        self.assertNotEqual(tts.cache_key("x"), tts.cache_key("x", voice="pocket-alba"))
+        self.assertNotEqual(tts._voice_id(0.8), tts._voice_id(1.0))
+        self.assertIn("80", tts._voice_id(0.8))
+        self.assertNotEqual(tts.cache_key("x", voice=tts._voice_id(0.8)), tts.cache_key("x"))
 
     def test_speed_reaches_the_voice(self):
         with mock.patch.dict(os.environ, {"DND_TTS_CACHE_MB": "0"}), \
              mock.patch("local_fallback.synthesize", return_value=b"\x01\x02") as syn:
             tts.synthesize_strict("Hello there.")
-        syn.assert_called_once_with("Hello there.", "auto", tts.SPEED)
+        syn.assert_called_once_with("Hello there.", "en", tts.SPEED)
 
     def test_env_override_is_clamped(self):
-        for raw, want in (("0.9", 0.9), ("5", 1.5), ("0.1", 0.5), ("nonsense", 0.8)):
+        for raw, want in (("0.9", 0.9), ("5", 1.5), ("0.1", 0.5), ("nonsense", 1.0)):
             with mock.patch.dict(os.environ, {"DND_TTS_SPEED": raw}):
                 self.assertEqual(tts._speed(), want, raw)
 

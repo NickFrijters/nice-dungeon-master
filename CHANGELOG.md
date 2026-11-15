@@ -10,6 +10,13 @@ Versions before **1.6.0** are reconstructed retroactively from git history; the 
 
 ## [Unreleased]
 
+## [2.19.0] — 2026-11-15 — English voice at 100%
+
+### Changed — English-only voice at normal speed
+
+- The narrator speaks at **100%** again (the 80% stretch stays available through `DND_TTS_SPEED`). Because the clip identity is back to the original, clips stored before the 80% change play again instead of being regenerated.
+- **Only English is spoken for now** (`tts.SUPPORTED_LANGUAGES`). Whatever language is asked for maps to English, the voice warm-up loads only the English model, and the Dutch summary block is text only: it no longer has a Play button. The voice server and the cache can still do Dutch; adding "nl" to `SUPPORTED_LANGUAGES` and the button back switches it on.
+
 ## [2.18.0] — 2026-11-15 — Dutch is an addition
 
 ### Fixed — a campaign with `language: nl` turned the whole game Dutch

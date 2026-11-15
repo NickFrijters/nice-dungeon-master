@@ -63,12 +63,15 @@ class CacheAndSynthTest(unittest.TestCase):
             total = sum(f.stat().st_size for f in Path(self.tmp.name).glob("*.pcm"))
             self.assertLessEqual(total, 300)
 
-    def test_warm_up_loads_both_languages_and_never_raises(self):
+    def test_warm_up_loads_only_the_english_model_and_never_raises(self):
         fake = mock.Mock(return_value=b"\x01\x02" * 10)
-        with mock.patch("local_fallback.enabled", return_value=True),              mock.patch("local_fallback.synthesize", fake):
+        with mock.patch("local_fallback.enabled", return_value=True), \
+             mock.patch("local_fallback.synthesize", fake):
             tts.warm_up()
-        self.assertEqual(fake.call_count, 2)
-        with mock.patch("local_fallback.enabled", return_value=True),              mock.patch("local_fallback.synthesize", side_effect=RuntimeError("down")):
+        self.assertEqual(fake.call_count, 1)
+        self.assertEqual(fake.call_args.args[1], "en")
+        with mock.patch("local_fallback.enabled", return_value=True), \
+             mock.patch("local_fallback.synthesize", side_effect=RuntimeError("down")):
             tts.warm_up()   # must not raise
 
     def test_warm_up_does_nothing_when_the_voice_is_not_installed(self):
@@ -77,14 +80,14 @@ class CacheAndSynthTest(unittest.TestCase):
             tts.warm_up()
         fake.assert_not_called()
 
-    def test_language_is_passed_to_the_voice_and_kept_in_the_cache_key(self):
+    def test_only_english_is_spoken_whatever_language_is_asked_for(self):
         fake = mock.Mock(return_value=b"\x01\x02" * 20)
         with mock.patch("local_fallback.synthesize", fake):
             tts.synthesize_strict("Goedemorgen allemaal.", "nl")
-            tts.synthesize_strict("Goedemorgen allemaal.", "nl")      # cached
-            tts.synthesize_strict("Goedemorgen allemaal.", "en")      # other voice, new clip
-        self.assertEqual([c.args[1] for c in fake.call_args_list], ["nl", "en"])
-        self.assertNotEqual(tts.cache_key("x", lang="nl"), tts.cache_key("x", lang="en"))
+            tts.synthesize_strict("Goedemorgen allemaal.", "en")      # same clip: already stored
+        self.assertEqual(fake.call_count, 1)
+        self.assertEqual(fake.call_args.args[1], "en")
+        self.assertEqual(tts.cache_key("x", lang="nl"), tts.cache_key("x", lang="en"))
 
     def test_auto_keeps_the_key_clips_were_stored_under_before_languages(self):
         import hashlib
@@ -94,10 +97,10 @@ class CacheAndSynthTest(unittest.TestCase):
         self.assertEqual(tts.cache_key("Old clip."), h.hexdigest())
         self.assertEqual(tts.cache_key("Old clip.", lang="auto"), h.hexdigest())
 
-    def test_unknown_language_falls_back_to_auto(self):
-        self.assertEqual(tts.clean_lang("klingon"), "auto")
-        self.assertEqual(tts.clean_lang("NL"), "nl")
-        self.assertEqual(tts.clean_lang(None), "auto")
+    def test_any_language_maps_to_english_for_now(self):
+        for asked in ("klingon", "nl", "NL", "auto", None, ""):
+            self.assertEqual(tts.clean_lang(asked), "en", asked)
+        self.assertEqual(tts.SUPPORTED_LANGUAGES, ("en",))
 
     def test_stop_voice_asks_a_running_server_to_exit_and_never_raises(self):
         import local_fallback

@@ -61,7 +61,7 @@ A running adventure is either **Roleplay** or **Combat**. The screen switches au
 ## -- if I make changes here, always automatically include in the next commit.
 ## -- remove items from this list once they are built
 - BUG: I think this is a bug..? When I load my test adventure, I only see character "Aldric"..?
-- TTS: Voorlopig gaan we alleen Engelse TTS ondersteunen. De leessnelheid is momenteel 80% en moet worden aangepast terug naar 100%.
+- INTERFACE: Does the TV exactly mirror the PC screen? If so, can we remove the toggle altogether because they will show the same? In reality, I will only be typing or inputting in one of the two devices so there doesn't need to be any guardrails to block input from the other. Interview me first if you think that's necessary.
 - INTERFACE: Interview me about the visualization of the text (being typed) in sync with the TTS.
 - INTERFACE: Loading between DM responses should always visualize what it's doing and how many things it has to do next (loading bar with several parts, or another way to show progress). Because waiting is always annoying for players. Goal is that every waiting time is accompanied by a tracker, always.
 - CLEANUP: No "PHONE" screen will ever be used, remove that function from the screen and code completely.
@@ -76,12 +76,13 @@ A running adventure is either **Roleplay** or **Combat**. The screen switches au
 - PERSISTENCY: When opening a campaign from the main menu, always start with a recap instead of showing the whole history.
 - PERSISTENCY: After every DM input, and after every players-submit, the game state should be processed and saved. So when the browser closes or the app goes back to the main menu, nothing is lost.
 - INTERFACE: Add the option to save and exit. This quits the running session and returns to the main menu.
-- TTS: I believe the current local TTS that we're using is the best (fast) available for Dutch. But please do further research of we can use another one (requirements: super fast) for a more realistic English voice, preferably a voice that would be great for a DM. Try Kokoro-82M (hexgrad/Kokoro-82M) first.
+- TTS: Please do further research of we can use another one TTS model (requirements: super fast) for a more realistic English voice, preferably a voice that would be great for a DM. Try Kokoro-82M (hexgrad/Kokoro-82M) first.
 - PERFORMANCE: Waiting for the DM should never take more than 5 seconds (this probably needs data management improvements).
 - INTERFACE: Als ik "Party input" open klap wil ik onder elkaar een regel per character met elk een tekst invoer veld(bovenaan een regel voor "Everybody"). Geen "stage" knoppen, maar maak het visueel als een veld tekstinvoer bevat. De "GO" knop verstuurt simpelweg alle ingevoerde tekstvelden naar de DM.
 - PERSISTENCY: Do an extremely thorough analysis on the continuity and persistent memory of our data keeping and the DM narration. For example: If a character destroys the door of a local inn, that should have effects when the same character visits the inn again 50 sessions later. The inn keeper won't forget that!
 - PERSISTENCY: Do a full analysis on adventure/campaign persistency. For example: Making sure that we're aiming towards (but not bound to) the general adventure/campaign setting. So that we don't drift off further from it with every session.
 - PERFORMANCE: Persistent image saving and rendering. Keep a very thorough database of previously downloaded images. Save all provided campaign/adventure images and all self-downloaded images from internet. To be able to use those in all future campaigns or on request.
+- CLEANUP: Remove the Neural Initiative mentions and logo from our app and code.
 
 ## Status
 - **v1 (done):** `/dm:dnd menu` starts the display. The Main Menu lists your campaigns, and clicking Load hands the request to Claude, who loads it and switches the browser to the play screen. "Manage characters" and "Settings" are placeholders.
