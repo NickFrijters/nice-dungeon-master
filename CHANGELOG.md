@@ -10,6 +10,8 @@ Versions before **1.6.0** are reconstructed retroactively from git history; the 
 
 ## [Unreleased]
 
+## [2.20.0] — 2026-11-15 — Party loads from the campaign
+
 ### Fixed — loading a campaign showed only a placeholder "Aldric"
 
 Two things combined. (1) The display's saved party had been overwritten by test data: an upstream test posts a fake "Aldric" to a display it starts, and nothing stopped it from using the real runtime folder. (2) Picking a campaign in the Main Menu relied on Claude to push the characters, and when no Claude session was listening the stale party stayed on screen.
