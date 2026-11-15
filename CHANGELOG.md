@@ -10,6 +10,12 @@ Versions before **1.6.0** are reconstructed retroactively from git history; the 
 
 ## [Unreleased]
 
+## [2.29.0] — 2026-11-15 — A clearer character sheet
+
+### Changed — a clearer character sheet
+
+The sheet pop-up is now a card: boxed HP/AC/Init/Speed tiles, rounded ability-score tiles, much larger text, pill-shaped tabs, and long feature text folded to three lines until you click it.
+
 ## [2.28.0] — 2026-11-15 — Recap when opening a campaign from the menu
 
 ### Changed — opening a campaign from the Main Menu starts with a recap
