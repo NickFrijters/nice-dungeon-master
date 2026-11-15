@@ -18,7 +18,10 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 PORT = int(os.environ.get("DND_LOCAL_TTS_PORT", "8767"))
 VOICE = os.environ.get("DND_KOKORO_VOICE", "bm_george")
 MODEL_DIR = os.path.join(os.path.expanduser("~"), ".cache", "claude-dnd", "tts-kokoro", "models")
-MODEL = os.environ.get("DND_KOKORO_MODEL", os.path.join(MODEL_DIR, "kokoro-v1.0.onnx"))
+#: The int8 file is the default (3.5x smaller, ~25% faster); the fp32 file is used if int8 is absent.
+_INT8 = os.path.join(MODEL_DIR, "kokoro-v1.0.int8.onnx")
+_FP32 = os.path.join(MODEL_DIR, "kokoro-v1.0.onnx")
+MODEL = os.environ.get("DND_KOKORO_MODEL") or (_INT8 if os.path.exists(_INT8) else _FP32)
 VOICES = os.environ.get("DND_KOKORO_VOICES", os.path.join(MODEL_DIR, "voices-v1.0.bin"))
 MAX_CHARS = 2000
 #: Sentences are synthesized one by one and joined, so a long block never
