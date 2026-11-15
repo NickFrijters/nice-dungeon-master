@@ -10,6 +10,12 @@ Versions before **1.6.0** are reconstructed retroactively from git history; the 
 
 ## [Unreleased]
 
+## [2.34.0] — 2026-11-15 — Kokoro narrator voice
+
+### Changed — a more realistic English narrator voice (Kokoro)
+
+Kokoro-82M (int8) is the default narrator voice when it is installed (`am_adam`); Pocket stays as the fallback. On the test machine it starts in about 1.8 s instead of 5.3 s and uses less memory. Settings has a Narrator voice picker (Adam, Fenrir, Onyx, George) with play buttons. Research and sample clips are in `docs/research/tts-english-voices.md`.
+
 ## [2.33.0] — 2026-11-15 — Combat screen
 
 ### Added — the Combat screen
