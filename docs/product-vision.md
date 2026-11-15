@@ -60,8 +60,6 @@ A running adventure is either **Roleplay** or **Combat**. The screen switches au
 ## Manual additions done by Nick in this .md file, read this as "next things" or the backlog.
 ## -- if I make changes here, always automatically include in the next commit.
 ## -- remove items from this list once they are built
-- When a new campaign is being created, there is no feedback at all. After the "Create campaign" button... silence until it's suddenly just there...
-- The main menu doesn't have an option to start a new Campaign. (it should be able to let Claude create one, or provide a PDF with a (published) adventure.
 - INTERFACE: Build the roleplay screen
 - INTERFACE: Build the combat screen
 - INTERFACE: Screenshot all interfaces and look for graphical inconsistencies or things that don't look nice - fix them (interview me where you think that's necessary).

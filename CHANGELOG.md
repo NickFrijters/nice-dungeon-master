@@ -10,6 +10,12 @@ Versions before **1.6.0** are reconstructed retroactively from git history; the 
 
 ## [Unreleased]
 
+## [2.30.0] — 2026-11-15 — Feedback while creating a campaign
+
+### Changed — feedback while a new campaign is being created
+
+After Create campaign (or Import) the menu shows a step tracker (Sent, Creating or Reading, Ready) with a running seconds counter.
+
 ## [2.29.0] — 2026-11-15 — A clearer character sheet
 
 ### Changed — a clearer character sheet

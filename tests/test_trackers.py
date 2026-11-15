@@ -114,6 +114,12 @@ class PagesTest(unittest.TestCase):
         self.assertIn("showSteps(['Sent to the Dungeon Master', 'Saving the session', 'Ready for the next one'], 1)", self.menu)
         self.assertIn('id="steps"', self.menu)
 
+    def test_creating_a_campaign_shows_steps_and_seconds(self):
+        self.assertIn("'Creating the campaign'", self.menu)
+        self.assertIn("'Reading the adventure'", self.menu)
+        self.assertIn("(this can take a minute or two)", self.menu)
+        self.assertIn("pendingTimer = setInterval(showPending, 1000)", self.menu)
+
 
 if __name__ == "__main__":
     unittest.main()

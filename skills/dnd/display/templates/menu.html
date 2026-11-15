@@ -218,8 +218,31 @@ async function startNew(kind, body, headers, errEl, expected) {
   if (!r.ok) { errEl.textContent = j.error || 'That did not work. Try again.'; return; }
   document.getElementById('panel-create').hidden = true;
   document.getElementById('panel-import').hidden = true;
-  pending = {before: beforeRaw, expected: j.campaign || null};
-  statusEl.textContent = kind === 'new' ? 'Claude is creating your campaign…' : 'Claude is reading your adventure…';
+  pending = {before: beforeRaw, expected: j.campaign || null, kind, t0: Date.now()};
+  showPending();
+  clearInterval(pendingTimer); pendingTimer = setInterval(showPending, 1000);
+}
+
+// Feedback while Claude builds a campaign: which part we are in, and for how long.
+let pendingTimer = null;
+function pendingNames(kind) {
+  return kind === 'new' ? ['Sent to the Dungeon Master', 'Creating the campaign', 'Ready to play']
+                        : ['Sent to the Dungeon Master', 'Reading the adventure', 'Building the campaign', 'Ready to play'];
+}
+function showPending() {
+  if (!pending) return;
+  const s = Math.round((Date.now() - pending.t0) / 1000);
+  const names = pendingNames(pending.kind);
+  showSteps(names, 1);
+  statusEl.textContent = (pending.kind === 'new' ? 'Claude is creating your campaign' : 'Claude is reading your adventure')
+    + '… ' + s + 's (this can take a minute or two)';
+}
+function pendingDone(label) {
+  clearInterval(pendingTimer); pendingTimer = null;
+  const names = pendingNames(pending.kind);
+  showSteps(names, names.length - 1);
+  statusEl.textContent = label;
+  pending = null;
 }
 
 function submitCreate(ev) {
@@ -251,21 +274,20 @@ async function refresh() {
       const fresh = data.campaigns.filter(c => !pending.before.has(c.name));
       const hit = fresh.find(c => c.name === pending.expected) || fresh[0];
       if (hit) {
-        statusEl.textContent = `Your campaign "${hit.name.replace(/-/g, ' ')}" is ready. Press Load to begin.`;
-        pending = null;
+        pendingDone(`Your campaign "${hit.name.replace(/-/g, ' ')}" is ready. Press Load to begin.`);
       }
     }
     document.getElementById('no-dm').hidden = !!data.dm_listening || !!data.saving;
     document.getElementById('saving').hidden = !data.saving;
     if (data.saving) showSteps(['Sent to the Dungeon Master', 'Saving the session', 'Ready for the next one'], 1);
-    else if (!waitingFor && !quitting) clearSteps();
+    else if (!waitingFor && !quitting && !pending) clearSteps();
     if (data.saving) document.querySelectorAll('#campaigns button').forEach(b => b.disabled = true);
     if (waitingFor && data.active === waitingFor) { location.href = '/'; return; }
   } catch (e) { /* server busy; try again */ }
 }
 loadOptions();
 refresh();
-setInterval(() => { if (waitingFor) refresh(); }, 2000);
+setInterval(() => { if (waitingFor || pending) refresh(); }, 2000);
 setInterval(() => { if (!waitingFor && !quitting) refresh(); }, 2500);   // keeps the 'no Dungeon Master' notice honest
 </script>
 </body>
