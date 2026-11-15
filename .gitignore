@@ -21,8 +21,6 @@
 **/display/.approved_devices.json
 **/display/.pending_devices.json
 
-# Dev-only render screenshots from the redesign work
-design-mockups/renders/
 
 # Local-only demo/gif tooling (kept out of the repo)
 demo_server.py

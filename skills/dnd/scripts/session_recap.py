@@ -1,7 +1,7 @@
 """
 session_recap.py — deterministic state-diff between two character snapshots.
 
-Ported from the Neural Initiative engine's recap module, re-implemented in the
+Ported from an earlier engine's recap module, re-implemented in the
 skill's idiom (plain Python + JSON + markdown character sheets, no Pydantic).
 
 Why this exists (zero LLM):

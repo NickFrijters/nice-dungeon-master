@@ -35,12 +35,11 @@ class ReferenceUrlTests(unittest.TestCase):
         out = lookup.reference_url("Toll the Dead", category="spells", record=rec)
         self.assertEqual(out["url"], rec["wikidot_url"])
 
-    def test_every_mapped_category_produces_a_url(self):
+    def test_plain_srd_entries_get_no_constructed_link(self):
+        """No verified reference site exists for them, so no guessed link."""
         for cat in ("spells", "conditions", "monsters", "equipment",
                     "magic_items", "features"):
-            out = lookup.reference_url("Fireball", category=cat)
-            self.assertTrue(out.get("url"), cat)
-            self.assertTrue(out.get("label"), cat)
+            self.assertEqual(lookup.reference_url("Fireball", category=cat), {}, cat)
 
     def test_an_unmapped_category_produces_no_link_at_all(self):
         """The whole point: silence beats a guess."""
@@ -50,13 +49,12 @@ class ReferenceUrlTests(unittest.TestCase):
     def test_a_name_that_slugifies_to_nothing_produces_no_link(self):
         self.assertEqual(lookup.reference_url("!!!", category="spells"), {})
 
-    def test_the_label_names_its_destination(self):
+    def test_a_supplemental_link_has_a_label(self):
         """A link should say where it goes before it is clicked."""
-        srd = lookup.reference_url("Fireball", category="spells")
         supp = lookup.reference_url(
             "X", category="spells", record={"wikidot_url": "https://example.test/x"}
         )
-        self.assertNotEqual(srd["label"], supp["label"])
+        self.assertTrue(supp["label"])
 
     def test_the_backcompat_shim_still_returns_a_bare_string(self):
         self.assertIsInstance(lookup.wikidot_url("Fireball", category="spells"), str)

@@ -1,11 +1,11 @@
 {
   "name": "nice-dungeon-master",
   "owner": {
-    "name": "Neural Initiative",
-    "url": "https://github.com/neuralinitiative"
+    "name": "Nick Frijters",
+    "url": "https://github.com/NickFrijters"
   },
   "metadata": {
-    "description": "Neural Initiative's Claude Code plugins.",
+    "description": "Claude Code plugins by Nick Frijters.",
     "version": "1.0.0"
   },
   "plugins": [

@@ -3,7 +3,7 @@
 ## Reporting a vulnerability
 
 Please report security issues privately through GitHub's
-[private vulnerability reporting](https://github.com/neuralinitiative/claude-dnd-skill/security/advisories/new)
+[private vulnerability reporting](https://github.com/NickFrijters/nice-dungeon-master/security/advisories/new)
 rather than opening a public issue.
 
 Include what you can: the affected file or script, what an attacker could do

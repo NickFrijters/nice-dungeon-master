@@ -70,7 +70,6 @@ A running adventure is either **Roleplay** or **Combat**. The screen switches au
 - INTERFACE: Screenshot all interfaces and look for graphical inconsistencies or things that don't look nice - fix them (interview me where you think that's necessary).
 - INTERFACE: Interview me about the following: It should not be possible that text scrolls out of the screen without the players confirming that they've read it, or the voice being played. Now on large texts, not everything is visible on TV - which is an issue.
 - CLEANUP: No "PHONE" screen will ever be used, remove that function from the screen and code completely.
-- CLEANUP: C:\Users\frijt\Documents\Claude\nice-dungeon-master\design-mockups shows a kind of visualization that I really dislike, why do we (still) have this folder with images?
 - PERSISTENCY: After every DM input, and after every players-submit, the game state should be processed and saved. So when the browser closes or the app goes back to the main menu, nothing is lost.
 - TTS: Please do further research of we can use another one TTS model (requirements: super fast) for a more realistic English voice, preferably a voice that would be great for a DM. Try Kokoro-82M (hexgrad/Kokoro-82M) first.
 - INTERFACE: Interview me about the visualization of the text (being narrated on screen) in sync with the TTS.
@@ -78,7 +77,6 @@ A running adventure is either **Roleplay** or **Combat**. The screen switches au
 - PERSISTENCY: Do an extremely thorough analysis on the continuity and persistent memory of our data keeping and the DM narration. For example: If a character destroys the door of a local inn, that should have effects when the same character visits the inn again 50 sessions later. The inn keeper won't forget that!
 - PERSISTENCY: Do a full analysis on adventure/campaign persistency. For example: Making sure that we're aiming towards (but not bound to) the general adventure/campaign setting. So that we don't drift off further from it with every session.
 - PERFORMANCE: Persistent image saving and rendering. Keep a very thorough database of previously downloaded images. Save all provided campaign/adventure images and all self-downloaded images from internet. To be able to use those in all future campaigns or on request.
-- CLEANUP: Remove the Neural Initiative mentions and logo from our app and code.
 - CLEANUP: We will always use the Vellum style instead of the Editorial style. So remove the Editorial style from the interface and code completely.
 - PRETTIFY: The "DM Help" info block that pops up, and the "Save and Exit" error block that pops up (can you check what I mean) doesn't match the rest of the interface style.
 - FLAVOUR: Add ambient sounds to match with the background visuals.
