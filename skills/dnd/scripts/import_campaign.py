@@ -292,6 +292,9 @@ def main():
     parser.add_argument("--chunks", action="store_true", help="Print total chunk count")
     parser.add_argument("--chunk", type=int, default=None, metavar="N",
                         help="Print chunk N (0-indexed; ~4000 words or ~6000 CJK characters)")
+    parser.add_argument("--extract-images", metavar="CAMPAIGN", default=None,
+                        help="PDF only: also extract the adventure's illustrations into <CAMPAIGN>/images/ "
+                             "and register them in the shared image library (needs PyMuPDF)")
     args = parser.parse_args()
 
     if not os.path.exists(args.filepath):
@@ -303,6 +306,15 @@ def main():
     except RuntimeError as e:
         print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)
+
+    if args.extract_images and args.filepath.lower().endswith(".pdf"):
+        try:
+            import image_library
+            r = image_library.extract_pdf_images(args.filepath, args.extract_images)
+            print(f"[import] images: {r['new']} new, {r['duplicate']} already in the library",
+                  file=sys.stderr)
+        except Exception as e:            # images are a bonus; never block the text import
+            print(f"[import] image extraction skipped: {e}", file=sys.stderr)
 
     if not text.strip():
         print("Warning: extracted text is empty. File may be image-only PDF.", file=sys.stderr)
