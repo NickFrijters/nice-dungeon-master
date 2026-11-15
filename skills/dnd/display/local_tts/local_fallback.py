@@ -36,6 +36,17 @@ def _start() -> None:
                      stderr=subprocess.DEVNULL, creationflags=flags, close_fds=True)
 
 
+def shutdown() -> None:
+    """Ask a running voice server to exit. Does nothing if none is running."""
+    if not _up():
+        return
+    try:
+        req = urllib.request.Request(BASE + "/shutdown", data=b"", method="POST")
+        urllib.request.urlopen(req, timeout=3).read()
+    except Exception:
+        pass
+
+
 def synthesize(text: str) -> bytes:
     if not enabled():
         raise RuntimeError("local TTS disabled or not installed")

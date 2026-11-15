@@ -77,6 +77,8 @@ A running adventure is either **Roleplay** or **Combat**. The screen switches au
 - I believe the current local TTS that we're using is the best (fast) available for Dutch. But please do further research of we can use another one (requirements: super fast) for a more realistic English voice, preferably a voice that would be great for a DM. Try Kokoro-82M (hexgrad/Kokoro-82M) first.
 - Waiting for the DM should never take more than 5 seconds (this probably needs data management improvements).
 - Als ik "Party input" open klap wil ik onder elkaar een regel per character met elk een tekst invoer veld(bovenaan een regel voor "Everybody"). Geen "stage" knoppen, maar maak het visueel als een veld tekstinvoer bevat. De "GO" knop verstuurt simpelweg alle ingevoerde tekstvelden naar de DM.
+- ANALYSE AND IMPROVE: Do an extremely thorough analysis on the continuity and persistent memory of our data keeping and the DM narration. For example: If a character destroys the door of a local inn, that should have effects when the same character visits the inn again 50 sessions later. The inn keeper won't forget that!
+- ANALYSE AND IMPROVE: Do a full analysis on adventure/campaign persistency. For example: Making sure that we're aiming towards (but not bound to) the general adventure/campaign setting. So that we don't drift off further from it with every session.
 
 ## Status
 - **v1 (done):** `/dm:dnd menu` starts the display. The Main Menu lists your campaigns, and clicking Load hands the request to Claude, who loads it and switches the browser to the play screen. "Manage characters" and "Settings" are placeholders.

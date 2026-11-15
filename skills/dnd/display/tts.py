@@ -138,6 +138,15 @@ def synthesize_strict(text: str) -> bytes:
     return pcm
 
 
+def stop_voice() -> None:
+    """Ask the local voice server to exit, if it is running. Never raises."""
+    try:
+        import local_fallback
+        local_fallback.shutdown()
+    except Exception:
+        pass
+
+
 def warm_up() -> None:
     """Load the English and Dutch models ahead of the first narration block.
 

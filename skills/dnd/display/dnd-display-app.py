@@ -1320,6 +1320,38 @@ def menu_load():
     return "", 204
 
 
+# Quit: tell Claude first (so it saves and stops waiting), then stop the display
+# and the local voice. The pause gives Claude's wait loop time to pick the line
+# up and acknowledge it before the display it polls goes away. The two names
+# below exist so tests can swap them; nothing else should.
+_QUIT_DELAY = 3.0
+_exit_display = os._exit
+
+
+@app.route("/menu/quit", methods=["POST"])
+def menu_quit():
+    """Stop the display (and the local voice) after telling Claude to wrap up."""
+    if not _token_ok():
+        return "Forbidden", 403
+    try:
+        with _staged_lock, open(QUEUE_FILE, "a", encoding="utf-8") as f:
+            f.write("[Menu]: quit\n")
+    except OSError:
+        pass   # Claude may not be waiting; the display still stops
+
+    def _stop():
+        import time as _t
+        _t.sleep(_QUIT_DELAY)
+        try:
+            if _tts is not None:
+                _tts.stop_voice()
+        finally:
+            _exit_display(0)
+
+    threading.Thread(target=_stop, daemon=True).start()
+    return "", 204
+
+
 # ─── Settings (reached from the Main Menu) ───────────────────────────────────
 
 @app.route("/settings")

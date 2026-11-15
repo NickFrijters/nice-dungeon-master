@@ -77,6 +77,18 @@ class CacheAndSynthTest(unittest.TestCase):
             tts.warm_up()
         fake.assert_not_called()
 
+    def test_stop_voice_asks_a_running_server_to_exit_and_never_raises(self):
+        import local_fallback
+        with mock.patch.object(local_fallback, "_up", return_value=True),              mock.patch("urllib.request.urlopen") as opened:
+            tts.stop_voice()
+        self.assertEqual(opened.call_count, 1)
+        self.assertTrue(opened.call_args[0][0].full_url.endswith("/shutdown"))
+        with mock.patch.object(local_fallback, "_up", return_value=False),              mock.patch("urllib.request.urlopen") as opened:
+            tts.stop_voice()
+        opened.assert_not_called()
+        with mock.patch.object(local_fallback, "_up", side_effect=RuntimeError("x")):
+            tts.stop_voice()   # must not raise
+
     def test_no_remote_service_in_the_module(self):
         src = (DISPLAY / "tts.py").read_text(encoding="utf-8").lower()
         for needle in ("gemini", "googleapis", "api_key", "urllib.request"):

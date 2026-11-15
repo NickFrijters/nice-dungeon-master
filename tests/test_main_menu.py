@@ -97,6 +97,31 @@ class MainMenuTest(unittest.TestCase):
             self.assertEqual(f.read(),
                              "[Mira]: I open the door\n[Menu]: load beta-saga\n")
 
+    def test_quit_tells_claude_then_stops_the_display_and_the_voice(self):
+        import threading
+        stopped = threading.Event()
+        codes = []
+        voice = mock.Mock()
+        with mock.patch.object(self.mod, "_QUIT_DELAY", 0),              mock.patch.object(self.mod, "_exit_display", lambda c: (codes.append(c), stopped.set())),              mock.patch.object(self.mod._tts, "stop_voice", voice):
+            r = self.client.post("/menu/quit")
+            self.assertEqual(r.status_code, 204)
+            self.assertTrue(stopped.wait(5), "the display never asked to exit")
+        self.assertEqual(codes, [0])
+        voice.assert_called_once()
+        with open(self.mod.QUEUE_FILE, encoding="utf-8") as f:
+            self.assertEqual(f.read(), "[Menu]: quit" + chr(10))
+
+    def test_quit_still_stops_when_the_queue_cannot_be_written(self):
+        import threading
+        stopped = threading.Event()
+        with mock.patch.object(self.mod, "_QUIT_DELAY", 0),              mock.patch.object(self.mod, "_exit_display", lambda c: stopped.set()),              mock.patch.object(self.mod._tts, "stop_voice"),              mock.patch("builtins.open", side_effect=OSError("disk")):
+            r = self.client.post("/menu/quit")
+            self.assertEqual(r.status_code, 204)
+            self.assertTrue(stopped.wait(5))
+
+    def test_menu_page_has_a_quit_button(self):
+        self.assertIn(b'id="quit"', self.client.get("/menu").data)
+
     def test_load_rejects_unknown_or_hostile_names(self):
         for bad in ("nope", "../alpha-quest", "alpha-quest; rm -rf ~", "", ".hidden"):
             r = self.client.post("/menu/load", json={"campaign": bad})

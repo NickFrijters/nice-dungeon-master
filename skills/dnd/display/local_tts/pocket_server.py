@@ -71,6 +71,10 @@ class H(BaseHTTPRequestHandler):
         self._send(200, b"ok") if self.path == "/health" else self._send(404)
 
     def do_POST(self):
+        if self.path == "/shutdown":
+            self._send(200, b"bye")
+            threading.Thread(target=SERVER.shutdown, daemon=True).start()
+            return
         if self.path != "/synth":
             return self._send(404)
         try:
@@ -85,7 +89,9 @@ class H(BaseHTTPRequestHandler):
             self._send(500, f"{type(e).__name__}: {e}".encode()[:300])
 
 
+SERVER = None
+
 if __name__ == "__main__":
-    srv = ThreadingHTTPServer(("127.0.0.1", PORT), H)
+    SERVER = ThreadingHTTPServer(("127.0.0.1", PORT), H)
     print(f"pocket server on 127.0.0.1:{PORT}", flush=True)
-    srv.serve_forever()
+    SERVER.serve_forever()

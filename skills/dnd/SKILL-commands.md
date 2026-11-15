@@ -14,6 +14,7 @@ Open the web **Main Menu**. After this, the player works in the browser and you 
 3. Enter the **menu wait**: the same blocking Bash call as the autorun wait (`python3 ${CLAUDE_SKILL_DIR}/display/autorun_wait.py`). No campaign is loaded yet, so there is no `state.md` flag to check; keep waiting until something arrives. If it times out empty, restart the wait silently.
 4. Menu requests arrive as lines starting with `[Menu]:`. Handle them like this:
    - `[Menu]: load <campaign-name>` → run the `/dm:dnd load <campaign-name>` procedure **without asking any setup questions**: the display is already running, so skip the display and input choice, and turn autorun **on** (write `autorun: true` to `state.md → ## Session Flags`) so the browser keeps control. Then give the recap and enter the autorun wait as usual.
+   - `[Menu]: quit` → the player pressed **Quit**. The display and the voice stop on their own about three seconds later. If a campaign is loaded, run the `/dm:dnd save` procedure first. Then say a short goodbye in one line and **end the loop: do not start another wait**. This line can also arrive while a campaign is running in autorun; handle it the same way.
    - Anything else after `[Menu]:` → tell the player it is not available yet, then go back to waiting.
 
 ## `/dm:dnd new <campaign-name> [theme]`

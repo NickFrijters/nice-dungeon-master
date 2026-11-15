@@ -10,6 +10,12 @@ Versions before **1.6.0** are reconstructed retroactively from git history; the 
 
 ## [Unreleased]
 
+## [2.12.0] — 2026-11-15 — Quit button
+
+### Added — Quit button
+
+The Main Menu has a Quit button. It queues `[Menu]: quit` for Claude (which saves the campaign and stops waiting), then about three seconds later the display exits and asks the local voice server to exit too (`/shutdown` on `pocket_server.py`). Before this, the display and voice kept running in the background after the terminal was closed.
+
 ## [2.11.0] — 2026-11-15 — TV/PC display merged
 
 ### Added — the owner's TV/PC display work, merged into the fork
