@@ -615,3 +615,13 @@ python3 ${CLAUDE_SKILL_DIR}/scripts/arc_drift.py anchors --campaign <name>
 ```
 
 `anchors` prints `## Setting Anchors` from world.md (exit 1 if missing). Used by `load` and `save`; see SKILL.md "Aim, don't bind".
+
+## Micro-save: `scripts/micro_save.py`
+
+The cheap per-turn save of DM-only state (see *Save after every turn* in SKILL.md). Atomic, deterministic, no model rewrite of `state.md`.
+
+```bash
+python3 ${CLAUDE_SKILL_DIR}/scripts/micro_save.py -c <campaign>   --event "Mira picked the cellar lock; Hobb saw it."   --flag "NPC Hobb: hostile, wants 5 gp for the door"   --unflag "NPC Old Label"
+```
+
+`--event` appends a bullet to `## Recent Events` (last 12 kept). `--flag "Label: text"` sets or replaces the `## Live State Flags` line with that label; `--unflag Label` removes it. All three may repeat.

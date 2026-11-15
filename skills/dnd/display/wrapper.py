@@ -218,9 +218,11 @@ def _inject_queue(master_fd: int) -> None:
         return
     raw = ""
     try:
-        with open(QUEUE_FILE, encoding="utf-8") as f:
+        _taken = QUEUE_FILE + ".taking"      # claim first, so a line appended meanwhile is not lost
+        os.replace(QUEUE_FILE, _taken)
+        with open(_taken, encoding="utf-8") as f:
             raw = f.read()
-        os.unlink(QUEUE_FILE)
+        os.unlink(_taken)
     except Exception:
         try:
             os.unlink(QUEUE_FILE)

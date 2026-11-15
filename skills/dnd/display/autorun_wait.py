@@ -72,8 +72,12 @@ for _i in range(1800):  # 0.3s * 1800 = 9 min
         _beat()
     if os.path.exists(QFILE):
         try:
-            content = open(QFILE, encoding="utf-8").read()
-            os.unlink(QFILE)
+            # Claim the file first (atomic rename), then read: a line the display appends
+            # in between goes to a fresh .input_queue instead of being deleted unread.
+            _taken = QFILE + ".taking"
+            os.replace(QFILE, _taken)
+            content = open(_taken, encoding="utf-8").read()
+            os.unlink(_taken)
         except Exception:
             content = ""
         break
