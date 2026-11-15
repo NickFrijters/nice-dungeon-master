@@ -60,8 +60,13 @@ A running adventure is either **Roleplay** or **Combat**. The screen switches au
 ## Manual additions done by Nick in this .md file, read this as "next things" or the backlog.
 ## -- if I make changes here, always automatically include in the next commit.
 ## -- remove items from this list once they are built
-- INTERFACE: Loading between DM responses should always visualize what it's doing and how many things it has to do next (loading bar with several parts, or another way to show progress). Because waiting is always annoying for players. Goal is that every waiting time is accompanied by a tracker, always.
+- BUG: "DM HELP" doet helemaal niks.
+- BUG: The most recent created DM narration in test adventure didn't trigger any voice.
+- INTERFACE: De party input moet (verticaal) compacter.
+- PERSISTENCY: When opening a campaign from the main menu, always start with a recap instead of showing the whole history.
+- The main menu doesn't have an option to start a new Campaign. (it should be able to let Claude create one, or provide a PDF with a (published) adventure.
 - INTERFACE: The text font that's currently used for narration is flavourful and clear, I want to use that font as the only font used throughout the whole app (do I? interview me first about the consequences)
+- INTERFACE: Loading between DM responses should always visualize what it's doing and how many things it has to do next (loading bar with several parts, or another way to show progress). Because waiting is always annoying for players. Goal is that every waiting time is accompanied by a tracker, always.
 - INTERFACE: Clearer visualization of character sheets, needs investigation and interviewing
 - INTERFACE: Build the roleplay screen
 - INTERFACE: Build the combat screen
@@ -69,7 +74,6 @@ A running adventure is either **Roleplay** or **Combat**. The screen switches au
 - INTERFACE: Interview me about the following: It should not be possible that text scrolls out of the screen without the players confirming that they've read it, or the voice being played. Now on large texts, not everything is visible on TV - which is an issue.
 - CLEANUP: No "PHONE" screen will ever be used, remove that function from the screen and code completely.
 - CLEANUP: C:\Users\frijt\Documents\Claude\nice-dungeon-master\design-mockups shows a kind of visualization that I really dislike, why do we (still) have this folder with images?
-- PERSISTENCY: When opening a campaign from the main menu, always start with a recap instead of showing the whole history.
 - PERSISTENCY: After every DM input, and after every players-submit, the game state should be processed and saved. So when the browser closes or the app goes back to the main menu, nothing is lost.
 - TTS: Please do further research of we can use another one TTS model (requirements: super fast) for a more realistic English voice, preferably a voice that would be great for a DM. Try Kokoro-82M (hexgrad/Kokoro-82M) first.
 - INTERFACE: Interview me about the visualization of the text (being narrated on screen) in sync with the TTS.

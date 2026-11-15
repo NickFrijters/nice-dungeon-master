@@ -2424,6 +2424,14 @@ def help_request():
     if not _token_ok():
         return "Forbidden", 403
 
+    # A lock left behind by a helper that was killed would block DM Help for ever: after three
+    # minutes it is stale (a hint takes well under two).
+    try:
+        if _time.time() - os.path.getmtime(HELP_LOCK) > 180:
+            os.unlink(HELP_LOCK)
+    except OSError:
+        pass
+
     # Atomic lock: O_EXCL fails if file already exists — no race condition
     try:
         fd = os.open(HELP_LOCK, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
@@ -2443,11 +2451,18 @@ def help_request():
         return "No active campaign", 400
 
     dm_help_py = os.path.join(os.path.dirname(os.path.abspath(__file__)), "dm_help.py")
-    subprocess.Popen(
-        [sys.executable, dm_help_py, "--campaign", campaign],
-        close_fds=True,
-        start_new_session=True,
-    )
+    try:
+        subprocess.Popen(
+            [sys.executable, dm_help_py, "--campaign", campaign],
+            close_fds=True,
+            start_new_session=True,
+        )
+    except OSError:
+        try:
+            os.unlink(HELP_LOCK)
+        except OSError:
+            pass
+        return "Could not start DM Help", 500
     return "", 202
 
 

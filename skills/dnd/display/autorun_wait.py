@@ -104,7 +104,7 @@ if content:
             ctx = ssl.create_default_context()
             ctx.check_hostname = False
             ctx.verify_mode = ssl.CERT_NONE
-        req = urllib.request.Request(f"{scheme}://localhost:5001/queue/consumed",
+        req = urllib.request.Request(f"{scheme}://localhost:{os.environ.get('DND_DISPLAY_PORT', '5001')}/queue/consumed",
                                      data=b"", method="POST",
                                      headers={"X-DND-Token": token})
         urllib.request.urlopen(req, timeout=1, context=ctx)

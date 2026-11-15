@@ -23,8 +23,12 @@ import json
 import os
 import pathlib
 import re
+import shutil
 import subprocess
 import sys
+import tempfile
+import time
+import traceback
 sys.path.insert(0, str(pathlib.Path(__file__).parent.parent / "scripts"))
 from paths import find_campaign as _find_campaign, skill_root as _skill_root, runtime_dir as _runtime_dir
 
@@ -44,6 +48,23 @@ STATE_SECTIONS = [
     "## Session Flags",
 ]
 STATE_SECTION_LINE_LIMIT = 20  # per section — keeps prompt tight
+
+
+#: How long to wait for Claude to write a hint.
+HINT_TIMEOUT = 90
+
+
+class HintError(Exception):
+    """A reason the hint could not be made, in words a player can read."""
+
+
+def _log(msg: str) -> None:
+    """Keep a trace in the runtime folder: the helper runs detached, so nothing else would show it."""
+    try:
+        with open(_RT / "dm_help.log", "a", encoding="utf-8") as f:
+            f.write(time.strftime("%Y-%m-%d %H:%M:%S ") + msg + "\n")
+    except OSError:
+        pass
 
 
 def release_lock() -> None:
@@ -296,31 +317,49 @@ def call_claude(display: str, state: str, session: str, arc: str, graph: str = "
 
     prompt = "\n\n".join(prompt_parts)
 
-    result = subprocess.run(
-        [
-            "claude", "-p",
-            "--model", "claude-sonnet-4-6",
-            "--system-prompt", system,
-            prompt,
-        ],
-        capture_output=True,
-        encoding="utf-8", text=True,
-        timeout=60,
-    )
+    # On Windows "claude" is claude.CMD, which Python cannot start by that bare name, so find the real
+    # file. The long instructions go in a file and the question on stdin: a .CMD launcher mangles
+    # quotes, newlines and symbols on the command line.
+    exe = shutil.which("claude")
+    if not exe:
+        raise HintError("the claude command was not found on this computer")
+    fd, system_path = tempfile.mkstemp(prefix="dm_help_system_", suffix=".txt")
+    os.close(fd)
+    try:
+        with open(system_path, "w", encoding="utf-8") as f:
+            f.write(system)
+        try:
+            result = subprocess.run(
+                [exe, "-p", "--model", "sonnet", "--system-prompt-file", system_path,
+                 "--no-session-persistence", "--tools", ""],
+                input=prompt, capture_output=True, encoding="utf-8", text=True, timeout=HINT_TIMEOUT,
+            )
+        except subprocess.TimeoutExpired:
+            raise HintError("it took too long")
+        except OSError as e:
+            raise HintError(f"claude could not be started ({e})")
+    finally:
+        try:
+            os.unlink(system_path)
+        except OSError:
+            pass
 
     if result.returncode != 0:
-        return "SKIP"
+        detail = (result.stderr or result.stdout or "").strip().replace("\n", " ")[:160]
+        raise HintError("claude stopped with an error" + (": " + detail if detail else ""))
 
     return result.stdout.strip()
 
 
 def send_tutor(text: str) -> None:
-    subprocess.run(
+    r = subprocess.run(
         [sys.executable, str(SEND_PY), "--tutor"],
         input=text,
         encoding="utf-8", text=True,
         capture_output=True,
     )
+    if r.returncode != 0:
+        _log("could not send the hint to the display: " + (r.stderr or "").strip()[:200])
 
 
 def main() -> None:
@@ -335,14 +374,23 @@ def main() -> None:
         arc     = get_arc_context(args.campaign)
         graph   = get_graph_context(args.campaign)
 
+        # Every click gets an answer on screen: a hint, a short "nothing to add", or the reason it failed.
         if not display and not state and not session:
+            send_tutor("There is nothing to go on yet. Play a little, then ask again.")
             return
 
         hint = call_claude(display, state, session, arc, graph)
-        if hint.strip().upper() == "SKIP":
+        if not hint.strip() or hint.strip().upper() == "SKIP":
+            send_tutor("Nothing to add right now. You are on the right track.")
             return
 
         send_tutor(hint)
+    except HintError as e:
+        _log(f"no hint for {args.campaign}: {e}")
+        send_tutor(f"DM Help could not come up with a hint ({e}). Try again in a moment.")
+    except Exception:
+        _log(traceback.format_exc())
+        send_tutor("DM Help ran into a problem. Try again in a moment.")
     finally:
         release_lock()
 

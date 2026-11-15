@@ -6825,6 +6825,13 @@ const _dmHelpBtn = document.getElementById('dm-help-btn');
 let _helpPending = false;
 let _helpResetTimer = null;
 
+// No hint arrived in time: say so instead of quietly resetting the button.
+function _dmHelpTimeout() {
+  if (!_helpPending && !_dmHelpBtn.classList.contains('locked')) return;
+  _showToast('No hint came back. Try DM Help again.', 5000);
+  _dmHelpReset();
+}
+
 function _dmHelpReset() {
   _helpPending = false;
   _dmHelpBtn.disabled = false;
@@ -6865,12 +6872,12 @@ _dmHelpBtn.addEventListener('click', async () => {
       // Auto-reset when the tutor block arrives (see renderTutorBlock)
       // Safety timeout in case it never arrives
       clearTimeout(_helpResetTimer);
-      _helpResetTimer = setTimeout(_dmHelpReset, 20000);
+      _helpResetTimer = setTimeout(_dmHelpTimeout, 110000);
     } else if (res.status === 202) {
       // Accepted — wait for the tutor SSE block to arrive
       // renderTutorBlock will call _dmHelpReset()
       clearTimeout(_helpResetTimer);
-      _helpResetTimer = setTimeout(_dmHelpReset, 20000);
+      _helpResetTimer = setTimeout(_dmHelpTimeout, 110000);
     } else {
       _showToast('DM Help isn’t available right now');
       _dmHelpReset();
