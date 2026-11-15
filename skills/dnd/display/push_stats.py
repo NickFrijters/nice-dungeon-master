@@ -167,6 +167,8 @@ def main() -> None:
                         help='Full character sheet data: {"attacks":[...],"spells":{...},"features":[...],"inventory":[...]} (requires --player)')
     parser.add_argument("--factions", metavar="JSON",
                         help='Party faction standings: [{"name":"Pale Court","standing":"Suspicious"},...]; [] clears')
+    parser.add_argument("--npcs", metavar="JSON",
+                        help='NPCs in the current scene: [{"name":"Borga","role":"Innkeeper","disposition":"Friendly"},...]; [] clears')
     parser.add_argument("--quests", metavar="JSON",
                         help='Quest tracker: [{"name":"The Ward-Points","status":"resolved"},{"name":"Vedra Ceth","status":"threat"},...]; [] clears. Status values: active, threat, resolved, failed')
     parser.add_argument("--turn-order", metavar="JSON",
@@ -301,6 +303,14 @@ def main() -> None:
             payload["factions"] = json.loads(args.factions)
         except json.JSONDecodeError as e:
             print(f"Invalid factions JSON: {e}", file=sys.stderr)
+            sys.exit(1)
+
+    # ── NPCs in the scene ──────────────────────────────────────────────────────
+    if args.npcs is not None:
+        try:
+            payload["npcs"] = json.loads(args.npcs)
+        except json.JSONDecodeError as e:
+            print(f"Invalid npcs JSON: {e}", file=sys.stderr)
             sys.exit(1)
 
     # ── Quests ─────────────────────────────────────────────────────────────────

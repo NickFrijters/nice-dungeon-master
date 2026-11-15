@@ -10,6 +10,12 @@ Versions before **1.6.0** are reconstructed retroactively from git history; the 
 
 ## [Unreleased]
 
+## [2.32.0] — 2026-11-15 — Roleplay screen
+
+### Added — the Roleplay screen
+
+A "Here now" panel with the NPCs in the current scene (`push_stats.py --npcs`), a picture column on the right with the newest three scene images (click to enlarge), and the active quest shown in a strip at the top. The party, factions and quests panels were already on the left.
+
 ## [2.31.0] — 2026-11-15 — Editorial style removed
 
 ### Removed — the Editorial style

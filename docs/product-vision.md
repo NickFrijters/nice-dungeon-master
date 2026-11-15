@@ -60,17 +60,16 @@ A running adventure is either **Roleplay** or **Combat**. The screen switches au
 ## Manual additions done by Nick in this .md file, read this as "next things" or the backlog.
 ## -- if I make changes here, always automatically include in the next commit.
 ## -- remove items from this list once they are built
-- INTERFACE: Build the roleplay screen
-- INTERFACE: Build the combat screen
-- INTERFACE: Screenshot all interfaces and look for graphical inconsistencies or things that don't look nice - fix them (interview me where you think that's necessary).
 - INTERFACE: Interview me about the following: It should not be possible that text scrolls out of the screen without the players confirming that they've read it, or the voice being played. Now on large texts, not everything is visible on TV - which is an issue.
 - CLEANUP: No "PHONE" screen will ever be used, remove that function from the screen and code completely.
+- PRETTIFY: The "DM Help" info block that pops up, and the "Save and Exit" error block that pops up (can you check what I mean) doesn't match the rest of the interface style.
 - PERSISTENCY: After every DM input, and after every players-submit, the game state should be processed and saved. So when the browser closes or the app goes back to the main menu, nothing is lost. Or is this already the case?
 - TTS: Please do further research of we can use another one TTS model (requirements: super fast) for a more realistic English voice, preferably a voice that would be great for a DM. Try Kokoro-82M (hexgrad/Kokoro-82M) first.
+- INTERFACE: Screenshot all interfaces and look for graphical inconsistencies or things that don't look nice - fix them (interview me where you think that's necessary).
 - INTERFACE: Interview me about the visualization of the text (being narrated on screen) in sync with the TTS.
 - PERFORMANCE: Waiting for the DM should never take more than 10 seconds (this probably needs data management improvements). That means that if we need larger pieces of text which take long to generate, cut it into pieces and continue working while the characters read or hear the first part.
-- PRETTIFY: The "DM Help" info block that pops up, and the "Save and Exit" error block that pops up (can you check what I mean) doesn't match the rest of the interface style.
 - FLAVOUR: Add ambient sounds to match with the background visuals.
+- INTERFACE: Build the combat screen
 - INTERFACE: Build the character creation screen
 
 ## Status

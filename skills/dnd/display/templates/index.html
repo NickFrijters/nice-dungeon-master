@@ -3688,6 +3688,31 @@
   #sheet-panel .sm-inventory-list li { font-size:17px; padding:4px 0; color:rgba(240,228,198,.95); }
   #sheet-panel .sm-rel-name { font-size:16px; } #sheet-panel .sm-rel-role, #sheet-panel .sm-rel-note { font-size:14px; }
   @media (max-width:640px) { #sheet-panel .sm-ab-grid { grid-template-columns:repeat(3, 1fr); } #sheet-panel .sm-name { font-size:22px; } }
+  /* ── Roleplay screen: NPCs here (left), scene gallery (right), active quest strip (top) ── */
+  #sb-npcs { margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(180,140,60,0.08); }
+  .sb-npcs-header { font-family: 'Cinzel', serif; font-size: 9px; letter-spacing: 2px; text-transform: uppercase;
+    color: rgba(180,140,60,0.55); margin-bottom: 6px; }
+  .sb-npc-item { padding: 3px 0; }
+  .sb-npc-name { font-size: 12px; color: rgba(225,210,175,0.9); }
+  .sb-npc-role { font-size: 10px; color: rgba(200,185,150,0.5); margin-left: 6px; }
+  .sb-npc-disp { font-family: 'Cinzel', serif; font-size: 8px; letter-spacing: .5px; text-transform: uppercase; margin-left: 6px; color: rgba(180,140,60,0.6); }
+  .sb-npc-disp.friendly, .sb-npc-disp.allied { color: rgba(80,200,130,0.75); }
+  .sb-npc-disp.hostile { color: rgba(220,60,60,0.85); }
+  .sb-npc-disp.suspicious, .sb-npc-disp.unfriendly { color: rgba(220,120,50,0.8); }
+  #scene-gallery { position: fixed; right: 18px; top: 110px; bottom: 110px; width: calc(max(340px, 18vw) - 56px);
+    z-index: 5; display: flex; flex-direction: column; gap: 12px; overflow: hidden; pointer-events: none; }
+  #scene-gallery[hidden] { display: none; }
+  #scene-gallery .sg-title { font-family: 'Cinzel', serif; font-size: 10px; letter-spacing: 3px; text-transform: uppercase;
+    color: rgba(180,140,60,0.55); }
+  #scene-gallery .sg-item { pointer-events: auto; cursor: pointer; border: 1px solid rgba(180,140,60,0.35); border-radius: 4px;
+    background: rgba(0,0,0,0.5); overflow: hidden; flex: 0 1 auto; min-height: 0; }
+  #scene-gallery .sg-item img { display: block; width: 100%; max-height: 28vh; object-fit: cover; }
+  #scene-gallery .sg-cap { font-size: 11px; padding: 4px 8px; color: rgba(215,200,165,0.75); }
+  #quest-strip { position: fixed; top: 56px; left: 50%; transform: translateX(-50%); z-index: 6; max-width: 60vw;
+    font-family: 'Cinzel', serif; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: rgba(200,165,80,0.7);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none; }
+  #quest-strip[hidden] { display: none; }
+  @media (max-width: 1100px) { #scene-gallery { display: none; } }
 </style>
 </head>
 <body>
@@ -3705,6 +3730,8 @@
 <!-- Overlays -->
 <div id="vignette"></div>
 <div id="frame"></div>
+<div id="quest-strip" hidden></div>
+<div id="scene-gallery" hidden><div class="sg-title">In view</div></div>
 <div id="scene-indicator">— The Inn —</div>
 <div id="bottom-fade"></div>
 
@@ -3911,6 +3938,10 @@
   <!-- Faction standings — injected by updateStats() when factions data is present -->
   <div id="sb-factions" style="display:none">
     <div class="sb-factions-header">Factions</div>
+  </div>
+  <!-- NPCs in the current scene — injected by updateStats() when npcs data is present -->
+  <div id="sb-npcs" style="display:none">
+    <div class="sb-npcs-header">Here now</div>
   </div>
   <!-- Quest tracker — injected by updateStats() when quests data is present -->
   <div id="sb-quests" style="display:none">
@@ -5525,6 +5556,21 @@ window._relayHandlers = window._relayHandlers || [];
 window._relayHandlers.push(function(m){
   if (m && m.t === 'img') _imgLightbox(!!m.open, m.im, true);
 });
+// The right-hand column keeps the three newest pictures of the scene in view next to the story.
+function _galleryAdd(im) {
+  const g = document.getElementById('scene-gallery'); if (!g) return;
+  g.querySelectorAll('.sg-item').forEach(el => { if (el.dataset.src === im.src) el.remove(); });
+  const it = document.createElement('div'); it.className = 'sg-item'; it.dataset.src = im.src;
+  const pic = document.createElement('img'); pic.src = _imgSrc(im.src); pic.alt = im.caption || '';
+  it.appendChild(pic);
+  if (im.caption) { const c = document.createElement('div'); c.className = 'sg-cap'; c.textContent = im.caption; it.appendChild(c); }
+  it.addEventListener('click', () => _imgLightbox(true, { src: im.src, caption: im.caption, _manual: true }, false));
+  g.appendChild(it);
+  const items = g.querySelectorAll('.sg-item');
+  for (let i = 0; i < items.length - 3; i++) items[i].remove();
+  g.hidden = false;
+}
+
 function renderImageBlock(im, replay) {
   _flushForBlock();
   const block = document.createElement('div');
@@ -5535,6 +5581,7 @@ function renderImageBlock(im, replay) {
   block.appendChild(img);
   if (im.caption) { const c = document.createElement('div'); c.className = 'img-cap'; c.textContent = im.caption; block.appendChild(c); }
   block.addEventListener('click', function(){ _imgLightbox(true, { src: im.src, caption: im.caption, _manual: true }, false); });
+  _galleryAdd(im);
   textContent.appendChild(block);
   _reanchorCursor();
   scrollToBottom();
@@ -6660,6 +6707,30 @@ function updateStats(stats) {
     } else {
       factPanel.style.display = 'none';
     }
+  }
+
+  // NPCs in the scene
+  if ('npcs' in stats) {
+    const panel = document.getElementById('sb-npcs');
+    const npcs = stats.npcs || [];
+    panel.querySelectorAll('.sb-npc-item').forEach(el => el.remove());
+    npcs.forEach(n => {
+      const item = document.createElement('div'); item.className = 'sb-npc-item';
+      const nm = document.createElement('span'); nm.className = 'sb-npc-name'; nm.textContent = n.name;
+      item.appendChild(nm);
+      if (n.role) { const r = document.createElement('span'); r.className = 'sb-npc-role'; r.textContent = n.role; item.appendChild(r); }
+      if (n.disposition) { const d = document.createElement('span'); d.className = 'sb-npc-disp ' + n.disposition.toLowerCase(); d.textContent = n.disposition; item.appendChild(d); }
+      panel.appendChild(item);
+    });
+    panel.style.display = npcs.length ? '' : 'none';
+  }
+
+  // Active quest in the top strip
+  if ('quests' in stats) {
+    const strip = document.getElementById('quest-strip');
+    const q = (stats.quests || []).find(x => (x.status || '').toLowerCase() === 'active');
+    strip.hidden = !q;
+    if (q) strip.textContent = 'Quest: ' + q.name;
   }
 
   // Quest panel

@@ -2248,6 +2248,13 @@ def stats():
         if "quests" in data:
             _current_stats["quests"] = data["quests"]
 
+        # npcs in the current scene replace entirely ([] clears): [{name, role, disposition}]
+        if "npcs" in data:
+            _current_stats["npcs"] = [
+                {"name": str(n.get("name", ""))[:60], "role": str(n.get("role", ""))[:80],
+                 "disposition": str(n.get("disposition", ""))[:30]}
+                for n in (data["npcs"] or []) if isinstance(n, dict) and n.get("name")][:12]
+
         current = dict(_current_stats)
 
     # autorun_waiting / autorun_cycle — display-only signals, not stored in stats

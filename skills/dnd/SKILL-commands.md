@@ -205,6 +205,7 @@ Open the web **Main Menu**. After this, the player works in the browser and you 
    python3 ${CLAUDE_SKILL_DIR}/display/push_stats.py --quests '[...]'
    ```
    The quest panel only appears when at least one quest is present — do not skip this push.
+   The first `active` quest also shows in a strip at the top of the screen. **NPCs here:** push the NPCs present in the current scene with `push_stats.py --npcs '[{"name":"Borga","role":"Innkeeper","disposition":"Friendly"}]'` at load and again whenever the party enters a new place or someone arrives or leaves (`[]` clears); they show in the "Here now" panel on the left. Flavour images you send with `send.py --image` appear in the picture column on the right (newest three).
 7. **Pull scene-context from the campaign graph.** Always run, even if you suspect `graph.json` doesn't exist — the script exits cleanly with a notice when uninitialized.
    ```bash
    python3 ${CLAUDE_SKILL_DIR}/scripts/campaign_graph.py scene-context \
