@@ -6,8 +6,6 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="dnd-token" content="{{ lan_token }}">
-<meta name="narrator-voice" content="{{ narrator_voice }}">
-<meta name="tts-available" content="{{ '1' if tts_available else '0' }}">
 <meta name="narration-audio-default" content="{{ '1' if narration_audio_default else '0' }}">
 
 <!-- Theme anti-FOUC. Runs synchronously before the stylesheet parses so the
@@ -1525,8 +1523,7 @@
     margin-top: 0.55em;
     position: relative;
   }
-  .tts-play-btn,
-  .tts-voice-btn {
+  .tts-play-btn {
     background: none;
     border: none;
     cursor: pointer;
@@ -1541,65 +1538,14 @@
     line-height: 0;
   }
   .dm-block:hover .tts-play-btn,
-  .dm-block:hover .tts-voice-btn,
   .npc-block:hover .tts-play-btn,
-  .npc-block:hover .tts-voice-btn,
-  .tts-bar:focus-within .tts-play-btn,
-  .tts-bar:focus-within .tts-voice-btn { color: rgba(180, 140, 60, 0.72); }
-  .tts-play-btn:hover,
-  .tts-voice-btn:hover {
+  .tts-bar:focus-within .tts-play-btn { color: rgba(180, 140, 60, 0.72); }
+  .tts-play-btn:hover {
     color: rgba(220, 185, 100, 1.0);
     background: rgba(180, 140, 60, 0.08);
   }
-  .tts-voice-label {
-    font-family: 'Cinzel', serif;
-    font-size: 7px;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    line-height: 1;
-    color: inherit;
-  }
   .tts-play-btn.tts-playing { color: rgba(210, 90, 70, 0.9); }
   .tts-play-btn.tts-loading { color: rgba(180, 140, 60, 0.45); }
-  @keyframes tts-spin { to { transform: rotate(360deg); } }
-  .tts-spin { animation: tts-spin 0.9s linear infinite; }
-  .tts-voice-menu {
-    position: absolute;
-    bottom: calc(100% + 4px);
-    left: 0;
-    background: rgba(8, 5, 2, 0.98);
-    border: 1px solid rgba(180, 140, 60, 0.45);
-    border-radius: 6px;
-    padding: 4px 0;
-    min-width: 120px;
-    z-index: 50;
-    box-shadow: 0 6px 28px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(0,0,0,0.6);
-  }
-  .tts-voice-group {
-    padding: 6px 13px 2px;
-    font-family: 'Cinzel', serif;
-    font-size: 6.5px;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: rgba(180, 140, 60, 0.65);
-    pointer-events: none;
-  }
-  .tts-voice-opt {
-    display: block;
-    width: 100%;
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 5px 13px;
-    text-align: left;
-    font-family: inherit;
-    font-size: 0.77rem;
-    letter-spacing: 0.05em;
-    color: rgba(220, 196, 148, 0.9);
-    transition: background 0.1s, color 0.1s;
-  }
-  .tts-voice-opt:hover { background: rgba(180,140,60,0.12); color: rgba(240,210,120,1.0); }
-  .tts-voice-opt.tts-voice-active { color: rgba(240,210,120,1.0); font-weight: 500; }
 
   /* ── Player input panel ── */
   #input-panel {
@@ -2824,33 +2770,16 @@
   }
 
   /* TTS per-block bar (v1.10.0) — dim bronze against parchment */
-  :root[data-theme="light"] .tts-play-btn,
-  :root[data-theme="light"] .tts-voice-btn { color: rgba(110, 75, 20, 0.35); }
+  :root[data-theme="light"] .tts-play-btn { color: rgba(110, 75, 20, 0.35); }
   :root[data-theme="light"] .dm-block:hover .tts-play-btn,
-  :root[data-theme="light"] .dm-block:hover .tts-voice-btn,
   :root[data-theme="light"] .npc-block:hover .tts-play-btn,
-  :root[data-theme="light"] .npc-block:hover .tts-voice-btn,
-  :root[data-theme="light"] .tts-bar:focus-within .tts-play-btn,
-  :root[data-theme="light"] .tts-bar:focus-within .tts-voice-btn { color: rgba(110, 75, 20, 0.75); }
-  :root[data-theme="light"] .tts-play-btn:hover,
-  :root[data-theme="light"] .tts-voice-btn:hover {
+  :root[data-theme="light"] .tts-bar:focus-within .tts-play-btn { color: rgba(110, 75, 20, 0.75); }
+  :root[data-theme="light"] .tts-play-btn:hover {
     color: rgb(50, 35, 18);
     background: rgba(180, 140, 60, 0.14);
   }
   :root[data-theme="light"] .tts-play-btn.tts-playing { color: rgba(160, 50, 30, 0.95); }
   :root[data-theme="light"] .tts-play-btn.tts-loading { color: rgba(110, 75, 20, 0.5); }
-  :root[data-theme="light"] .tts-voice-menu {
-    background: rgba(252, 245, 222, 0.99);
-    border-color: rgba(140, 95, 20, 0.55);
-    box-shadow: 0 6px 28px rgba(140, 95, 20, 0.45), 0 0 0 1px rgba(140, 95, 20, 0.15);
-  }
-  :root[data-theme="light"] .tts-voice-group { color: rgba(110, 75, 20, 0.75); }
-  :root[data-theme="light"] .tts-voice-opt { color: rgb(50, 35, 18); }
-  :root[data-theme="light"] .tts-voice-opt:hover {
-    background: rgba(180, 140, 60, 0.18);
-    color: rgb(20, 14, 6);
-  }
-  :root[data-theme="light"] .tts-voice-opt.tts-voice-active { color: rgb(70, 30, 130); font-weight: 500; }
 
   /* Dice-pending "Waiting on…" badge (PR #38 + #39 hardening) — parchment plate */
   :root[data-theme="light"] #dice-pending-badge {
@@ -3048,11 +2977,6 @@
       border-color: rgba(140, 95, 20, 0.55);
     }
     :root:not([data-theme]) #phone-mode-menu .pm-opt { color: rgb(50, 35, 18); }
-    :root:not([data-theme]) .tts-voice-menu {
-      background: rgba(252, 245, 222, 0.99);
-      border-color: rgba(140, 95, 20, 0.55);
-    }
-    :root:not([data-theme]) .tts-voice-opt { color: rgb(50, 35, 18); }
     :root:not([data-theme]) #dice-pending-badge {
       background: rgba(250, 240, 215, 0.96);
       color: rgb(70, 50, 18);
@@ -6495,17 +6419,6 @@ document.getElementById('speed-row').addEventListener('click', () => {
 // can toggle it on without affecting player phones.
 // ═══════════════════════════════════════════════════════════════════
 
-const _TTS_VOICES_MALE   = ['Charon', 'Enceladus', 'Fenrir', 'Umbriel'];
-const _TTS_VOICES_FEMALE = ['Aoede', 'Gacrux', 'Kore', 'Vindemiatrix', 'Zephyr'];
-
-const _ttsAvailableMeta = document.querySelector('meta[name="tts-available"]');
-const _TTS_AVAILABLE = _ttsAvailableMeta && _ttsAvailableMeta.getAttribute('content') === '1';
-
-const _narratorVoiceMeta = document.querySelector('meta[name="narrator-voice"]');
-let _ttsVoice = (_narratorVoiceMeta && _narratorVoiceMeta.getAttribute('content'))
-  || localStorage.getItem('dnd_tts_voice')
-  || 'Enceladus';
-
 // The Main Menu's "Narration audio" setting is the default; a choice made on
 // this browser's own toggle wins once it exists.
 const _narrationAudioMeta = document.querySelector('meta[name="narration-audio-default"]');
@@ -6513,15 +6426,10 @@ let _ttsAutoNarrate = localStorage.getItem('dnd_tts_auto') !== null
   ? localStorage.getItem('dnd_tts_auto') === '1'
   : !!(_narrationAudioMeta && _narrationAudioMeta.getAttribute('content') === '1');
 
-let _ttsCtx = null;
-let _ttsActiveSource = null;
 let _ttsActivePlayBtn = null;
 
-// Free fallback: the browser's own speech synthesis, no API key needed.
-// Used when /tts has no key configured (503) or fails. Without this, a
-// keyless install got a play button that flashed "TTS 503" for three seconds
-// and never spoke -- the server path was the only path.
-let _ttsServerOk = true;
+// Narration is spoken by the browser's own speech synthesis. There is no
+// remote text-to-speech service: nothing is configured, billed or sent out.
 let _ttsUtterance = null;
 const _TTS_HAS_BROWSER = 'speechSynthesis' in window;
 if (_TTS_HAS_BROWSER) {
@@ -6656,23 +6564,10 @@ function _ttsBrowserSpeak(btn, text) {
   last.onerror = done;
 }
 
-function _getTtsCtx() {
-  if (!_ttsCtx || _ttsCtx.state === 'closed') {
-    _ttsCtx = new (window.AudioContext || window.webkitAudioContext)();
-  }
-  return _ttsCtx;
-}
-
 const _SVG_SPEAKER = '<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 5.5h3l4-3v11l-4-3H3v-5z" fill="currentColor"/><path d="M10.5 5.2c.9.8 1.5 1.8 1.5 2.8s-.6 2-1.5 2.8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><path d="M12.2 3.4c1.5 1.2 2.3 2.7 2.3 4.6s-.8 3.4-2.3 4.6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>';
 const _SVG_STOP    = '<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 12 12" fill="none" aria-hidden="true"><rect x="2" y="2" width="8" height="8" rx="1.5" fill="currentColor"/></svg>';
-const _SVG_SPIN    = '<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" class="tts-spin" aria-hidden="true"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" stroke-dasharray="31.4 31.4" stroke-linecap="round"/></svg>';
-const _SVG_CHEVRON = '<svg xmlns="http://www.w3.org/2000/svg" width="9" height="9" viewBox="0 0 10 10" fill="none" aria-hidden="true"><path d="M2 3.5l3 3 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
 function _ttsStopActive() {
-  if (_ttsActiveSource) {
-    try { _ttsActiveSource.stop(); } catch (_) {}
-    _ttsActiveSource = null;
-  }
   if (_TTS_HAS_BROWSER && (_ttsUtterance || speechSynthesis.speaking || speechSynthesis.pending)) {
     _ttsUtterance = null;
     speechSynthesis.cancel();
@@ -6692,133 +6587,16 @@ function _ttsExtractText(blockEl) {
   return (clone.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 2000);
 }
 
-async function _ttsPlayBlock(btn, blockEl) {
+function _ttsPlayBlock(btn, blockEl) {
   if (btn.classList.contains('tts-playing')) { _ttsStopActive(); return; }
   _ttsStopActive();
   const text = _ttsExtractText(blockEl);
-  if (!text) return;
-
-  if (!_ttsServerOk && _TTS_HAS_BROWSER) { _ttsBrowserSpeak(btn, text); return; }
-
-  const ctx = _getTtsCtx();
-  const resumeP = ctx.state !== 'running' ? ctx.resume() : Promise.resolve();
-
-  btn.innerHTML = _SVG_SPIN;
-  btn.classList.add('tts-loading');
-  btn.setAttribute('aria-label', 'Loading…');
-  _ttsActivePlayBtn = btn;
-
-  try {
-    const resp = await fetch('/tts', {
-      method: 'POST',
-      headers: _authHeaders(),
-      body: JSON.stringify({ text, voice: _ttsVoice }),
-    });
-    if (!resp.ok) throw new Error('TTS ' + resp.status);
-    const pcm = await resp.arrayBuffer();
-    if (!pcm.byteLength) throw new Error('TTS empty');
-
-    await resumeP;
-    if (ctx.state === 'suspended') await ctx.resume();
-
-    const int16 = new Int16Array(pcm);
-    const audioBuffer = ctx.createBuffer(1, int16.length, 24000);
-    const ch = audioBuffer.getChannelData(0);
-    for (let i = 0; i < int16.length; i++) ch[i] = int16[i] / 32768.0;
-
-    const source = ctx.createBufferSource();
-    source.buffer = audioBuffer;
-    source.connect(ctx.destination);
-
-    btn.innerHTML = _SVG_STOP;
-    btn.classList.remove('tts-loading');
-    btn.classList.add('tts-playing');
-    btn.setAttribute('aria-label', 'Stop narration');
-    _ttsActiveSource = source;
-
-    source.onended = () => {
-      if (_ttsActiveSource === source) {
-        _ttsActiveSource = null;
-        if (_ttsActivePlayBtn === btn) {
-          btn.innerHTML = _SVG_SPEAKER;
-          btn.classList.remove('tts-playing');
-          btn.setAttribute('aria-label', 'Listen to narration');
-          _ttsActivePlayBtn = null;
-        }
-      }
-    };
-    source.start(0);
-  } catch (err) {
-    if (_ttsActivePlayBtn === btn && _TTS_HAS_BROWSER) {
-      // 503 means no key is configured, so stop asking the server at all.
-      // Anything else (429, 502, a dropped connection) is transient: fall
-      // back for this block and try the server again on the next one.
-      if (err.message === 'TTS 503') _ttsServerOk = false;
-      _ttsBrowserSpeak(btn, text);
-      return;
-    }
-    if (_ttsActivePlayBtn === btn) {
-      const label = (err.message || 'ERR').slice(0, 12);
-      btn.textContent = label;
-      btn.classList.remove('tts-loading', 'tts-playing');
-      setTimeout(() => {
-        if (!btn.classList.contains('tts-playing') && !btn.classList.contains('tts-loading')) {
-          btn.innerHTML = _SVG_SPEAKER;
-          btn.setAttribute('aria-label', 'Listen to narration');
-        }
-      }, 3000);
-      _ttsActivePlayBtn = null;
-    }
-    _ttsActiveSource = null;
-  }
-}
-
-function _ttsSaveVoice(voice) {
-  _ttsVoice = voice;
-  localStorage.setItem('dnd_tts_voice', voice);
-  // Persist per-campaign on the server so a fresh page load lands on the same
-  // voice across browsers. Best-effort; UI never blocks on the response.
-  fetch('/voice', {
-    method: 'POST',
-    headers: _authHeaders(),
-    body: JSON.stringify({ voice }),
-  }).catch(() => {});
-  document.querySelectorAll('.tts-voice-opt').forEach(o => {
-    o.classList.toggle('tts-voice-active', o.dataset.voice === voice);
-  });
-}
-
-function _ttsBuildVoiceMenu() {
-  const menu = document.createElement('div');
-  menu.className = 'tts-voice-menu';
-  menu.hidden = true;
-
-  function _addGroup(label, voices) {
-    const hdr = document.createElement('div');
-    hdr.className = 'tts-voice-group';
-    hdr.textContent = label;
-    menu.appendChild(hdr);
-    voices.forEach(v => {
-      const opt = document.createElement('button');
-      opt.className = 'tts-voice-opt';
-      opt.dataset.voice = v;
-      opt.textContent = v;
-      if (v === _ttsVoice) opt.classList.add('tts-voice-active');
-      opt.addEventListener('click', e => {
-        e.stopPropagation();
-        _ttsSaveVoice(v);
-        menu.hidden = true;
-      });
-      menu.appendChild(opt);
-    });
-  }
-  _addGroup('Male',   _TTS_VOICES_MALE);
-  _addGroup('Female', _TTS_VOICES_FEMALE);
-  return menu;
+  if (!text || !_TTS_HAS_BROWSER) return;
+  _ttsBrowserSpeak(btn, text);
 }
 
 function _addTtsBar(blockEl) {
-  if (!_TTS_AVAILABLE || !blockEl) return;
+  if (!_TTS_HAS_BROWSER || !blockEl) return;
   if (blockEl.querySelector(':scope > .tts-bar')) return;  // already added
 
   const bar = document.createElement('div');
@@ -6831,22 +6609,6 @@ function _addTtsBar(blockEl) {
   playBtn.addEventListener('click', e => { e.stopPropagation(); _ttsPlayBlock(playBtn, blockEl); });
   bar.appendChild(playBtn);
 
-  const voiceBtn = document.createElement('button');
-  voiceBtn.className = 'tts-voice-btn';
-  voiceBtn.innerHTML = '<span class="tts-voice-label">Voices</span>' + _SVG_CHEVRON;
-  voiceBtn.setAttribute('aria-label', 'Select narrator voice');
-  bar.appendChild(voiceBtn);
-
-  const menu = _ttsBuildVoiceMenu();
-  bar.appendChild(menu);
-
-  voiceBtn.addEventListener('click', e => {
-    e.stopPropagation();
-    const wasHidden = menu.hidden;
-    document.querySelectorAll('.tts-voice-menu').forEach(m => { m.hidden = true; });
-    menu.hidden = !wasHidden;
-  });
-
   blockEl.appendChild(bar);
 
   if (_ttsAutoNarrate) {
@@ -6855,12 +6617,8 @@ function _addTtsBar(blockEl) {
   }
 }
 
-document.addEventListener('click', () => {
-  document.querySelectorAll('.tts-voice-menu').forEach(m => { m.hidden = true; });
-}, { passive: true });
-
-// Auto-narrate row — only shown if the server reports TTS available.
-if (_TTS_AVAILABLE) {
+// Auto-narrate row — only shown if this browser can speak.
+if (_TTS_HAS_BROWSER) {
   const narrateRow = document.getElementById('narrate-row');
   const narrateLabel = document.getElementById('narrate-label');
   if (narrateRow && narrateLabel) {
@@ -6874,12 +6632,6 @@ if (_TTS_AVAILABLE) {
       _ttsAutoNarrate = !_ttsAutoNarrate;
       localStorage.setItem('dnd_tts_auto', _ttsAutoNarrate ? '1' : '0');
       refresh();
-      if (_ttsAutoNarrate) {
-        // Prime the AudioContext from this click so auto-narrate works on the next
-        // block without needing a per-block gesture (iOS Safari).
-        const ctx = _getTtsCtx();
-        if (ctx.state !== 'running') ctx.resume().catch(() => {});
-      }
     });
   }
 }

@@ -73,13 +73,6 @@ try:
 except Exception:
     _audio = None   # type: ignore
 
-# TTS module — degrades silently if Gemini API key not configured
-try:
-    import tts as _tts
-except Exception:
-    _tts = None   # type: ignore
-
-
 def _apply_campaign_sfx_languages() -> None:
     """Read sfx_languages from the active campaign's state.md Session Flags.
 
@@ -1218,8 +1211,6 @@ def index():
     return render_template(
         "index.html",
         lan_token=_lan_token or "",
-        narrator_voice=_read_narrator_voice(),
-        tts_available=(_tts is not None),
         narration_audio_default=_narration_audio_default(),
     )
 
@@ -2011,139 +2002,11 @@ def roll_pref():
     return {"ok": True, "character": char, "mode": mode}, 200
 
 
-# ─── Narrator voice (Gemini Flash TTS) ────────────────────────────────────────
-# Voice selection persists per-campaign in state.md → ## Session Flags →
-# `tts_voice: <name>`. Read at /index render, written by POST /voice.
-
-_VOICE_PAT = re.compile(r"^\s*tts_voice:\s*([A-Za-z]+)\s*$", re.MULTILINE)
-
-
 def _active_campaign_name() -> Optional[str]:
     try:
         return open(CAMP_FILE, encoding="utf-8").read().strip() or None
     except OSError:
         return None
-
-
-def _read_narrator_voice() -> str:
-    """Return the active campaign's tts_voice, or the module default."""
-    if _tts is None:
-        return ""
-    name = _active_campaign_name()
-    if not name:
-        return _tts.DEFAULT_VOICE
-    try:
-        state = _find_campaign(name) / "state.md"
-        if not state.exists():
-            return _tts.DEFAULT_VOICE
-        text = state.read_text(encoding="utf-8", errors="replace")
-    except (OSError, ValueError):
-        return _tts.DEFAULT_VOICE
-    m = _VOICE_PAT.search(text)
-    if not m:
-        return _tts.DEFAULT_VOICE
-    v = m.group(1).strip()
-    return v if v in _tts.VALID_VOICES else _tts.DEFAULT_VOICE
-
-
-def _write_narrator_voice(voice: str) -> bool:
-    """Persist tts_voice to the active campaign's state.md → ## Session Flags."""
-    if _tts is None or voice not in _tts.VALID_VOICES:
-        return False
-    name = _active_campaign_name()
-    if not name:
-        return False
-    try:
-        state = _find_campaign(name) / "state.md"
-        # utf8io transcodes legacy-GBK state.md losslessly (one-time migration);
-        # raises ValueError on anything undecodable, so we never write U+FFFD
-        # back over the file from the display UI.
-        text = _read_text(state) if state.exists() else ""
-    except (OSError, ValueError):
-        return False
-
-    new_line = f"tts_voice: {voice}"
-    if _VOICE_PAT.search(text):
-        text = _VOICE_PAT.sub(new_line, text, count=1)
-    else:
-        # Append under ## Session Flags. If the section is missing, append at EOF.
-        if "## Session Flags" in text:
-            # Insert right after the header line. Keep the existing template
-            # comment if present, but place the flag immediately under it.
-            text = re.sub(
-                r"(## Session Flags\n(?:\*\(.*?\)\*\n)?)",
-                r"\1" + new_line + "\n",
-                text,
-                count=1,
-            )
-        else:
-            sep = "" if text.endswith("\n") else "\n"
-            text = f"{text}{sep}\n## Session Flags\n{new_line}\n"
-
-    try:
-        state.write_text(text, encoding="utf-8")
-        return True
-    except OSError:
-        return False
-
-
-@app.route("/tts", methods=["POST"])
-def tts_synthesize():
-    """Synthesize a narrator/NPC block to L16 PCM.
-
-    Body: {"text": str, "voice": str (optional)}
-    Response: raw L16 PCM bytes, Content-Type: audio/L16;codec=pcm;rate=24000
-    Failures: 503 (no key / module unavailable), 400 (bad input), 502 (upstream)
-    """
-    if _tts is None:
-        return "TTS module unavailable", 503
-    if not _token_ok():
-        return "Forbidden", 403
-    if not _rate_ok(request.remote_addr or "?"):
-        return "Rate limited", 429
-    data = request.get_json(silent=True) or {}
-    text = (data.get("text") or "").strip()
-    voice = (data.get("voice") or _tts.DEFAULT_VOICE).strip()
-    if not text:
-        return "empty text", 400
-    if len(text) > _tts.MAX_TEXT_CHARS:
-        text = text[: _tts.MAX_TEXT_CHARS]
-    if voice not in _tts.VALID_VOICES:
-        voice = _tts.DEFAULT_VOICE
-    if _tts.key_source() == "unset":
-        return "TTS not configured (see docs/SKILL-tts.md)", 503
-    try:
-        pcm = _tts.synthesize_strict(text, voice)
-    except _tts.TtsError as e:
-        return f"TTS upstream: {e}", 502
-    return Response(
-        pcm,
-        mimetype="audio/L16;codec=pcm;rate=24000",
-        headers={
-            "X-Audio-Chars": str(len(text)),
-            "X-Audio-Voice": voice,
-            "Cache-Control": "no-store",
-        },
-    )
-
-
-@app.route("/voice", methods=["POST"])
-def tts_voice():
-    """Persist narrator voice selection for the active campaign.
-
-    Body: {"voice": str}
-    Response: {"voice": str, "persisted": bool}
-    """
-    if _tts is None:
-        return jsonify({"voice": "", "persisted": False}), 503
-    if not _token_ok():
-        return "Forbidden", 403
-    data = request.get_json(silent=True) or {}
-    voice = (data.get("voice") or "").strip()
-    if voice not in _tts.VALID_VOICES:
-        return jsonify({"error": "invalid voice"}), 400
-    ok = _write_narrator_voice(voice)
-    return jsonify({"voice": voice, "persisted": ok}), 200
 
 
 @app.route("/audio/sfx/<name>")

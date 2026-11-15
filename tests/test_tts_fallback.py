@@ -1,25 +1,15 @@
-"""A keyless install must still be able to hear the narration.
+"""Narration is spoken by the browser's own voice, and only that.
 
-WHY
-===
-`/tts` returns 503 when no Gemini key is configured, and the play button's
-catch block put the string "TTS 503" on the button for three seconds and gave
-up. There was no second path: `speechSynthesis` appeared nowhere in the repo,
-so narration audio was a paid feature by accident. The fallback speaks through
-the browser's own voice instead.
+There is no remote text-to-speech service: nothing is configured, billed or
+sent to a third party. These tests drive the real speaking code through node
+and check the things that are easy to get wrong:
 
-Two things in it are easy to get wrong, and are what these tests check:
-
-  * **503 and a transient error are not the same.** 503 means no key exists, so
-    the server should never be asked again this session. A 429 or a dropped
-    connection means try the server again on the next block. Collapsing them
-    either hammers a server that cannot answer, or permanently downgrades a
-    working install because one request timed out.
-  * **The chunker must split text in every script we run in.** Chrome cuts a
+  * The chunker must split text in every script we run in. Chrome cuts a
     single utterance at roughly fifteen seconds, which is what the 220-character
-    chunking is for. A terminator set of only `.!?` finds no sentence end at all
-    in Japanese or Chinese prose and returns the whole paragraph as one chunk —
-    walking straight into the cut-off the function exists to avoid.
+    chunking is for. A terminator set of only .!? finds no sentence end at all
+    in Japanese or Chinese prose and returns the whole paragraph as one chunk.
+  * Voice choice follows the text, not the page. The page's html lang is a
+    static "en", so a Dutch or Japanese block must pick a matching voice.
 
 Driven through node rather than asserted against the source: "the function
 exists" was exactly what was true of the badge code that never ran.
@@ -41,7 +31,7 @@ NODE = shutil.which("node")
 #: Pull just the fallback machinery out of the template. Narrow, so the test
 #: needs no DOM beyond the two globals the picker reads.
 _SLICE = re.compile(
-    r"(// Free fallback: the browser's own speech synthesis.*?)\nfunction _getTtsCtx", re.S)
+    r"(// Narration is spoken by the browser's own speech synthesis.*?)\nconst _SVG_SPEAKER", re.S)
 
 _STUBS = """
 globalThis.document = { documentElement: { lang: DOC_LANG } };
@@ -128,17 +118,15 @@ class WiringTests(unittest.TestCase):
     def setUpClass(cls):
         cls.full = HTML.read_text(encoding="utf-8")
 
-    def test_the_fallback_is_called_from_more_than_one_place(self):
-        """It needs the pre-check (server already known keyless) AND the catch
-        (this request just failed). One without the other half-works."""
-        # `(?<!function )` matters: the declaration reads
-        # `function _ttsBrowserSpeak(btn, text)` and matches the bare pattern,
-        # so counting every occurrence stays at 2 with BOTH call sites deleted.
-        # That is the exact shape this file's docstring warns about.
-        calls = len(re.findall(r"(?<!function )_ttsBrowserSpeak\(btn, text\)", self.full))
-        self.assertGreaterEqual(calls, 2,
-                                "the fallback should be reached from both the "
-                                "pre-check and the error path")
+    def test_play_always_speaks_through_the_browser(self):
+        """The play button has one path, and it is the browser voice."""
+        play = re.search(r"function _ttsPlayBlock\(btn, blockEl\) \{(.*?)\n\}", self.full, re.S)
+        self.assertIsNotNone(play)
+        self.assertIn("_ttsBrowserSpeak(btn, text)", play.group(1))
+
+    def test_no_remote_speech_service_is_referenced(self):
+        for needle in ("fetch('/tts'", "fetch('/voice'", "gemini", "GEMINI", "audio/L16"):
+            self.assertNotIn(needle, self.full)
 
     def test_the_stop_button_cancels_the_browser_voice(self):
         """Without this, Stop silences the server path and the browser keeps
@@ -147,14 +135,6 @@ class WiringTests(unittest.TestCase):
         stop = re.search(r"function _ttsStopActive\(\) \{(.*?)\n\}", self.full, re.S)
         self.assertIsNotNone(stop)
         self.assertIn("speechSynthesis.cancel()", stop.group(1))
-
-    def test_only_503_disables_the_server_permanently(self):
-        """A transient failure must not downgrade a working install."""
-        self.assertIn("if (err.message === 'TTS 503') _ttsServerOk = false;", self.full)
-        bare = re.findall(r"^\s*_ttsServerOk = false;", self.full, re.M)
-        self.assertEqual(bare, [],
-                         "an unconditional `_ttsServerOk = false` means any single "
-                         "error stops using the server for the rest of the session")
 
 
 class VoiceSelectionTests(unittest.TestCase):

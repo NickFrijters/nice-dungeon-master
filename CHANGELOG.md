@@ -10,6 +10,12 @@ Versions before **1.6.0** are reconstructed retroactively from git history; the 
 
 ## [Unreleased]
 
+## [2.10.0] — 2026-11-15 — Local narration only
+
+### Removed — the remote narration service
+
+Narration audio now uses the browser's own speech synthesis only. The Gemini text-to-speech module (`display/tts.py`), its `/tts` and `/voice` routes, the API-key lookup, the clip cache, the Gemini voice picker and `docs/SKILL-tts.md` are gone. Nothing is configured, billed or sent to a third party by this project. The `tts_voice` session flag is no longer used (existing values in `state.md` are ignored).
+
 ## [2.9.0] — 2026-11-15 — Settings page
 
 ### Added — Settings page
