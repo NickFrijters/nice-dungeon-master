@@ -1,27 +1,51 @@
-"""Client for the local Pocket TTS server (used by display/tts.py).
+"""Client for the local TTS server (used by display/tts.py).
 
 synthesize(text) -> raw 16-bit mono 24 kHz PCM bytes, or raises RuntimeError.
-Starts pocket_server.py (in the Pocket TTS venv) on demand and waits for it.
-Disable with DND_LOCAL_TTS=off.
+Starts the engine's server (in its own venv) on demand and waits for it.
+Engine: DND_TTS_ENGINE=pocket (default) or kokoro. Disable with DND_LOCAL_TTS=off.
 """
 import json, os, subprocess, sys, time, urllib.request
 from pathlib import Path
 
-PORT = int(os.environ.get("DND_LOCAL_TTS_PORT", "8766"))
-BASE = f"http://127.0.0.1:{PORT}"
 HERE = Path(__file__).resolve().parent
-VENV_PY = Path.home() / ".cache" / "claude-dnd" / "tts-pocket" / "venv" / "Scripts" / "python.exe"
+CACHE = Path.home() / ".cache" / "claude-dnd"
 START_TIMEOUT = 120.0   # first start loads the model (~25 s)
 SYNTH_TIMEOUT = 180.0
 
+#: engine -> (venv folder, server script, default port)
+ENGINES = {
+    "pocket": ("tts-pocket", "pocket_server.py", 8766),
+    "kokoro": ("tts-kokoro", "kokoro_server.py", 8767),
+}
+
+
+def engine() -> str:
+    """The chosen engine. Anything unknown means pocket, the default."""
+    e = os.environ.get("DND_TTS_ENGINE", "pocket").strip().lower()
+    return e if e in ENGINES else "pocket"
+
+
+def venv_python(eng: str = "") -> Path:
+    folder = ENGINES[eng or engine()][0]
+    return CACHE / folder / "venv" / "Scripts" / "python.exe"
+
+
+def port(eng: str = "") -> int:
+    # DND_LOCAL_TTS_PORT overrides the engine's own port.
+    return int(os.environ.get("DND_LOCAL_TTS_PORT") or ENGINES[eng or engine()][2])
+
+
+def _base() -> str:
+    return f"http://127.0.0.1:{port()}"
+
 
 def enabled() -> bool:
-    return os.environ.get("DND_LOCAL_TTS", "on").lower() != "off" and VENV_PY.exists()
+    return os.environ.get("DND_LOCAL_TTS", "on").lower() != "off" and venv_python().exists()
 
 
 def _up() -> bool:
     try:
-        with urllib.request.urlopen(BASE + "/health", timeout=2) as r:
+        with urllib.request.urlopen(_base() + "/health", timeout=2) as r:
             return r.read() == b"ok"
     except Exception:
         return False
@@ -31,9 +55,10 @@ def _start() -> None:
     flags = 0
     if os.name == "nt":
         flags = subprocess.CREATE_NO_WINDOW | subprocess.DETACHED_PROCESS
-    subprocess.Popen([str(VENV_PY), str(HERE / "pocket_server.py")],
+    env = dict(os.environ, DND_LOCAL_TTS_PORT=str(port()))
+    subprocess.Popen([str(venv_python()), str(HERE / ENGINES[engine()][1])],
                      stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
-                     stderr=subprocess.DEVNULL, creationflags=flags, close_fds=True)
+                     stderr=subprocess.DEVNULL, creationflags=flags, close_fds=True, env=env)
 
 
 def shutdown() -> None:
@@ -41,13 +66,13 @@ def shutdown() -> None:
     if not _up():
         return
     try:
-        req = urllib.request.Request(BASE + "/shutdown", data=b"", method="POST")
+        req = urllib.request.Request(_base() + "/shutdown", data=b"", method="POST")
         urllib.request.urlopen(req, timeout=3).read()
     except Exception:
         pass
 
 
-def synthesize(text: str, lang: str = "auto", speed: float = 1.0) -> bytes:
+def synthesize(text: str, lang: str = "auto", speed: float = 1.0, voice: str = "") -> bytes:
     if not enabled():
         raise RuntimeError("local TTS disabled or not installed")
     if not _up():
@@ -57,8 +82,11 @@ def synthesize(text: str, lang: str = "auto", speed: float = 1.0) -> bytes:
             time.sleep(1)
         if not _up():
             raise RuntimeError("local TTS server did not start")
+    body = {"text": text, "lang": lang, "speed": speed}
+    if voice:
+        body["voice"] = voice
     req = urllib.request.Request(
-        BASE + "/synth", data=json.dumps({"text": text, "lang": lang, "speed": speed}).encode(),
+        _base() + "/synth", data=json.dumps(body).encode(),
         headers={"Content-Type": "application/json"}, method="POST")
     try:
         with urllib.request.urlopen(req, timeout=SYNTH_TIMEOUT) as r:

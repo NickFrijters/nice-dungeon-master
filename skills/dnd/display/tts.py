@@ -1,4 +1,5 @@
-"""Narrator voice: local Pocket TTS (Kyutai) only. No remote service.
+"""Narrator voice: local TTS only (Pocket TTS by default, optional Kokoro-82M
+with DND_TTS_ENGINE=kokoro). No remote service.
 
 Server-side wrapper called by /tts in dnd-display-app.py. The model runs in
 its own process (local_tts/pocket_server.py, in the Pocket TTS venv under
@@ -39,8 +40,21 @@ def _speed() -> float:
 SPEED = _speed()
 
 #: Changing the voice, the model or the speed must not replay old clips.
-def _voice_id(speed: float) -> str:
-    return "pocket-alba" if speed == 1.0 else f"pocket-alba-{round(speed * 100)}"
+def _engine() -> str:
+    e = os.environ.get("DND_TTS_ENGINE", "pocket").strip().lower()
+    return e if e in ("pocket", "kokoro") else "pocket"
+
+
+#: Kokoro voice (DND_KOKORO_VOICE, default bm_george). Only used by the kokoro engine.
+KOKORO_VOICE = "".join(c for c in os.environ.get("DND_KOKORO_VOICE", "bm_george").lower()
+                       if c.isalpha() or c == "_") or "bm_george"
+
+
+def _voice_id(speed: float, engine: str = "") -> str:
+    """Names engine, voice and speed. The pocket id is unchanged from before
+    engines existed, so its cached clips still play."""
+    base = f"kokoro-{KOKORO_VOICE}" if (engine or _engine()) == "kokoro" else "pocket-alba"
+    return base if speed == 1.0 else f"{base}-{round(speed * 100)}"
 
 
 VOICE_ID = _voice_id(SPEED)
@@ -158,13 +172,16 @@ def synthesize_strict(text: str, lang: str = "en") -> bytes:
     if not text:
         raise TtsError("empty text")
     lang = clean_lang(lang)
-    key = cache_key(text, lang=lang)
+    key = cache_key(text, voice=_voice_id(SPEED), lang=lang)
     hit = cache_get(key)
     if hit:
         return hit
     try:
         import local_fallback
-        pcm = local_fallback.synthesize(text, lang, SPEED)
+        if _engine() == "kokoro":
+            pcm = local_fallback.synthesize(text, lang, SPEED, KOKORO_VOICE)
+        else:
+            pcm = local_fallback.synthesize(text, lang, SPEED)
     except Exception as e:
         raise TtsError(str(e)) from e
     cache_put(key, pcm)
