@@ -10,6 +10,15 @@ Versions before **1.6.0** are reconstructed retroactively from git history; the 
 
 ## [Unreleased]
 
+## [2.16.0] — 2026-11-15 — Settings menu everywhere
+
+### Changed — all settings live in the Settings menu, reachable from the game
+
+- A small **cog** (bottom-left of the play screen, and the Settings button of the editorial rail) opens the Settings menu over the game; **Done**, the x or Esc closes it. The play screen's own settings column is gone.
+- Moved into Settings, under **Display (every screen)**: theme, style, text size, typing speed, sound effects and roll on screen. Narration length is now the Flavour setting, and Auto Narrate is the Narration audio setting.
+- **Display settings are global**: stored on the server, seeded into every page, and pushed live to every open screen when changed, so the TV follows the PC at once. They used to be remembered separately by each browser.
+- `scripts/dev-restart.sh` runs the display from the working copy on port 5001 (LAN, Main Menu first), replacing whatever display is running.
+
 ## [2.15.0] — 2026-11-15 — LAN mode always on
 
 ### Changed — LAN mode is always on

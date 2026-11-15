@@ -1234,12 +1234,15 @@ def _broadcast(payload: dict) -> None:
 
 # ─── Routes ──────────────────────────────────────────────────────────────────
 
-def _narration_audio_default() -> bool:
+def _display_settings() -> dict:
+    """Theme, style, text size, typing speed, on-screen dice, sound and narration
+    audio: the same on every screen, chosen in the Settings menu."""
     try:
         import settings as _settings
-        return bool(_settings.load()["narration_audio"])
+        return _settings.display_settings()
     except Exception:
-        return False
+        return {"theme": "dark", "skin": "vellum", "text_size": 0.75, "type_speed": "normal",
+                "roll_on_screen": False, "sound_effects": True, "narration_audio": False}
 
 
 @app.route("/")
@@ -1250,7 +1253,7 @@ def index():
     return render_template(
         "index.html",
         lan_token=_lan_token or "",
-        narration_audio_default=_narration_audio_default(),
+        display_settings=_display_settings(),
         tts_available=bool(_tts is not None and _tts.available()),
     )
 
@@ -1405,7 +1408,13 @@ def settings_data():
                     "options": {"flavour": list(_settings.FLAVOUR_WORDS),
                                 "combat": list(_settings.COMBAT_LEVELS),
                                 "default_ruleset": list(_settings.RULESETS),
-                                "experience": list(_settings.EXPERIENCE_LEVELS)},
+                                "experience": list(_settings.EXPERIENCE_LEVELS),
+                                "theme": list(_settings.THEMES),
+                                "skin": list(_settings.SKINS),
+                                "type_speed": list(_settings.TYPE_SPEEDS),
+                                "text_size": {"min": _settings.TEXT_SIZE_MIN,
+                                              "max": _settings.TEXT_SIZE_MAX,
+                                              "step": _settings.TEXT_SIZE_STEP}},
                     "campaigns": camps})
 
 
@@ -1430,6 +1439,14 @@ def settings_save():
                 f.write(str(_settings.FLAVOUR_WORDS[saved["flavour"]]))
         except OSError:
             pass
+    if "sound_effects" in data and _audio:
+        try:
+            _audio.set_sfx(bool(saved["sound_effects"]))
+        except Exception:
+            pass
+    shown = _settings.display_settings()
+    if any(k in data for k in shown):
+        _broadcast({"display_settings": shown})    # every screen follows at once
     return jsonify(saved)
 
 
@@ -3068,6 +3085,12 @@ if __name__ == "__main__":
         print(f"DnD DM Display — Flask server starting on {scheme}://localhost:5001")
         print(f"Open {scheme}://localhost:5001 in your browser, then Chromecast the tab.")
         print()
+    try:
+        import settings as _settings
+        if _audio:
+            _audio.set_sfx(bool(_settings.load()["sound_effects"]))
+    except Exception:
+        pass
     # Load the narrator voice now, in the background, so the first narration
     # block is not the one that waits ~30 s for the model. DND_TTS_WARMUP=off
     # skips it.

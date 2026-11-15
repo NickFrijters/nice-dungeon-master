@@ -20,8 +20,10 @@
   .label { font-size:1.1rem; }
   .hint { color:var(--dim); font-size:.9rem; margin:2px 0 12px; }
   .seg { display:flex; gap:8px; flex-wrap:wrap; }
-  .seg button { background:transparent; color:var(--text); border:1px solid var(--line); border-radius:8px;
+  .seg button, .step { background:transparent; color:var(--text); border:1px solid var(--line); border-radius:8px;
                 padding:9px 16px; font:inherit; cursor:pointer; }
+  .step { color:var(--text); border:1px solid var(--line); border-radius:8px; padding:9px 16px; font:inherit; cursor:pointer; }
+  .step:hover { border-color:var(--gold); }
   .seg button[aria-pressed="true"] { background:var(--gold); color:#1a1208; border-color:var(--gold); font-weight:bold; }
   .chars { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:8px 0;
            border-top:1px solid var(--line); }
@@ -30,11 +32,17 @@
            border-radius:8px; opacity:0; transition:opacity .25s; font-weight:bold; }
   #saved.show { opacity:1; }
   #err { color:#e07a6a; min-height:1.4em; margin-top:16px; }
+  .done { float:right; background:var(--gold); color:#1a1208; border:0; border-radius:8px; padding:8px 18px;
+          font:inherit; font-weight:bold; cursor:pointer; }
+  body.embedded main { padding-top:24px; }
+  .stepper { display:flex; align-items:center; gap:10px; }
+  .stepper .val { min-width:4.5ch; text-align:center; font-size:1.1rem; }
 </style>
 </head>
 <body>
 <main>
-  <a class="back" href="/menu">← Main Menu</a>
+  <a class="back" id="back-link" href="/menu">← Main Menu</a>
+  <button class="done" id="done-btn" type="button" hidden>Done</button>
   <h1>Settings</h1>
   <p class="sub">Changes save by themselves and apply from the next turn.</p>
 
@@ -62,6 +70,42 @@
     <div class="seg" data-key="narration_audio" data-bool="1"></div>
   </div>
 
+  <h2>Display (every screen)</h2>
+  <div class="row">
+    <div class="label">Theme</div>
+    <div class="hint">Dark, light, or follow the computer.</div>
+    <div class="seg" data-key="theme"></div>
+  </div>
+  <div class="row">
+    <div class="label">Style</div>
+    <div class="hint">The look of the play screen.</div>
+    <div class="seg" data-key="skin"></div>
+  </div>
+  <div class="row">
+    <div class="label">Text size</div>
+    <div class="hint">How big the story text is, on the PC and on the TV.</div>
+    <div class="stepper" id="text-size">
+      <button type="button" class="step" data-dir="-1" aria-label="Smaller text">A−</button>
+      <span class="val" id="text-size-val"></span>
+      <button type="button" class="step" data-dir="1" aria-label="Bigger text">A+</button>
+    </div>
+  </div>
+  <div class="row">
+    <div class="label">Typing speed</div>
+    <div class="hint">How fast the story text appears.</div>
+    <div class="seg" data-key="type_speed"></div>
+  </div>
+  <div class="row">
+    <div class="label">Sound effects</div>
+    <div class="hint">Sounds triggered by the narration.</div>
+    <div class="seg" data-key="sound_effects" data-bool="1"></div>
+  </div>
+  <div class="row">
+    <div class="label">Roll on screen</div>
+    <div class="hint">Open the dice roller on the screen when the Dungeon Master calls for a roll (for games without phones).</div>
+    <div class="seg" data-key="roll_on_screen" data-bool="1"></div>
+  </div>
+
   <h2>Rules</h2>
   <div class="row">
     <div class="label">Ruleset for new campaigns</div>
@@ -79,6 +123,14 @@
 <script>
 const TOKEN = {{ lan_token|tojson }};
 const errEl = document.getElementById('err');
+const EMBEDDED = new URLSearchParams(location.search).has('embedded');
+if (EMBEDDED) {
+  document.body.classList.add('embedded');
+  document.getElementById('back-link').hidden = true;
+  const done = document.getElementById('done-btn');
+  done.hidden = false;
+  done.addEventListener('click', () => parent.postMessage('dnd-close-settings', location.origin));
+}
 const savedEl = document.getElementById('saved');
 let data = null;
 
@@ -106,7 +158,24 @@ function segment(el, options, current, onPick) {
   }
 }
 
+function renderTextSize() {
+  const o = data.options.text_size;
+  const val = document.getElementById('text-size-val');
+  val.textContent = Math.round(data.settings.text_size * 100) + '%';
+  for (const b of document.querySelectorAll('#text-size .step')) {
+    b.onclick = async () => {
+      const next = Math.round((data.settings.text_size + Number(b.dataset.dir) * o.step) * 100) / 100;
+      const clamped = Math.min(o.max, Math.max(o.min, next));
+      if (clamped === data.settings.text_size) return;
+      if (!await post('/settings/save', {text_size: clamped})) return;
+      data.settings.text_size = clamped;
+      val.textContent = Math.round(clamped * 100) + '%';
+    };
+  }
+}
+
 function render() {
+  renderTextSize();
   for (const el of document.querySelectorAll('.seg[data-key]')) {
     const key = el.dataset.key;
     const options = el.dataset.bool ? [false, true] : data.options[key];

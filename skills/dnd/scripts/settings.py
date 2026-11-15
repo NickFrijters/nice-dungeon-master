@@ -26,21 +26,46 @@ FLAVOUR_WORDS = {"low": 100, "medium": 250, "high": 500}
 COMBAT_LEVELS = ("none", "low", "medium", "high")
 EXPERIENCE_LEVELS = ("New", "Experienced")
 RULESETS = ("2014", "2024")
+THEMES = ("dark", "light", "auto")
+SKINS = ("vellum", "editorial")
+TYPE_SPEEDS = ("normal", "fast", "instant")
+TEXT_SIZE_MIN, TEXT_SIZE_MAX, TEXT_SIZE_STEP = 0.5, 2.0, 0.05
 
+# Story and rules settings come first; the display settings that used to live in
+# the play screen's own column follow. All of them are global: one value, shown
+# the same on every screen (PC and TV).
 DEFAULTS = {
     "flavour": "medium",
     "combat": "medium",
     "explain_dutch": False,
     "narration_audio": False,
     "default_ruleset": "2014",
+    "theme": "dark",
+    "skin": "vellum",
+    "text_size": 0.75,
+    "type_speed": "normal",
+    "roll_on_screen": False,
+    "sound_effects": True,
 }
 
 _CHOICES = {
     "flavour": tuple(FLAVOUR_WORDS),
     "combat": COMBAT_LEVELS,
     "default_ruleset": RULESETS,
+    "theme": THEMES,
+    "skin": SKINS,
+    "type_speed": TYPE_SPEEDS,
 }
-_BOOLS = ("explain_dutch", "narration_audio")
+_BOOLS = ("explain_dutch", "narration_audio", "roll_on_screen", "sound_effects")
+
+#: Keys the play screen needs to draw itself.
+DISPLAY_KEYS = ("theme", "skin", "text_size", "type_speed", "roll_on_screen",
+                "sound_effects", "narration_audio")
+
+
+def display_settings() -> dict:
+    s = load()
+    return {k: s[k] for k in DISPLAY_KEYS}
 
 
 def settings_path() -> pathlib.Path:
@@ -57,14 +82,23 @@ def load() -> dict:
     if isinstance(raw, dict):
         for key in DEFAULTS:
             if key in raw and _valid(key, raw[key]):
-                out[key] = raw[key]
+                out[key] = _normalize(key, raw[key])
     return out
 
 
 def _valid(key: str, value) -> bool:
     if key in _BOOLS:
         return isinstance(value, bool)
+    if key == "text_size":
+        return (isinstance(value, (int, float)) and not isinstance(value, bool)
+                and TEXT_SIZE_MIN <= value <= TEXT_SIZE_MAX)
     return value in _CHOICES.get(key, ())
+
+
+def _normalize(key: str, value):
+    if key == "text_size":
+        return round(round(float(value) / TEXT_SIZE_STEP) * TEXT_SIZE_STEP, 2)
+    return value
 
 
 def save(changes: dict) -> dict:
@@ -79,7 +113,7 @@ def save(changes: dict) -> dict:
             raise ValueError(f"unknown setting: {key}")
         if not _valid(key, value):
             raise ValueError(f"invalid value for {key}: {value!r}")
-        current[key] = value
+        current[key] = _normalize(key, value)
     path = settings_path()
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(".json.tmp")
