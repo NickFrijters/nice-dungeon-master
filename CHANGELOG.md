@@ -10,6 +10,12 @@ Versions before **1.6.0** are reconstructed retroactively from git history; the 
 
 ## [Unreleased]
 
+## [2.28.0] — 2026-11-15 — Recap when opening a campaign from the menu
+
+### Changed — opening a campaign from the Main Menu starts with a recap
+
+The screen no longer replays the old exchanges; the DM opens with a short recap (where the party is, what is at stake, what was happening).
+
 ## [2.27.0] — 2026-11-15 — New campaign from the menu, image library, neutral branding
 
 ### Added — start a new campaign from the Main Menu
