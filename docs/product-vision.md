@@ -60,6 +60,8 @@ A running adventure is either **Roleplay** or **Combat**. The screen switches au
 ## Manual additions done by Nick in this .md file, read this as "next things" or the backlog.
 ## -- if I make changes here, always automatically include in the next commit.
 ## -- remove items from this list once they are built
+- BUG: Claude is creating your campaign… 2383s (this can take a minute or two) ✓ Sent to the Dungeon Master Creating the campaign Ready to play
+- CLEANUP: No "PHONE" screen will ever be used, remove that function from the screen and code completely.
 - INTERFACE: Screenshot all interfaces and look for graphical inconsistencies or things that don't look nice - fix them (interview me where you think that's necessary).
 - INTERFACE: Interview me about the visualization of the text (being narrated on screen) in sync with the TTS.
 - PERFORMANCE: Waiting for the DM should never take more than 10 seconds (this probably needs data management improvements). That means that if we need larger pieces of text which take long to generate, cut it into pieces and continue working while the characters read or hear the first part.
