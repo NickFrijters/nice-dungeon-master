@@ -1255,6 +1255,7 @@ def index():
         lan_token=_lan_token or "",
         display_settings=_display_settings(),
         tts_available=bool(_tts is not None and _tts.available()),
+        tts_engine=_tts_engine_label(),
     )
 
 
@@ -1479,6 +1480,14 @@ def combat_move():
     _persist_stats()
     _broadcast({"stats": current})
     return "", 204
+
+
+def _tts_engine_label() -> str:
+    """Name of the voice engine actually in use, for the line under each narration block."""
+    try:
+        return "Kokoro TTS" if _tts is not None and _tts._engine() == "kokoro" else "Pocket TTS"
+    except Exception:
+        return "Pocket TTS"
 
 
 @app.route("/menu/exit", methods=["POST"])

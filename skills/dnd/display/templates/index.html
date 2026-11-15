@@ -7,6 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="dnd-token" content="{{ lan_token }}">
 <meta name="tts-available" content="{{ '1' if tts_available else '0' }}">
+<meta name="tts-engine" content="{{ tts_engine }}">
 <script>
   // The display settings are chosen in the Settings menu and are the same on every
   // screen. Seed the keys the early theme/skin/text-size code below reads.
@@ -7184,7 +7185,7 @@ function _ttsSetStatus(blockEl, state, text, pct) {
   _ttsClearTick(el);
   el.dataset.state = state;
   el.className = 'tts-status st-' + state;
-  el.querySelector('.tts-st-voice').textContent = 'Pocket TTS';
+  el.querySelector('.tts-st-voice').textContent = (document.querySelector('meta[name="tts-engine"]') || {}).content || 'Pocket TTS';
   el.querySelector('.tts-st-text').textContent = text;
   el.querySelector('.tts-st-fill').style.width = (pct == null ? '' : Math.round(pct * 100) + '%');
 }

@@ -10,6 +10,12 @@ Versions before **1.6.0** are reconstructed retroactively from git history; the 
 
 ## [Unreleased]
 
+## [2.34.1] — 2026-11-15 — Voice label shows the real engine
+
+### Fixed — the voice label under each narration block
+
+It always said "Pocket TTS", even when Kokoro was speaking. It now names the engine in use.
+
 ## [2.34.0] — 2026-11-15 — Kokoro narrator voice
 
 ### Changed — a more realistic English narrator voice (Kokoro)
