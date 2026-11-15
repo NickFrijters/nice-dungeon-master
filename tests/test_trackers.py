@@ -50,15 +50,21 @@ class StepsTest(unittest.TestCase):
 const seq = ['wait', 'prep', 'run'].map(phase => _turnSteps({ phase, voice: phase !== 'wait' }, true));
 console.log(JSON.stringify(seq));
 """)
-        self.assertEqual([s["idx"] for s in r], [1, 2, 3])
-        self.assertEqual(r[0]["names"], ["Sent to the DM", "DM is writing", "Preparing the voice", "Narrating"])
+        self.assertEqual([s["idx"] for s in r], [1, 3, 4])
+        self.assertEqual(r[0]["names"], ["Sent to the DM", "DM has your move", "DM is writing", "Preparing the voice", "Narrating"])
+
+    def test_the_step_between_sent_and_writing_follows_the_dm_picking_up_the_move(self):
+        r = _run("""
+console.log(JSON.stringify({ queued: _turnSteps({ phase: 'wait', voice: false }, true).idx, picked: _turnSteps({ phase: 'wait', picked: true, voice: false }, true).idx }));
+""")
+        self.assertEqual(r, {"queued": 1, "picked": 2})
 
     def test_without_voice_the_voice_parts_are_left_out(self):
         r = _run("""
 console.log(JSON.stringify({ wait: _turnSteps({ phase: 'wait', voice: false }, false), run: _turnSteps({ phase: 'run', voice: false }, false) }));
 """)
-        self.assertEqual(r["wait"]["names"], ["Sent to the DM", "DM is writing", "Writing the text"])
-        self.assertEqual((r["wait"]["idx"], r["run"]["idx"]), (1, 2))
+        self.assertEqual(r["wait"]["names"], ["Sent to the DM", "DM has your move", "DM is writing", "Writing the text"])
+        self.assertEqual((r["wait"]["idx"], r["run"]["idx"]), (1, 3))
 
     def test_steps_before_the_current_one_are_done_and_the_rest_are_waiting(self):
         r = _run("""
@@ -90,6 +96,9 @@ class PagesTest(unittest.TestCase):
     def test_the_turn_bar_shows_the_step_and_how_many_there_are(self):
         self.assertIn("'step ' + (st.idx + 1) + ' of ' + st.names.length", self.play)
         self.assertIn('<div class="tb-steps"></div>', self.play)
+
+    def test_picking_up_the_move_is_noticed(self):
+        self.assertIn("if (_turn) _turn.picked = true;", self.play)
 
     def test_the_finished_turn_marks_every_step_done(self):
         body = self.play[self.play.index("function _turnFinish()"):]
