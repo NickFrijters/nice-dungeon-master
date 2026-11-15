@@ -10,6 +10,15 @@ Versions before **1.6.0** are reconstructed retroactively from git history; the 
 
 ## [Unreleased]
 
+## [2.18.0] — 2026-11-15 — Dutch is an addition
+
+### Fixed — a campaign with `language: nl` turned the whole game Dutch
+
+The per-campaign language mode (a `language:` flag, a `## Glossary`, and a "hybrid language" style note) made the Dungeon Master narrate everything in Dutch, which clashed with the Settings menu's **Explain in Dutch**. Dutch is now only ever an addition to English:
+
+- All play is English: narration, NPC speech, rules answers, the recap. The "Language?" question at `/dm:dnd new` is gone, and `/dm:dnd load` step 2b now cleans up an old campaign (drops `language:`, replaces a Dutch style note with an English-plus-summary one, ignores the Glossary) instead of switching the session to its language. SKILL.md states the rule and says it wins over anything older in a campaign file.
+- Spell, rule and condition pop-ups show the English text, and with Explain in Dutch on a Dutch explanation **underneath** it (when one exists). They used to be replaced by Dutch whenever the campaign said `language: nl`.
+
 ## [2.17.0] — 2026-11-15 — TV/PC switch
 
 ### Changed — one TV | PC switch, next to the cog

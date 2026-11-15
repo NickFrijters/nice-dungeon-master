@@ -1488,14 +1488,13 @@ _NL_FILE = os.path.join(os.path.expanduser("~"), ".claude", "dnd", "tools", "srd
 _nl_cache = {"mtime": None, "data": {}}
 
 
-def _campaign_language() -> str:
+def _explain_dutch_on() -> bool:
+    """The Settings menu's "Explain in Dutch": an addition to the English, never a replacement."""
     try:
-        camp = open(CAMP_FILE, encoding="utf-8").read().strip()
-        txt = (_find_campaign(camp) / "state.md").read_text(encoding="utf-8")
-        m = re.search(r"^language:\s*(\w+)", txt, re.M)
-        return (m.group(1).lower() if m else "en")
+        import settings as _settings
+        return bool(_settings.load()["explain_dutch"])
     except Exception:
-        return "en"
+        return False
 
 
 def _nl_entry(name, category):
@@ -1539,13 +1538,12 @@ def srd_lookup():
     if not _SRD_AVAILABLE or _lookup is None:
         return jsonify({"found": False, "error": "SRD dataset not loaded"}), 503
 
-    if _campaign_language().startswith("nl"):
+    text = _lookup.lookup_with_level(name, category=category, level=level)
+    if text and _explain_dutch_on():
+        # English first, always; the Dutch explanation goes underneath when there is one.
         _e = _nl_entry(name, category)
         if _e:
-            return jsonify({"found": True, "name": name, "category": _e.get("cat", category or ""), "text": _nl_text(name, _e)})
-    text = _lookup.lookup_with_level(name, category=category, level=level)
-    if text and _campaign_language().startswith("nl"):
-        text += "\n\n(Nog geen Nederlandse uitleg beschikbaar; de DM kan die toevoegen.)"
+            text += "\n\n## Nederlands\n\n" + "\n".join(_e.get("meta") or []) + "\n\n" + _e.get("desc", "")
     if text:
         rec = _lookup.lookup_record(name, category=category)
         resolved_cat = (rec or {}).get("_cat", category or "")

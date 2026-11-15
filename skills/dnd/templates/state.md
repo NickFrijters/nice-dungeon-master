@@ -16,7 +16,7 @@
 *(none yet)*
 
 ## Glossary
-*One translation per game term, for a table playing in a language other than English. Settle each term the first time it comes up and keep it — e.g. `Prone — Derribado`, `Short Rest — Descanso corto`. Read at every /dnd load.*
+*Only for coined names you want to keep consistent. All play is in English; Dutch is an addition chosen in Settings.*
 *(none yet)*
 
 ## World State
