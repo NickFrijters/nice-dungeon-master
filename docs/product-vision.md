@@ -61,6 +61,9 @@ A running adventure is either **Roleplay** or **Combat**. The screen switches au
 ## -- if I make changes here, always automatically include in the next commit.
 ## -- remove items from this list once they are built
 - TTS: De snelheid van de stem moet 80% zijn.
+- TTS: Voorlopig gaan we alleen Engelse TTS ondersteunen.
+- BUG: In de lopende campaign met setting "Dutch" is alles nog Nederlands, in plaats van (zoals de bedoeling) standaard alles Engels en een korte Nederlandse samenvatting. Remember, the Dutch setting is an ADDITION to the default English functionality.
+- INTERFACE: Interview me about the visualization of the text (being typed) in sync with the TTS.
 - INTERFACE: Verplaats alle nog bestaande settings van het speelscherm naar het settings menu. A small cog icon in the corner of the screen should show the settings menu straight form an adventure, instead of just from the main menu.
 - INTERFACE: Loading between DM responses should always visualize what it's doing and how many things it has to do next (loading bar with several parts, or another way to show progress). Because waiting is always annoying for players.
 - CLEANUP: No "PHONE" screen will ever be used, remove that function from the screen and code completely.

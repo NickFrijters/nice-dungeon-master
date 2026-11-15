@@ -26,8 +26,20 @@ from typing import Optional
 #: Text longer than this is cut; the narration path chunks at block flush.
 MAX_TEXT_CHARS = 2000
 
-#: Changing the voice or the model must not replay old clips.
-VOICE_ID = "pocket-alba"
+def _speed() -> float:
+    try:
+        s = float(os.environ.get("DND_TTS_SPEED", "0.8"))
+    except ValueError:
+        s = 0.8
+    return min(1.5, max(0.5, s))
+
+
+#: How fast the narrator talks, as a fraction of the model's natural pace.
+#: 0.8 = 80%. Pitch is kept. DND_TTS_SPEED overrides it.
+SPEED = _speed()
+
+#: Changing the voice, the model or the speed must not replay old clips.
+VOICE_ID = "pocket-alba" if SPEED == 1.0 else f"pocket-alba-{round(SPEED * 100)}"
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE / "local_tts"))
@@ -145,7 +157,7 @@ def synthesize_strict(text: str, lang: str = "auto") -> bytes:
         return hit
     try:
         import local_fallback
-        pcm = local_fallback.synthesize(text, lang)
+        pcm = local_fallback.synthesize(text, lang, SPEED)
     except Exception as e:
         raise TtsError(str(e)) from e
     cache_put(key, pcm)

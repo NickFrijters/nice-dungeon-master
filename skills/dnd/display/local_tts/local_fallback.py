@@ -47,7 +47,7 @@ def shutdown() -> None:
         pass
 
 
-def synthesize(text: str, lang: str = "auto") -> bytes:
+def synthesize(text: str, lang: str = "auto", speed: float = 1.0) -> bytes:
     if not enabled():
         raise RuntimeError("local TTS disabled or not installed")
     if not _up():
@@ -58,7 +58,7 @@ def synthesize(text: str, lang: str = "auto") -> bytes:
         if not _up():
             raise RuntimeError("local TTS server did not start")
     req = urllib.request.Request(
-        BASE + "/synth", data=json.dumps({"text": text, "lang": lang}).encode(),
+        BASE + "/synth", data=json.dumps({"text": text, "lang": lang, "speed": speed}).encode(),
         headers={"Content-Type": "application/json"}, method="POST")
     try:
         with urllib.request.urlopen(req, timeout=SYNTH_TIMEOUT) as r:

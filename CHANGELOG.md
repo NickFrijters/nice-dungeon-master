@@ -10,6 +10,12 @@ Versions before **1.6.0** are reconstructed retroactively from git history; the 
 
 ## [Unreleased]
 
+## [2.14.0] — 2026-11-15 — Voice speed 80%
+
+### Changed — the narrator speaks at 80% speed
+
+Narration is slowed to 80% of the model's natural pace, with the pitch unchanged (a plain slowdown would deepen the voice). Pocket TTS has no speed setting, so `local_tts/stretch.py` re-joins short overlapping pieces of each clip (WSOLA) inside the voice server; it adds no noticeable time. The speed is part of the cache identity, so clips stored at the old speed are not replayed. `DND_TTS_SPEED` changes it (0.5 to 1.5).
+
 ## [2.13.0] — 2026-11-15 — Voice controls and Dutch summary
 
 ### Changed — voice controls, and a Dutch summary you can play

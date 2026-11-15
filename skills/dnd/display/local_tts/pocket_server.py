@@ -6,6 +6,8 @@ GET  /health -> "ok"
 Models load lazily on first use and stay in memory.
 """
 import json, os, re, sys, threading
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import numpy as np
@@ -43,13 +45,16 @@ def get(lang: str):
     return _models[lang]
 
 
-def synth(text: str, lang: str) -> bytes:
+def synth(text: str, lang: str, speed: float = 1.0) -> bytes:
     if lang not in LANGS:
         lang = detect_lang(text)
     with _lock:
         m, voice = get(lang)
         wav = m.generate_audio(voice, text).squeeze().cpu().numpy().astype(np.float32)
         sr = int(m.sample_rate)
+    if abs(speed - 1.0) >= 1e-3:
+        from stretch import time_stretch
+        wav = time_stretch(wav, speed, sr).astype(np.float32)   # slower, same pitch
     if sr != TARGET_SR:
         n = int(len(wav) * TARGET_SR / sr)
         wav = np.interp(np.linspace(0, len(wav) - 1, n), np.arange(len(wav)), wav)
@@ -83,7 +88,11 @@ class H(BaseHTTPRequestHandler):
             text = (data.get("text") or "").strip()[:MAX_CHARS]
             if not text:
                 return self._send(400, b"empty text")
-            pcm = synth(text, (data.get("lang") or "auto").lower())
+            try:
+                speed = float(data.get("speed", 1.0))
+            except (TypeError, ValueError):
+                speed = 1.0
+            pcm = synth(text, (data.get("lang") or "auto").lower(), min(2.0, max(0.5, speed)))
             self._send(200, pcm, "application/octet-stream")
         except Exception as e:  # never crash the server on one bad request
             self._send(500, f"{type(e).__name__}: {e}".encode()[:300])

@@ -57,7 +57,7 @@ class CacheAndSynthTest(unittest.TestCase):
 
     def test_cache_is_bounded(self):
         with mock.patch.dict(os.environ, {"DND_TTS_CACHE_MB": "0.0003"}):  # ~300 bytes
-            with mock.patch("local_fallback.synthesize", side_effect=lambda t, lang="auto": b"x" * 200):
+            with mock.patch("local_fallback.synthesize", side_effect=lambda t, lang="auto", speed=1.0: b"x" * 200):
                 for i in range(5):
                     tts.synthesize_strict(f"line {i}")
             total = sum(f.stat().st_size for f in Path(self.tmp.name).glob("*.pcm"))
