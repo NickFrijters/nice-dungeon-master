@@ -3745,6 +3745,13 @@
   .cb-hp .cb-hp-fill { height: 100%; background: rgba(110,190,120,.95); }
   .cb-hp.enemy .cb-hp-fill { background: rgba(225,95,85,.95); }
   .cb-hp .cb-hp-note { font-size: 11px; color: rgba(210,195,160,.6); }
+  /* ── Pages: long text waits for a Continue before older text scrolls away ── */
+  #page-continue { position: fixed; left: calc(50% + 106px); bottom: 104px; transform: translateX(-50%); z-index: 30; display: none;
+    font: 700 14px 'Cinzel', serif; letter-spacing: .16em; text-transform: uppercase; color: rgba(255,235,170,1);
+    background: rgba(40,28,10,.94); border: 2px solid rgba(235,205,120,.9); border-radius: 22px; padding: 10px 28px; cursor: pointer;
+    box-shadow: 0 6px 30px rgba(0,0,0,.7); animation: pageNudge 1.6s ease-in-out infinite; }
+  #page-continue.show { display: block; }
+  @keyframes pageNudge { 0%,100% { transform: translateX(-50%) translateY(0); } 50% { transform: translateX(-50%) translateY(-4px); } }
 </style>
 </head>
 <body>
@@ -3990,6 +3997,7 @@
 <div id="text-scroll">
   <div id="text-content"></div>
 </div>
+<button id="page-continue" type="button">Continue &#9662;</button>
 <button id="new-content-pill" type="button" aria-label="Jump to newest narration">New ↓</button>
 
 <script>
@@ -4753,12 +4761,79 @@ function getOrCreateBlock() {
   return currentEl.querySelector('p:last-child');
 }
 
+// ── Pages ───────────────────────────────────────────────────────────────────
+// Without a voice reading it, text must not scroll out of sight unread: when the unread part of
+// the narration fills the visible area, typing waits for a Continue (any screen; every screen moves on).
+let _pageHeld = false, _pageStartY = null, _pageBlock = null, _pageCredit = 0;
+function _pageY(el) {   // bottom of an element, in the scroll area's own coordinates
+  return el.getBoundingClientRect().bottom - textScroll.getBoundingClientRect().top + textScroll.scrollTop;
+}
+// How much unread text may pile up: about 55% of the area, and never more than what is really
+// visible: from under the battle map (combat) or the top fade, down to where the newest line sits
+// when scrolled to the bottom (the turn bar and padding sit below it).
+function _pageUsable() {
+  const h = textScroll.clientHeight;
+  const cv = document.body.classList.contains('combat') ? document.getElementById('combat-view') : null;
+  const top = cv ? cv.getBoundingClientRect().bottom - textScroll.getBoundingClientRect().top + 8 : h * 0.14;
+  const tail = currentEl ? Math.max(0, textScroll.scrollHeight - _pageY(_pageLast())) : 180;
+  return Math.max(60, Math.min(h * 0.55, h - top - tail));
+}
+function _pageVoiceReading() { return !!(_turn && _turn.voice && !_turn.audioEnded); }
+function _pageLast() { return currentEl.querySelector('p:last-child') || currentEl; }
+function _pageShouldHold() {
+  if (!currentEl || _pageVoiceReading() || document.hidden) return false;
+  if (_pageBlock !== currentEl) {                       // a new narration block starts a new page
+    _pageBlock = currentEl; _pageCredit = 0;
+    _pageStartY = currentEl.getBoundingClientRect().top - textScroll.getBoundingClientRect().top + textScroll.scrollTop - 4;
+  }
+  return (_pageY(_pageLast()) - _pageStartY) > _pageUsable();
+}
+function _pageHold() {
+  if (_pageCredit > 0) { _pageCredit--; _pageStartY = _pageY(_pageLast()); return false; }
+  _pageHeld = true;
+  document.getElementById('page-continue').classList.add('show');
+  return true;
+}
+function _pageRelease() {
+  _pageHeld = false;
+  const b = document.getElementById('page-continue'); if (b) b.classList.remove('show');
+}
+function _pageResume() {
+  if (charDelay === 0) { if (charQueue.length) _pageInstantRun(); } else { setTimeout(typeNextChar, 0); }
+}
+function _pageContinue(fromRelay) {
+  if (!_pageHeld) { if (fromRelay) _pageCredit = Math.min(2, _pageCredit + 1); return; }
+  _pageRelease();
+  if (currentEl) _pageStartY = _pageY(_pageLast()) - 24;   // what is shown now has been read
+  if (!fromRelay && window._relaySend) window._relaySend({ t: 'page-continue' });
+  _pageResume();
+}
+// Instant typing speed: draw the text in slices and stop at each full page instead of dumping it all.
+function _pageInstantRun() {
+  if (_pageHeld) return;
+  while (charQueue.length) {
+    if (_pageShouldHold() && _pageHold()) { scrollToBottom(); return; }
+    instantFlush(24);
+  }
+  scrollToBottom();
+  _turnTypingDone(true);
+}
+document.getElementById('page-continue').addEventListener('click', () => _pageContinue(false));
+document.addEventListener('keydown', e => {
+  if (_pageHeld && (e.key === 'Enter' || e.key === ' ') && !/^(INPUT|TEXTAREA|SELECT)$/.test((e.target && e.target.tagName) || '')) {
+    e.preventDefault(); _pageContinue(false);
+  }
+});
+
 function typeNextChar() {
   if (charQueue.length === 0) {
     isTyping = false;
+    _pageRelease();
     _turnTypingDone();
     return;
   }
+  if (_pageHeld) return;
+  if (_pageShouldHold() && _pageHold()) return;
 
   const item = charQueue.shift();
   if (_turn && typeof item === 'string') _turn.typed++;
@@ -4972,7 +5047,7 @@ document.addEventListener('visibilitychange', () => {
 function startTyping() {
   if (isTyping) return;
   if (document.hidden) { _flushWhileHidden(); return; }
-  if (charDelay === 0) { instantFlush(); _turnTypingDone(true); return; }
+  if (charDelay === 0) { _pageInstantRun(); return; }
   isTyping = true;
   typeNextChar();
 }
@@ -5132,11 +5207,21 @@ function flushNewBlock() {
 // Called before inserting a non-DM block so the typewriter never gets
 // interrupted mid-word. Renders all queued chars immediately, then
 // stops the typewriter loop cleanly.
-function instantFlush() {
+function instantFlush(limit) {   // limit: draw only about that many items (paged flush), never stopping inside an inline element
   if (charQueue.length === 0) return;
   clearTimeout(idleTimer);
-  const pending = charQueue.splice(0);  // atomically drain
   let flushInline = null;  // local inline tracker for this flush pass
+  let take = charQueue.length;
+  if (limit) {
+    let open = false, k = 0;
+    for (; k < charQueue.length && (k < limit || open); k++) {
+      const q = charQueue[k];
+      if (q && typeof q === 'object') { if (q.open) open = true; else if (q.close) open = false; }
+    }
+    take = k;
+  }
+  const pending = charQueue.splice(0, take);
+  if (!charQueue.length) _pageRelease();   // everything is shown: nothing left to hold
   for (const item of pending) {
     if (item === '\n') {
       flushInline = null;
@@ -5714,6 +5799,7 @@ function clearDisplay(then) {
     // Abort any in-progress typewriter
     charQueue        = [];
     isTyping         = false;
+    _pageRelease();
     _currentInlineEl = null;
     if (currentCursor && currentCursor.parentNode) {
       currentCursor.parentNode.removeChild(currentCursor);
@@ -9339,6 +9425,7 @@ function _initDicePad() {
     if(!m || m.t!=='sheet') return;
     if (m.open && m.name) openSheet(m.name); else closeSheet();
   });
+  window._relayHandlers.push(function(m){ if(m && m.t==='page-continue' && typeof _pageContinue==='function') _pageContinue(true); });
   window._relayHandlers.push(function(m){ if(m && m.t==='sheet-tab' && typeof _smSetTab==='function') _smSetTab(m.tab, true); });
 })();
 </script>
