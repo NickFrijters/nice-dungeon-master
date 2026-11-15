@@ -41,7 +41,9 @@ if (( SIZE < 50 )); then
 fi
 
 # Parse + shape check via Python (already a dependency of the skill).
-python3 - "$TAIL" <<'PY'
+PY=python3
+"$PY" -c "import sys" >/dev/null 2>&1 || PY=python
+"$PY" - "$TAIL" <<'PY'
 import json, sys
 path = sys.argv[1]
 try:

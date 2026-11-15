@@ -21,6 +21,7 @@ reads the `autosave` flag from the active campaign's state.md and no-ops when of
 or when no D&D campaign is loaded.
 """
 
+import subprocess
 import sys
 import os
 import json
@@ -32,10 +33,21 @@ import paths  # noqa: E402
 HOOK_EVENT = "Stop"
 
 
+def _python_name() -> str:
+    """"python3" when it really runs; otherwise the interpreter running this
+    installer. On Windows "python3" is often a Store placeholder that fails."""
+    try:
+        ok = subprocess.run(["python3", "-c", "import sys"], capture_output=True,
+                            timeout=10).returncode == 0
+    except (OSError, subprocess.SubprocessError):
+        ok = False
+    return "python3" if ok else f'"{sys.executable}"'
+
+
 def checkpoint_command() -> str:
     """Absolute command the hook runs. Resolved at install time."""
     script = paths.scripts_dir() / "autosave_checkpoint.py"
-    return f'python3 "{script}"'
+    return f'{_python_name()} "{script}"'
 
 
 def default_settings_path() -> str:

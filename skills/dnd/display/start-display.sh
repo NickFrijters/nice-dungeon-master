@@ -14,12 +14,26 @@
 export PYTHONUTF8=1
 
 DISPLAY_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+# Find a Python that actually runs. On Windows, "python3" is often a Microsoft
+# Store placeholder that prints an error instead of starting Python.
+PY=""
+for cand in python3 python py; do
+  if command -v "$cand" >/dev/null 2>&1 && "$cand" -c "import sys; sys.exit(0 if sys.version_info[0] == 3 else 1)" >/dev/null 2>&1; then
+    PY="$cand"; break
+  fi
+done
+if [ -z "$PY" ]; then
+  echo "Python 3 was not found. Install it from python.org, then try again."
+  exit 1
+fi
+
 LOG="$DISPLAY_DIR/app.log"               # process log — recreated each launch
 PID_FILE="$DISPLAY_DIR/app.pid"          # process pid  — recreated each launch
 CERT_SERVER_PID="$DISPLAY_DIR/.cert-server.pid"
 # Writable runtime dir (update-safe) — TLS certs live here so they survive
 # /plugin update and devices don't have to re-trust them. Resolve via paths.py.
-RT="$(python3 -c "import sys,os;sys.path.insert(0,os.path.join('$DISPLAY_DIR','..','scripts'));from paths import runtime_dir;print(runtime_dir())" 2>/dev/null)"
+RT="$("$PY" -c "import sys,os;sys.path.insert(0,os.path.join('$DISPLAY_DIR','..','scripts'));from paths import runtime_dir;print(runtime_dir())" 2>/dev/null)"
 [ -z "$RT" ] && { RT="${DND_CAMPAIGN_ROOT:-$HOME/.claude/dnd}/.runtime"; mkdir -p "$RT"; }
 
 # ── Parse flags ───────────────────────────────────────────────────────────────
@@ -67,7 +81,7 @@ if $TLS_MODE; then
     kill "$(cat "$CERT_SERVER_PID")" 2>/dev/null || true
     rm -f "$CERT_SERVER_PID"
   fi
-  python3 -m http.server 8080 --directory "$RT" > /dev/null 2>&1 &
+  "$PY" -m http.server 8080 --directory "$RT" > /dev/null 2>&1 &
   echo $! > "$CERT_SERVER_PID"
 else
   # HTTP mode: shut down any leftover cert server from a previous TLS session
@@ -92,7 +106,7 @@ sleep 0.3
 # state) is pure stdlib and runs without it. But if the user asked for the
 # display, fail with the exact one-time install command rather than a silent
 # "server may not have started" further down.
-if ! python3 -c "import flask, flask_cors" 2>/dev/null; then
+if ! "$PY" -c "import flask, flask_cors" 2>/dev/null; then
   echo "The display companion needs its Python dependencies (one-time install):"
   echo "    pip3 install -r \"$DISPLAY_DIR/requirements.txt\""
   echo ""
@@ -105,7 +119,7 @@ fi
 APP_ARGS="$LAN_FLAG $MENU_FLAG"
 $TLS_MODE && APP_ARGS="$APP_ARGS --tls"
 
-nohup python3 "$DISPLAY_DIR/dnd-display-app.py" $APP_ARGS > "$LOG" 2>&1 &
+nohup "$PY" "$DISPLAY_DIR/dnd-display-app.py" $APP_ARGS > "$LOG" 2>&1 &
 echo $! > "$PID_FILE"
 
 LOCAL_URL="${SCHEME}://localhost:5001"
