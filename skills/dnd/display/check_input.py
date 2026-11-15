@@ -46,6 +46,21 @@ def _narration_directive():
     return ""
 
 
+def _settings_directives():
+    """The table's Main Menu settings as [[...]] lines, or '' if unavailable."""
+    try:
+        sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "scripts"))
+        import settings
+        camp = None
+        try:
+            camp = open(rt(".campaign"), encoding="utf-8").read().strip() or None
+        except OSError:
+            pass
+        return "\n".join(settings.directive_lines(camp))
+    except Exception:
+        return ""
+
+
 def _roll_directives():
     """One [[<Char> roll mode: …]] line per per-character override, or '' if none."""
     try:
@@ -67,7 +82,7 @@ try:
             content = f.read().strip()
         os.remove(QUEUE_FILE)
         if content:
-            for d in (_roll_directives(), _narration_directive()):
+            for d in (_roll_directives(), _narration_directive(), _settings_directives()):
                 if d:
                     print(d)
             print(content)

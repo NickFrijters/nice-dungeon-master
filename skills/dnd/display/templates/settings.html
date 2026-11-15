@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Settings · Nice Dungeon Master</title>
+<style>
+  :root { --bg:#14110f; --panel:#1f1a17; --line:#3a312b; --text:#eadfd0; --dim:#9c8f80; --gold:#d6a24a; }
+  * { box-sizing: border-box; }
+  body { margin:0; min-height:100vh; background:var(--bg); color:var(--text);
+         font-family: Georgia, "Times New Roman", serif; display:flex; justify-content:center; }
+  main { width:min(760px, 100%); padding:40px 24px 64px; }
+  a.back { color:var(--dim); text-decoration:none; }
+  a.back:hover { color:var(--gold); }
+  h1 { color:var(--gold); font-size:2rem; margin:12px 0 4px; }
+  .sub { color:var(--dim); margin:0 0 28px; }
+  h2 { font-size:1.05rem; color:var(--gold); text-transform:uppercase; letter-spacing:.12em; margin:32px 0 12px; }
+  .row { background:var(--panel); border:1px solid var(--line); border-radius:10px;
+         padding:16px 18px; margin-bottom:10px; }
+  .label { font-size:1.1rem; }
+  .hint { color:var(--dim); font-size:.9rem; margin:2px 0 12px; }
+  .seg { display:flex; gap:8px; flex-wrap:wrap; }
+  .seg button { background:transparent; color:var(--text); border:1px solid var(--line); border-radius:8px;
+                padding:9px 16px; font:inherit; cursor:pointer; }
+  .seg button[aria-pressed="true"] { background:var(--gold); color:#1a1208; border-color:var(--gold); font-weight:bold; }
+  .chars { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:8px 0;
+           border-top:1px solid var(--line); }
+  .chars:first-of-type { border-top:0; }
+  #saved { position:fixed; bottom:20px; right:20px; background:var(--gold); color:#1a1208; padding:8px 14px;
+           border-radius:8px; opacity:0; transition:opacity .25s; font-weight:bold; }
+  #saved.show { opacity:1; }
+  #err { color:#e07a6a; min-height:1.4em; margin-top:16px; }
+</style>
+</head>
+<body>
+<main>
+  <a class="back" href="/menu">← Main Menu</a>
+  <h1>Settings</h1>
+  <p class="sub">Changes save by themselves and apply from the next turn.</p>
+
+  <h2>The story</h2>
+  <div class="row">
+    <div class="label">Flavour and detail</div>
+    <div class="hint">How long each Dungeon Master step may be: low 100, medium 250, high 500 words at most.</div>
+    <div class="seg" data-key="flavour"></div>
+  </div>
+  <div class="row">
+    <div class="label">Combat</div>
+    <div class="hint">How many fights come up. Medium is like a published adventure; high is mostly fighting.</div>
+    <div class="seg" data-key="combat"></div>
+  </div>
+
+  <h2>Language and sound</h2>
+  <div class="row">
+    <div class="label">Explain in Dutch</div>
+    <div class="hint">Keeps the full English text and adds a short, simple Dutch summary under it.</div>
+    <div class="seg" data-key="explain_dutch" data-bool="1"></div>
+  </div>
+  <div class="row">
+    <div class="label">Narration audio</div>
+    <div class="hint">Read the story aloud on the screen. Some browsers also need one click on the play screen first.</div>
+    <div class="seg" data-key="narration_audio" data-bool="1"></div>
+  </div>
+
+  <h2>Rules</h2>
+  <div class="row">
+    <div class="label">Ruleset for new campaigns</div>
+    <div class="hint">Each campaign keeps the ruleset it was started with. This only chooses the default for new ones.</div>
+    <div class="seg" data-key="default_ruleset"></div>
+  </div>
+
+  <h2>Characters</h2>
+  <div class="hint" style="margin-top:-6px">New gives simple choices and clear explanations. Experienced gives full options and short explanations.</div>
+  <div id="characters"></div>
+
+  <div id="err" role="alert"></div>
+</main>
+<div id="saved">Saved</div>
+<script>
+const TOKEN = {{ lan_token|tojson }};
+const errEl = document.getElementById('err');
+const savedEl = document.getElementById('saved');
+let data = null;
+
+function flash() { savedEl.classList.add('show'); setTimeout(() => savedEl.classList.remove('show'), 1200); }
+
+async function post(url, body) {
+  errEl.textContent = '';
+  const r = await fetch(url, {method: 'POST',
+    headers: {'Content-Type': 'application/json', 'X-DND-Token': TOKEN}, body: JSON.stringify(body)});
+  if (!r.ok) { errEl.textContent = 'Could not save: ' + await r.text(); return false; }
+  flash(); return true;
+}
+
+function pretty(v) { return v === true ? 'On' : v === false ? 'Off' : v.charAt(0).toUpperCase() + v.slice(1); }
+
+function segment(el, options, current, onPick) {
+  el.textContent = '';
+  for (const opt of options) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = pretty(opt);
+    b.setAttribute('aria-pressed', String(opt === current));
+    b.onclick = async () => { if (await onPick(opt)) segment(el, options, opt, onPick); };
+    el.appendChild(b);
+  }
+}
+
+function render() {
+  for (const el of document.querySelectorAll('.seg[data-key]')) {
+    const key = el.dataset.key;
+    const options = el.dataset.bool ? [false, true] : data.options[key];
+    segment(el, options, data.settings[key], async v => {
+      if (!await post('/settings/save', {[key]: v})) return false;
+      data.settings[key] = v; return true;
+    });
+  }
+  const box = document.getElementById('characters');
+  box.textContent = '';
+  for (const camp of data.campaigns) {
+    if (!camp.characters.length) continue;
+    const row = document.createElement('div'); row.className = 'row';
+    const title = document.createElement('div'); title.className = 'label';
+    title.textContent = camp.name.replace(/-/g, ' ');
+    row.appendChild(title);
+    for (const ch of camp.characters) {
+      const line = document.createElement('div'); line.className = 'chars';
+      const name = document.createElement('span'); name.textContent = ch.name;
+      const seg = document.createElement('div'); seg.className = 'seg';
+      line.append(name, seg); row.appendChild(line);
+      segment(seg, data.options.experience, ch.experience, async v => {
+        const ok = await post('/settings/experience', {campaign: camp.name, character: ch.name, experience: v});
+        if (ok) ch.experience = v; return ok;
+      });
+    }
+    box.appendChild(row);
+  }
+}
+
+fetch('/settings/data').then(r => r.json()).then(d => { data = d; render(); })
+  .catch(() => { errEl.textContent = 'Could not load settings.'; });
+</script>
+</body>
+</html>

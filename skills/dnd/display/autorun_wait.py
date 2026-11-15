@@ -95,4 +95,15 @@ if content:
     except Exception:
         pass
 
+if content.strip():
+    try:
+        import settings
+        camp = None
+        try:
+            camp = open(os.path.join(RT, ".campaign"), encoding="utf-8").read().strip() or None
+        except OSError:
+            pass
+        sys.stdout.write("\n".join(settings.directive_lines(camp)) + "\n")
+    except Exception:
+        pass
 sys.stdout.write(content)

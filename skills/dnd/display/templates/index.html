@@ -8,6 +8,7 @@
 <meta name="dnd-token" content="{{ lan_token }}">
 <meta name="narrator-voice" content="{{ narrator_voice }}">
 <meta name="tts-available" content="{{ '1' if tts_available else '0' }}">
+<meta name="narration-audio-default" content="{{ '1' if narration_audio_default else '0' }}">
 
 <!-- Theme anti-FOUC. Runs synchronously before the stylesheet parses so the
      correct data-theme attribute is on <html> before any rule resolves —
@@ -6505,7 +6506,12 @@ let _ttsVoice = (_narratorVoiceMeta && _narratorVoiceMeta.getAttribute('content'
   || localStorage.getItem('dnd_tts_voice')
   || 'Enceladus';
 
-let _ttsAutoNarrate = localStorage.getItem('dnd_tts_auto') === '1';
+// The Main Menu's "Narration audio" setting is the default; a choice made on
+// this browser's own toggle wins once it exists.
+const _narrationAudioMeta = document.querySelector('meta[name="narration-audio-default"]');
+let _ttsAutoNarrate = localStorage.getItem('dnd_tts_auto') !== null
+  ? localStorage.getItem('dnd_tts_auto') === '1'
+  : !!(_narrationAudioMeta && _narrationAudioMeta.getAttribute('content') === '1');
 
 let _ttsCtx = null;
 let _ttsActiveSource = null;

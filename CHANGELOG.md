@@ -10,6 +10,21 @@ Versions before **1.6.0** are reconstructed retroactively from git history; the 
 
 ## [Unreleased]
 
+## [2.9.0] — 2026-11-15 — Settings page
+
+### Added — Settings page
+
+The Main Menu has a Settings page (`/settings`), saved to `settings.json` in the data root:
+
+- **Flavour and detail** (low / medium / high): caps each DM step at 100 / 250 / 500 words.
+- **Combat** (none / low / medium / high): how many fights come up.
+- **Explain in Dutch** (on / off): keeps the full English and adds a short, simple Dutch summary.
+- **Narration audio** (on / off): default for the play screen's auto-narrate.
+- **Ruleset for new campaigns** (2014 / 2024): the default offered by `/dm:dnd new`.
+- **Experience** per character (New / Experienced), saved in `<campaign>/experience.json`.
+
+Claude receives these as `[[Table settings - ...]]` lines with every batch of player input (`check_input.py` and `autorun_wait.py`), and `scripts/settings.py directives` prints the same lines for sessions without a display.
+
 ## [2.8.0] — 2026-11-15 — Web Main Menu
 
 ### Added — web Main Menu

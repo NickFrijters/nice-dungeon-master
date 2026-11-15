@@ -30,7 +30,7 @@ Open the web **Main Menu**. After this, the player works in the browser and you 
    - `DM rolls everything openly` → write `roll_mode: auto`. You resolve PC rolls yourself with full math shown.
 
    Default to `roll_mode: players` if the question is dismissed.
-2. **Ruleset selection (added 2026-05-08).** Ask: *"D&D 5e ruleset for this campaign? **2014** (SRD 5.1, default — full mechanics, classic Player's Handbook structure) or **2024** (SRD 5.2, weapon mastery + origin feats + background ASIs + revised exhaustion)?"* Default to `2014` if no answer or ambiguous. Write the chosen value to `state.md` header line as `**Ruleset:** 2014` or `**Ruleset:** 2024`.
+2. **Ruleset selection (added 2026-05-08).** Read the default with `python3 ${CLAUDE_SKILL_DIR}/scripts/settings.py show` (`default_ruleset`) and recommend it. Ask: *"D&D 5e ruleset for this campaign? **2014** (SRD 5.1, default — full mechanics, classic Player's Handbook structure) or **2024** (SRD 5.2, weapon mastery + origin feats + background ASIs + revised exhaustion)?"* Default to `2014` if no answer or ambiguous. Write the chosen value to `state.md` header line as `**Ruleset:** 2014` or `**Ruleset:** 2024`.
 
    If 2024 was chosen: verify the dataset exists with `ls ${CLAUDE_SKILL_DIR}/data/dnd5e_srd_2024.json`. If missing, run `python3 ${CLAUDE_SKILL_DIR}/scripts/build_srd.py --ruleset 2024` (one-time, ~3 min). Until the dataset exists, lookup-based features will fall back to 2014.
 3. `mkdir -p ~/.claude/dnd/campaigns/<name>/characters`

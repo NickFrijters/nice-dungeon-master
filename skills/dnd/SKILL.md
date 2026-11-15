@@ -1,6 +1,6 @@
 ---
 name: dnd
-description: "v2.8.0 · Dungeon Master assistant for running persistent D&D 5e campaigns. Handles campaign creation/loading, character management, combat tracking, NPC generation, dice rolling, and session state — all persisted across sessions. Invoke with /dm:dnd followed by a subcommand, or just speak naturally once a campaign is loaded."
+description: "v2.9.0 · Dungeon Master assistant for running persistent D&D 5e campaigns. Handles campaign creation/loading, character management, combat tracking, NPC generation, dice rolling, and session state — all persisted across sessions. Invoke with /dm:dnd followed by a subcommand, or just speak naturally once a campaign is loaded."
 tools: Read, Write, Edit, Glob, Bash, AskUserQuestion
 ---
 
@@ -63,6 +63,19 @@ When the skill is invoked **without a clear action** — a bare `/dm:dnd`, or a 
 - **Display & input mode** — the session-setup choice at `/dm:dnd load` and `/dm:dnd new` (see those procedures). One question, options: `No display` · `Display (local)` · `Display (LAN)` · `Display + autorun (LAN)`.
 
 For free-form or open-ended input (a character concept, a campaign theme, a narrative choice mid-scene) keep using natural prose — `AskUserQuestion` is for **bounded** choices, not for everything. Don't interrogate the player with menus when a sentence will do.
+
+---
+
+## Table settings (set in the web Main Menu)
+
+Player input that arrives from the display starts with `[[Table settings - ...]]` lines. They come from the Main Menu's Settings page and are **binding for that turn**:
+
+- **Flavour:** never exceed the stated word limit for a DM step (100 / 250 / 500).
+- **Combat:** shapes how often fights come up. `none` means resolve conflict through roleplay, exploration and puzzles; `low` means few fights; `medium` follows the module; `high` means frequent combat with little roleplay between.
+- **Explain in Dutch:** when present, write the full English text as usual, then one short, simple Dutch summary (two sentences at most). The English is never shortened or replaced.
+- **Experience:** for characters marked *New*, offer simple choices, plain words and clear explanations; for *Experienced*, give full options with brief explanations. When the line names players, apply it to those characters' choices.
+
+When there is no display, run `python3 ${CLAUDE_SKILL_DIR}/scripts/settings.py directives <campaign>` once at load to read the same settings.
 
 ---
 

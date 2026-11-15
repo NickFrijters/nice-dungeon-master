@@ -1202,6 +1202,14 @@ def _broadcast(payload: dict) -> None:
 
 # ─── Routes ──────────────────────────────────────────────────────────────────
 
+def _narration_audio_default() -> bool:
+    try:
+        import settings as _settings
+        return bool(_settings.load()["narration_audio"])
+    except Exception:
+        return False
+
+
 @app.route("/")
 def index():
     if _MENU_FIRST:
@@ -1212,6 +1220,7 @@ def index():
         lan_token=_lan_token or "",
         narrator_voice=_read_narrator_voice(),
         tts_available=(_tts is not None),
+        narration_audio_default=_narration_audio_default(),
     )
 
 
@@ -1278,6 +1287,68 @@ def menu_load():
         return "could not queue", 500
     global _MENU_FIRST
     _MENU_FIRST = False
+    return "", 204
+
+
+# ─── Settings (reached from the Main Menu) ───────────────────────────────────
+
+@app.route("/settings")
+def settings_page():
+    return render_template("settings.html", lan_token=_lan_token or "")
+
+
+@app.route("/settings/data")
+def settings_data():
+    import settings as _settings
+    camps = []
+    for c in _list_campaigns():
+        camps.append({"name": c["name"],
+                      "characters": [{"name": n, "experience": e}
+                                     for n, e in _settings.load_experience(c["name"]).items()]})
+    return jsonify({"settings": _settings.load(),
+                    "options": {"flavour": list(_settings.FLAVOUR_WORDS),
+                                "combat": list(_settings.COMBAT_LEVELS),
+                                "default_ruleset": list(_settings.RULESETS),
+                                "experience": list(_settings.EXPERIENCE_LEVELS)},
+                    "campaigns": camps})
+
+
+@app.route("/settings/save", methods=["POST"])
+def settings_save():
+    if not _token_ok():
+        return "Forbidden", 403
+    import settings as _settings
+    data = request.get_json(force=True, silent=True) or {}
+    try:
+        saved = _settings.save(data)
+    except ValueError as e:
+        return str(e), 400
+    if "flavour" in data:
+        # One source of truth for reply length: the narration target the DM
+        # already reads. The in-game slider can still override it live.
+        try:
+            os.makedirs(os.path.dirname(rt("narration_target")), exist_ok=True)
+            with open(rt("narration_target"), "w", encoding="utf-8") as f:
+                f.write(str(_settings.FLAVOUR_WORDS[saved["flavour"]]))
+        except OSError:
+            pass
+    return jsonify(saved)
+
+
+@app.route("/settings/experience", methods=["POST"])
+def settings_experience():
+    if not _token_ok():
+        return "Forbidden", 403
+    import settings as _settings
+    data = request.get_json(force=True, silent=True) or {}
+    campaign = str(data.get("campaign", ""))
+    if campaign not in {c["name"] for c in _list_campaigns()}:
+        return "unknown campaign", 404
+    try:
+        _settings.save_experience(campaign, str(data.get("character", "")),
+                                  str(data.get("experience", "")))
+    except ValueError as e:
+        return str(e), 400
     return "", 204
 
 
