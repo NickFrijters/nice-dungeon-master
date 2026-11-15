@@ -10,6 +10,20 @@ Versions before **1.6.0** are reconstructed retroactively from git history; the 
 
 ## [Unreleased]
 
+## [2.35.0] — 2026-11-15 — Pages, saved turns, styled pop-ups
+
+### Added — long narration waits for a Continue
+
+When no voice is reading the text and the unread part fills the visible area, typing pauses and a Continue button appears (Enter or Space also work). Pressing it on any screen moves every screen on. With instant typing the text is drawn in slices and stops at each page too.
+
+### Added — the game is saved after every turn (and the question answered)
+
+The display now keeps a per-campaign `display_state.json` (party live values, NPCs, combat board, quests, factions, time, turn order, staged input, queued indicator), written atomically and restored on restart and on campaign load, with no bleed between campaigns. The input queue is appended instead of overwritten, so two quick submits no longer lose one. `scripts/micro_save.py` plus a "Save after every turn" rule give the DM a cheap save after each turn and each player submit. Audit table: `docs/research/persistence-state-audit.md`.
+
+### Changed — DM Help and Save & exit look like the rest of the interface
+
+The DM Help hint block, tracker and toast share the sheet's gold parchment look, and Save & exit uses a styled dialog instead of the browser's own confirm box.
+
 ## [2.34.1] — 2026-11-15 — Voice label shows the real engine
 
 ### Fixed — the voice label under each narration block
