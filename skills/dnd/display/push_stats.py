@@ -167,6 +167,8 @@ def main() -> None:
                         help='Full character sheet data: {"attacks":[...],"spells":{...},"features":[...],"inventory":[...]} (requires --player)')
     parser.add_argument("--factions", metavar="JSON",
                         help='Party faction standings: [{"name":"Pale Court","standing":"Suspicious"},...]; [] clears')
+    parser.add_argument("--combat", metavar="JSON",
+                        help='Combat board: {"enemies":[{"name":"Goblin 1","hp":7,"max":7}],"map":{"cols":12,"rows":8,"title":"Cave","tokens":[{"name":"Dagna","x":2,"y":3,"side":"pc"},{"name":"Goblin 1","x":8,"y":3,"side":"enemy"}]}}; {} clears')
     parser.add_argument("--npcs", metavar="JSON",
                         help='NPCs in the current scene: [{"name":"Borga","role":"Innkeeper","disposition":"Friendly"},...]; [] clears')
     parser.add_argument("--quests", metavar="JSON",
@@ -303,6 +305,14 @@ def main() -> None:
             payload["factions"] = json.loads(args.factions)
         except json.JSONDecodeError as e:
             print(f"Invalid factions JSON: {e}", file=sys.stderr)
+            sys.exit(1)
+
+    # ── Combat board ───────────────────────────────────────────────────────────
+    if args.combat is not None:
+        try:
+            payload["combat"] = json.loads(args.combat)
+        except json.JSONDecodeError as e:
+            print(f"Invalid combat JSON: {e}", file=sys.stderr)
             sys.exit(1)
 
     # ── NPCs in the scene ──────────────────────────────────────────────────────

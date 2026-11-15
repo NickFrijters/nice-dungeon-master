@@ -3713,6 +3713,38 @@
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none; }
   #quest-strip[hidden] { display: none; }
   @media (max-width: 1100px) { #scene-gallery { display: none; } }
+  /* ── Combat screen: the battle map is dominant; the story sits underneath ── */
+  #combat-view { position: fixed; left: 230px; right: 30px; top: 74px; height: 58vh; z-index: 5; display: none;
+    grid-template-columns: 1fr 230px; grid-template-rows: auto 1fr; gap: 10px 16px; }
+  body.combat #combat-view { display: grid; }
+  body.combat #text-scroll { padding-top: calc(74px + 58vh + 14px); }
+  body.combat #scene-gallery { display: none !important; }
+  #cb-order { grid-column: 1 / -1; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .cb-round { font-family: 'Cinzel', serif; font-size: 12px; letter-spacing: 2px; text-transform: uppercase; color: rgba(200,165,80,.85); margin-right: 8px; }
+  .cb-chip { font-family: 'Cinzel', serif; font-size: 12px; padding: 4px 12px; border-radius: 14px; border: 1px solid rgba(180,140,60,.35);
+    color: rgba(215,200,165,.85); background: rgba(0,0,0,.45); }
+  .cb-chip.enemy { border-color: rgba(220,80,70,.5); color: rgba(240,170,160,.9); }
+  .cb-chip.current { background: rgba(200,160,64,.28); border-color: rgba(235,205,120,1); color: rgba(255,235,170,1); font-weight: 700; }
+  #cb-map-wrap { position: relative; min-height: 0; display: flex; align-items: center; justify-content: center; }
+  #cb-map { position: relative; height: 100%; max-width: 100%; border: 2px solid rgba(200,165,80,.5); border-radius: 4px;
+    background: rgba(24,18,10,.82); box-shadow: 0 0 40px rgba(0,0,0,.7); touch-action: none; }
+  #cb-map .cb-cell { position: absolute; border-right: 1px solid rgba(180,140,60,.14); border-bottom: 1px solid rgba(180,140,60,.14);
+    box-sizing: border-box; }
+  #cb-map .cb-axis { position: absolute; font: 10px 'Cinzel', serif; color: rgba(200,165,80,.6); text-align: center; pointer-events: none; }
+  .cb-token { position: absolute; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-sizing: border-box;
+    font: 700 11px 'Cinzel', serif; color: #1a1208; cursor: grab; user-select: none; border: 2px solid rgba(255,255,255,.7);
+    background: rgba(110,190,120,.95); transition: left .15s, top .15s; }
+  .cb-token.enemy { background: rgba(225,95,85,.95); }
+  .cb-token.dragging { cursor: grabbing; transition: none; z-index: 3; opacity: .9; }
+  .cb-token.current { box-shadow: 0 0 0 3px rgba(235,205,120,.95); }
+  #cb-side { overflow-y: auto; min-height: 0; scrollbar-width: none; }
+  #cb-side h4 { margin: 8px 0 6px; font: 11px 'Cinzel', serif; letter-spacing: 2px; text-transform: uppercase; color: rgba(200,165,80,.85); }
+  .cb-hp { margin-bottom: 7px; }
+  .cb-hp .cb-hp-name { font-size: 13px; color: rgba(235,222,190,.95); display: flex; justify-content: space-between; }
+  .cb-hp .cb-hp-bar { height: 7px; border-radius: 4px; background: rgba(255,255,255,.1); overflow: hidden; margin-top: 2px; }
+  .cb-hp .cb-hp-fill { height: 100%; background: rgba(110,190,120,.95); }
+  .cb-hp.enemy .cb-hp-fill { background: rgba(225,95,85,.95); }
+  .cb-hp .cb-hp-note { font-size: 11px; color: rgba(210,195,160,.6); }
 </style>
 </head>
 <body>
@@ -3730,6 +3762,11 @@
 <!-- Overlays -->
 <div id="vignette"></div>
 <div id="frame"></div>
+<div id="combat-view" aria-label="Combat">
+  <div id="cb-order"></div>
+  <div id="cb-map-wrap"><div id="cb-map"></div></div>
+  <div id="cb-side"></div>
+</div>
 <div id="quest-strip" hidden></div>
 <div id="scene-gallery" hidden><div class="sg-title">In view</div></div>
 <div id="scene-indicator">— The Inn —</div>
@@ -6633,6 +6670,7 @@ setInterval(() => {
 
 function updateStats(stats) {
   if (!stats || !stats.players) return;
+  setTimeout(() => _updateCombat(stats), 0);   // after the turn order below has been stored
   const sidebar = document.getElementById('sidebar');
   const turnSection = document.getElementById('sb-turn-section');
   const solo = stats.players.length === 1;
@@ -6787,6 +6825,104 @@ function updateStats(stats) {
 }
 
 let _currentTurnOrder = null;
+
+// ── Combat screen ───────────────────────────────────────────────────────────
+// Combat mode is on while a turn order is running. The map comes from push_stats --combat.
+let _combatState = null;
+function _cbName(name) { return String(name || ''); }
+function _updateCombat(stats) {
+  if ('combat' in stats) _combatState = stats.combat || null;
+  const to = ('turn_order' in stats && !stats.turn_order) ? null : _currentTurnOrder;
+  const on = !!(to && (to.order || []).length);
+  document.body.classList.toggle('combat', on);
+  if (!on) return;
+  _renderCombat(to);
+}
+function _renderCombat(to) {
+  const bar = document.getElementById('cb-order');
+  bar.textContent = '';
+  const rd = document.createElement('span'); rd.className = 'cb-round'; rd.textContent = 'Round ' + (to.round ?? 1); bar.appendChild(rd);
+  (to.order || []).forEach(n => {
+    const c = document.createElement('span');
+    c.className = 'cb-chip' + (n in _playerData ? '' : ' enemy') + (n === to.current ? ' current' : '');
+    c.textContent = n; bar.appendChild(c);
+  });
+  // Party and enemy HP
+  const side = document.getElementById('cb-side'); side.textContent = '';
+  const addHp = (cls, name, hp, max, note) => {
+    const d = document.createElement('div'); d.className = 'cb-hp ' + cls;
+    const top = document.createElement('div'); top.className = 'cb-hp-name';
+    const nm = document.createElement('span'); nm.textContent = name;
+    const v = document.createElement('span'); v.textContent = (hp != null ? hp : '?') + (max != null ? '/' + max : '');
+    top.append(nm, v); d.appendChild(top);
+    const b = document.createElement('div'); b.className = 'cb-hp-bar';
+    const f = document.createElement('div'); f.className = 'cb-hp-fill';
+    f.style.width = (max ? Math.max(0, Math.min(100, 100 * hp / max)) : 0) + '%'; b.appendChild(f); d.appendChild(b);
+    if (note) { const t = document.createElement('div'); t.className = 'cb-hp-note'; t.textContent = note; d.appendChild(t); }
+    side.appendChild(d);
+  };
+  const h1 = document.createElement('h4'); h1.textContent = 'Party'; side.appendChild(h1);
+  Object.values(_playerData).forEach(p => addHp('pc', p.name, p.hp && p.hp.current, p.hp && p.hp.max, ''));
+  const en = (_combatState && _combatState.enemies) || [];
+  if (en.length) {
+    const h2 = document.createElement('h4'); h2.textContent = 'Enemies'; side.appendChild(h2);
+    en.forEach(e => addHp('enemy', e.name, e.hp, e.max, e.note));
+  }
+  _renderCombatMap(to);
+}
+function _renderCombatMap(to) {
+  const map = document.getElementById('cb-map');
+  const m = _combatState && _combatState.map;
+  if (!m) { map.style.display = 'none'; return; }
+  map.style.display = '';
+  map.textContent = '';
+  const wrap = document.getElementById('cb-map-wrap');
+  const cell = Math.max(10, Math.floor(Math.min(wrap.clientWidth / (m.cols + 1), wrap.clientHeight / (m.rows + 1))));
+  const pad = Math.round(cell * 0.7);
+  map.style.width = (m.cols * cell + pad) + 'px'; map.style.height = (m.rows * cell + pad) + 'px';
+  for (let x = 0; x < m.cols; x++) {
+    const a = document.createElement('div'); a.className = 'cb-axis'; a.textContent = String.fromCharCode(65 + x);
+    a.style.cssText = `left:${pad + x * cell}px;top:0;width:${cell}px;height:${pad}px;line-height:${pad}px`; map.appendChild(a);
+  }
+  for (let y = 0; y < m.rows; y++) {
+    const a = document.createElement('div'); a.className = 'cb-axis'; a.textContent = String(y + 1);
+    a.style.cssText = `left:0;top:${pad + y * cell}px;width:${pad}px;height:${cell}px;line-height:${cell}px`; map.appendChild(a);
+    for (let x = 0; x < m.cols; x++) {
+      const c = document.createElement('div'); c.className = 'cb-cell';
+      c.style.cssText = `left:${pad + x * cell}px;top:${pad + y * cell}px;width:${cell}px;height:${cell}px`; map.appendChild(c);
+    }
+  }
+  const size = Math.round(cell * 0.82), off = Math.round((cell - size) / 2);
+  m.tokens.forEach(tk => {
+    const t = document.createElement('div');
+    t.className = 'cb-token ' + tk.side + (tk.name === to.current ? ' current' : '');
+    t.textContent = tk.name.replace(/[^A-Za-z0-9 ]/g, '').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() +
+      (/\d+$/.test(tk.name) ? tk.name.match(/\d+$/)[0] : '');
+    t.title = tk.name;
+    t.style.cssText = `width:${size}px;height:${size}px;left:${pad + tk.x * cell + off}px;top:${pad + tk.y * cell + off}px`;
+    t.addEventListener('pointerdown', ev => _tokenDrag(ev, t, tk, cell, pad, off, m));
+    map.appendChild(t);
+  });
+}
+function _tokenDrag(ev, el, tk, cell, pad, off, m) {
+  ev.preventDefault(); el.setPointerCapture(ev.pointerId); el.classList.add('dragging');
+  const map = document.getElementById('cb-map');
+  const move = e => {
+    const r = map.getBoundingClientRect();
+    el.style.left = (e.clientX - r.left - el.offsetWidth / 2) + 'px';
+    el.style.top = (e.clientY - r.top - el.offsetHeight / 2) + 'px';
+  };
+  const up = e => {
+    el.removeEventListener('pointermove', move); el.removeEventListener('pointerup', up);
+    el.classList.remove('dragging');
+    const r = map.getBoundingClientRect();
+    const x = Math.floor((e.clientX - r.left - pad) / cell), y = Math.floor((e.clientY - r.top - pad) / cell);
+    if (x < 0 || y < 0 || x >= m.cols || y >= m.rows || (x === tk.x && y === tk.y)) { _renderCombatMap(_currentTurnOrder || {}); return; }
+    fetch('/combat/move', { method: 'POST', headers: { 'Content-Type': 'application/json', ...(_dndToken ? { 'X-DND-Token': _dndToken } : {}) },
+      body: JSON.stringify({ name: tk.name, x, y }) }).catch(() => _renderCombatMap(_currentTurnOrder || {}));
+  };
+  el.addEventListener('pointermove', move); el.addEventListener('pointerup', up);
+}
 
 // ═══════════════════════════════════════════════════════════════════
 // AUDIO — SFX only. Python detects triggers from narration text and

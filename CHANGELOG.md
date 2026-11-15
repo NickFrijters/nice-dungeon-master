@@ -10,6 +10,12 @@ Versions before **1.6.0** are reconstructed retroactively from git history; the 
 
 ## [Unreleased]
 
+## [2.33.0] — 2026-11-15 — Combat screen
+
+### Added — the Combat screen
+
+While a turn order is running, the screen switches to combat: an initiative bar on top, a lettered and numbered battle map in the middle with tokens you can drag (the DM is told `[Map]: Dagna moved from C4 to E4`), party and enemy HP bars on the right, and the story underneath. The DM pushes the board with `push_stats.py --combat`. Map drawing by Claude from the scene description is a simple grid; published map images are not placed on the grid yet.
+
 ## [2.32.0] — 2026-11-15 — Roleplay screen
 
 ### Added — the Roleplay screen

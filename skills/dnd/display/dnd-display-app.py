@@ -1411,6 +1411,76 @@ def menu_load():
     return "", 204
 
 
+def _clean_combat(raw):
+    """Keep only what the combat screen draws: enemies (name/hp/max) and a map with tokens."""
+    if not isinstance(raw, dict) or not raw:
+        return None
+    out = {"enemies": [], "map": None}
+    for e in (raw.get("enemies") or [])[:24]:
+        if isinstance(e, dict) and e.get("name"):
+            def _n(v):
+                try:
+                    return max(0, int(v))
+                except (TypeError, ValueError):
+                    return None
+            out["enemies"].append({"name": str(e["name"])[:40], "hp": _n(e.get("hp")), "max": _n(e.get("max")),
+                                   "note": str(e.get("note", ""))[:40]})
+    m = raw.get("map")
+    if isinstance(m, dict):
+        try:
+            cols = min(26, max(4, int(m.get("cols", 12))))
+            rows = min(26, max(4, int(m.get("rows", 8))))
+        except (TypeError, ValueError):
+            cols, rows = 12, 8
+        toks = []
+        for tk in (m.get("tokens") or [])[:60]:
+            if not (isinstance(tk, dict) and tk.get("name")):
+                continue
+            try:
+                x, y = int(tk.get("x", 0)), int(tk.get("y", 0))
+            except (TypeError, ValueError):
+                continue
+            if 0 <= x < cols and 0 <= y < rows:
+                toks.append({"name": str(tk["name"])[:40], "x": x, "y": y,
+                             "side": "enemy" if tk.get("side") == "enemy" else "pc"})
+        out["map"] = {"cols": cols, "rows": rows, "title": str(m.get("title", ""))[:60], "tokens": toks}
+    return out
+
+
+def _cell_label(x: int, y: int) -> str:
+    return f"{chr(ord('A') + x)}{y + 1}"
+
+
+@app.route("/combat/move", methods=["POST"])
+def combat_move():
+    """A token was dragged on the map: remember it and tell Claude (it is the DM's call what that means)."""
+    if not _token_ok():
+        return "Forbidden", 403
+    data = request.get_json(force=True, silent=True) or {}
+    name = str(data.get("name", ""))
+    try:
+        x, y = int(data.get("x")), int(data.get("y"))
+    except (TypeError, ValueError):
+        return "bad position", 400
+    with _stats_lock:
+        combat = _current_stats.get("combat") or {}
+        m = combat.get("map")
+        tok = next((t for t in (m or {}).get("tokens", []) if t["name"] == name), None)
+        if not tok or not (0 <= x < m["cols"] and 0 <= y < m["rows"]):
+            return "unknown token or cell", 404
+        old = _cell_label(tok["x"], tok["y"])
+        tok["x"], tok["y"] = x, y
+        current = dict(_current_stats)
+    try:
+        with _staged_lock, open(QUEUE_FILE, "a", encoding="utf-8") as f:
+            f.write(f"[Map]: {name} moved from {old} to {_cell_label(x, y)}\n")
+    except OSError:
+        pass
+    _persist_stats()
+    _broadcast({"stats": current})
+    return "", 204
+
+
 @app.route("/menu/exit", methods=["POST"])
 def menu_exit():
     """Save and exit: ask Claude to save, and send every screen back to the Main Menu.
@@ -2247,6 +2317,10 @@ def stats():
         # quests replaces entirely ([] clears)
         if "quests" in data:
             _current_stats["quests"] = data["quests"]
+
+        # combat board replaces entirely (null/{} clears): enemies with HP, plus the battle map
+        if "combat" in data:
+            _current_stats["combat"] = _clean_combat(data["combat"])
 
         # npcs in the current scene replace entirely ([] clears): [{name, role, disposition}]
         if "npcs" in data:

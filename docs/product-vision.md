@@ -69,7 +69,6 @@ A running adventure is either **Roleplay** or **Combat**. The screen switches au
 - INTERFACE: Interview me about the visualization of the text (being narrated on screen) in sync with the TTS.
 - PERFORMANCE: Waiting for the DM should never take more than 10 seconds (this probably needs data management improvements). That means that if we need larger pieces of text which take long to generate, cut it into pieces and continue working while the characters read or hear the first part.
 - FLAVOUR: Add ambient sounds to match with the background visuals.
-- INTERFACE: Build the combat screen
 - INTERFACE: Build the character creation screen
 
 ## Status
