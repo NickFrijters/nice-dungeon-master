@@ -10,6 +10,12 @@ Versions before **1.6.0** are reconstructed retroactively from git history; the 
 
 ## [Unreleased]
 
+## [2.31.0] — 2026-11-15 — Editorial style removed
+
+### Removed — the Editorial style
+
+Vellum is the only look. About 340 lines of Editorial-only styling, its fonts, the Style choice in Settings and the Editorial option are gone.
+
 ## [2.30.0] — 2026-11-15 — Feedback while creating a campaign
 
 ### Changed — feedback while a new campaign is being created

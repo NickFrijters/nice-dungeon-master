@@ -27,7 +27,7 @@ COMBAT_LEVELS = ("none", "low", "medium", "high")
 EXPERIENCE_LEVELS = ("New", "Experienced")
 RULESETS = ("2014", "2024")
 THEMES = ("dark", "light", "auto")
-SKINS = ("vellum", "editorial")
+SKINS = ("vellum",)   # one look only: Vellum
 TYPE_SPEEDS = ("normal", "fast", "instant")
 TEXT_SIZE_MIN, TEXT_SIZE_MAX, TEXT_SIZE_STEP = 0.5, 2.0, 0.05
 

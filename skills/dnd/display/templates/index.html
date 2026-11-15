@@ -33,11 +33,9 @@
   // per #46) carry base:'editorial' so structural CSS resolves, and variant:'<id>'
   // so token blocks scoped to data-variant apply on top.
   //   { id:'vellum',    label:'Vellum'    }                                                   // flat
-  //   { id:'editorial', label:'Editorial' }                                                   // flat
   //   { id:'gaslamp',   label:'Gaslamp',  base:'editorial', variant:'gaslamp' }   // overlay (future)
   window._SKINS = [
     { id: 'vellum',    label: 'Vellum'    },
-    { id: 'editorial', label: 'Editorial' },
   ];
 
   (function () {
@@ -83,8 +81,6 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet">
-<!-- Editorial skin fonts (Colossal redesign) — loaded always, used only under data-skin="editorial" -->
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400;1,6..72,500&display=swap" rel="stylesheet">
 <link rel="icon" type="image/x-icon"  href="/favicon.ico">
 <link rel="icon" type="image/png" sizes="32x32"  href="/icons/app_icon_32.png">
 <link rel="apple-touch-icon" sizes="180x180"      href="/icons/app_icon_180.png">
@@ -3113,189 +3109,112 @@
      kicker); plain vars drive the reading content. Overrides the vellum
      base by specificity + source order.
      ════════════════════════════════════════════════════════════════════ */
-  :root[data-skin="editorial"]{
-    --e-canvas:#16130E; --e-ink:#E3DCCB; --e-mut:rgba(237,230,214,.55);
-    --e-accent:#FF7A2D; --e-accent-ink:#FF9A55; --e-dice-text:#16130E;
-    --e-block:#221C16; --e-on-block:#EDE6D6; --e-hair:rgba(237,230,214,.16); --e-track:rgba(237,230,214,.14);
-    --e-strong:#221C16; --e-on-strong:#EDE6D6; --e-hair-strong:rgba(237,230,214,.16); --e-track-strong:rgba(237,230,214,.14);
-  }
-  :root[data-skin="editorial"][data-theme="light"]{
-    --e-canvas:#F3EFE4; --e-ink:#14110C; --e-mut:rgba(20,17,12,.6);
-    --e-accent:#E5481E; --e-accent-ink:#C23A14; --e-dice-text:#F3EFE4;
-    --e-block:#FBF8F0; --e-on-block:#14110C; --e-hair:rgba(20,17,12,.16); --e-track:rgba(20,17,12,.14);
-    --e-strong:#14110C; --e-on-strong:#F3EFE4; --e-hair-strong:rgba(243,239,228,.22); --e-track-strong:rgba(243,239,228,.22);
-  }
-  @media (prefers-color-scheme: light){
-    :root[data-skin="editorial"]:not([data-theme]){
-      --e-canvas:#F3EFE4; --e-ink:#14110C; --e-mut:rgba(20,17,12,.6);
-      --e-accent:#E5481E; --e-accent-ink:#C23A14; --e-dice-text:#F3EFE4;
-      --e-block:#FBF8F0; --e-on-block:#14110C; --e-hair:rgba(20,17,12,.16); --e-track:rgba(20,17,12,.14);
-      --e-strong:#14110C; --e-on-strong:#F3EFE4; --e-hair-strong:rgba(243,239,228,.22); --e-track-strong:rgba(243,239,228,.22);
-    }
-  }
+  
+  
+  
 
   /* canvas + retire the vellum chrome */
-  :root[data-skin="editorial"] body{ background:var(--e-canvas); color:var(--e-ink); font-family:'Newsreader',Georgia,serif; }
-  :root[data-skin="editorial"] .bg-layer,
-  :root[data-skin="editorial"] #vignette,
-  :root[data-skin="editorial"] #frame,
-  :root[data-skin="editorial"] #sky,
-  :root[data-skin="editorial"] #particles{ display:none !important; }
+  
+  
 
   /* scene kicker */
-  :root[data-skin="editorial"] #scene-indicator{
-    font-family:'Syne',sans-serif; font-weight:800; font-size:12px; letter-spacing:.34em; color:var(--e-accent); }
+  
 
   /* reading column */
   /* reading area fills the width between the party rail and the launcher rail; flat (no parchment card) */
-  :root[data-skin="editorial"] body:not(.input-only) #text-scroll{ padding:84px 132px 88px 252px; }
-  :root[data-skin="editorial"] body:not(.input-only) #text-scroll.sidebar-hidden{ padding-left:80px; }
-  :root[data-skin="editorial"] #text-content{
-    max-width:1180px; margin:0 auto 0 0;
-    background:none !important; border:0 !important; border-radius:0 !important; box-shadow:none !important; padding:0 !important; }
-  :root[data-skin="editorial"] .dm-block p{
-    color:var(--e-ink); text-shadow:none; font-family:'Newsreader',serif; font-size:1.02em; line-height:1.6; }
-  :root[data-skin="editorial"] .dm-block p em{ color:var(--e-accent-ink); font-style:italic; }
+  
+  
+  
+  
+  
 
   /* NPC dialogue — the hero pull-quote, large & legible */
-  :root[data-skin="editorial"] .npc-block{ border-left:4px solid var(--e-accent); padding-left:1.1em; }
-  :root[data-skin="editorial"] .npc-name{
-    font-family:'Syne',sans-serif; font-weight:800; font-size:12px; letter-spacing:.18em; color:var(--e-accent); }
-  :root[data-skin="editorial"] .npc-block p,
-  :root[data-skin="editorial"] .npc-block p em{
-    color:var(--e-ink); font-family:'Newsreader',serif; font-style:italic; font-weight:500;
-    font-size:1.2em; line-height:1.42; text-shadow:none; }
+  
+  
+  
 
   /* player action */
-  :root[data-skin="editorial"] .player-block{ border-left:4px solid color-mix(in srgb, var(--e-accent) 45%, transparent); padding-left:1.1em; }
-  :root[data-skin="editorial"] .player-name{
-    font-family:'Syne',sans-serif; font-weight:800; font-size:11px; letter-spacing:.16em; color:var(--e-mut); }
-  :root[data-skin="editorial"] .player-block p{ color:var(--e-ink); opacity:.85; font-family:'Newsreader',serif; text-shadow:none; }
+  
+  
+  
 
   /* action intent */
-  :root[data-skin="editorial"] .action-tag{ font-family:'Syne',sans-serif; font-weight:700; color:var(--e-mut); }
-  :root[data-skin="editorial"] .action-block p{ color:var(--e-ink); opacity:.6; text-shadow:none; }
+  
+  
 
   /* dice — accent banner */
-  :root[data-skin="editorial"] .dice-result{
-    font-family:'Syne',sans-serif; font-weight:800; letter-spacing:.04em; font-size:13px;
-    color:var(--e-dice-text); background:var(--e-accent); border:0; border-radius:0; text-shadow:none; padding:.42em 1.1em; }
+  
 
   /* world clock */
-  :root[data-skin="editorial"] #world-clock,
-  :root[data-skin="editorial"] #wc-date,
-  :root[data-skin="editorial"] #wc-sub{ font-family:'Syne',sans-serif; color:var(--e-ink); }
-  :root[data-skin="editorial"] #ruleset-badge{ font-family:'Syne',sans-serif; color:var(--e-accent); }
+  
+  
 
   /* party rail (sidebar) = strong chrome */
-  :root[data-skin="editorial"] #sidebar{ background:var(--e-strong); color:var(--e-on-strong); border-right:1px solid var(--e-hair-strong); }
-  :root[data-skin="editorial"] .sb-player{ border-bottom:1px solid var(--e-hair-strong); }
-  :root[data-skin="editorial"] .sb-name{ font-family:'Syne',sans-serif; font-weight:800; letter-spacing:.06em; color:var(--e-on-strong); }
-  :root[data-skin="editorial"] .sb-identity{ color:var(--e-on-strong); opacity:.55; }
-  :root[data-skin="editorial"] .sb-label{ font-family:'Syne',sans-serif; color:var(--e-accent); }
-  :root[data-skin="editorial"] .sb-hp-nums{ font-family:'Syne',sans-serif; color:var(--e-on-strong); }
-  :root[data-skin="editorial"] .sb-bar-track{ background:var(--e-track-strong); border:0; }
-  :root[data-skin="editorial"] .sb-bar-fill{ background:var(--e-accent); }
-  :root[data-skin="editorial"] #sidebar-toggle{ font-family:'Syne',sans-serif; color:var(--e-accent); }
+  
+  
+  
+  
+  
+  
+  
+  
+  
 
   /* ── Layer 2: bottom input panel + dice pad = strong chrome (matches party rail / phone footer) ── */
-  :root[data-skin="editorial"] #input-panel{
-    background:var(--e-strong); color:var(--e-on-strong);
-    border:1px solid var(--e-hair-strong); border-radius:3px;
-    box-shadow:0 -2px 40px rgba(0,0,0,.28); }
-  :root[data-skin="editorial"] #input-panel:focus-within{ border-color:var(--e-accent); }
-  :root[data-skin="editorial"] #input-panel-label{
-    font-family:'Syne',sans-serif; font-weight:800; font-size:9px; letter-spacing:.28em; color:var(--e-accent); }
-  :root[data-skin="editorial"] #input-badge{
-    font-family:'Syne',sans-serif; font-weight:700; color:var(--e-dice-text);
-    background:var(--e-accent); border:0; }
-  :root[data-skin="editorial"] #input-toggle-arrow{ color:var(--e-on-strong); opacity:.5; }
+  
+  
+  
+  
+  
 
   /* character tabs */
-  :root[data-skin="editorial"] .char-tab{
-    font-family:'Syne',sans-serif; font-weight:700; font-size:11px; letter-spacing:.1em;
-    color:var(--e-on-strong); opacity:.62; background:transparent;
-    border:1px solid var(--e-hair-strong); border-radius:3px; padding:10px 16px; }
-  :root[data-skin="editorial"] .char-tab:hover{ opacity:1; border-color:var(--e-accent); color:var(--e-on-strong); }
-  :root[data-skin="editorial"] .char-tab.active{
-    opacity:1; color:var(--e-dice-text); background:var(--e-accent); border-color:var(--e-accent); }
+  
+  
+  
 
   /* free-text composer */
-  :root[data-skin="editorial"] #player-input-text{
-    background:color-mix(in srgb, var(--e-strong), #000 22%); color:var(--e-on-strong);
-    border:1px solid var(--e-hair-strong); border-radius:2px;
-    font-family:'Newsreader',serif; font-size:14px; }
-  :root[data-skin="editorial"] #player-input-text:focus{ border-color:var(--e-accent); }
-  :root[data-skin="editorial"] #player-input-text::placeholder{ color:var(--e-on-strong); opacity:.4; }
+  
+  
+  
 
   /* footer buttons */
-  :root[data-skin="editorial"] #stage-btn{
-    font-family:'Syne',sans-serif; font-weight:800; font-size:13px; letter-spacing:.14em;
-    color:var(--e-dice-text); background:var(--e-accent);
-    border:1px solid var(--e-accent); border-radius:3px; padding:13px 32px; }
+  
   /* in the TV drawer give Stage real presence */
-  :root[data-skin="editorial"] body:not(.input-only) #input-panel #stage-btn{ font-size:15px; padding:16px 40px; }
-  :root[data-skin="editorial"] #stage-btn:hover{ background:var(--e-accent-ink); border-color:var(--e-accent-ink); color:var(--e-dice-text); }
-  :root[data-skin="editorial"] #skip-turn-btn{
-    font-family:'Syne',sans-serif; font-weight:700; font-size:9px; letter-spacing:.12em;
-    color:var(--e-on-strong); opacity:.7; background:transparent;
-    border:1px dashed var(--e-hair-strong); border-radius:2px; }
-  :root[data-skin="editorial"] #skip-turn-btn:hover{ opacity:1; border-color:var(--e-accent); color:var(--e-accent); }
+  
+  
+  
+  
 
   /* staged queue */
-  :root[data-skin="editorial"] .staged-entry{
-    background:color-mix(in srgb, var(--e-strong), #000 14%);
-    border-left:3px solid var(--e-accent); border-radius:0 2px 2px 0; }
-  :root[data-skin="editorial"] .staged-entry.is-ready{ border-left-color:var(--e-accent-ink); }
-  :root[data-skin="editorial"] .staged-char{ font-family:'Syne',sans-serif; font-weight:700; color:var(--e-accent); }
-  :root[data-skin="editorial"] .staged-text{ font-family:'Newsreader',serif; color:var(--e-on-strong); opacity:.85; }
-  :root[data-skin="editorial"] .ready-btn{
-    font-family:'Syne',sans-serif; font-weight:700; color:var(--e-on-strong); opacity:.7;
-    background:transparent; border:1px solid var(--e-hair-strong); border-radius:2px; }
-  :root[data-skin="editorial"] .ready-btn:hover{ opacity:1; border-color:var(--e-accent); }
+  
+  
+  
+  
+  
+  
 
   /* ── dice pad (phone roll surface) ── */
-  :root[data-skin="editorial"] body.input-only #dice-pad{
-    border-top:1px solid var(--e-hair-strong); background:color-mix(in srgb, var(--e-strong), #000 10%); }
-  :root[data-skin="editorial"] #dice-pad .dp-die,
-  :root[data-skin="editorial"] #dice-pad .dp-adv,
-  :root[data-skin="editorial"] #dice-pad .dp-mod{
-    background:color-mix(in srgb, var(--e-strong), #000 22%); color:var(--e-on-strong);
-    border:1px solid var(--e-hair-strong); border-radius:3px;
-    font-family:'Syne',sans-serif; font-weight:700; }
-  :root[data-skin="editorial"] #dice-pad .dp-die.active,
-  :root[data-skin="editorial"] #dice-pad .dp-adv.active{
-    background:var(--e-accent); border-color:var(--e-accent); color:var(--e-dice-text); }
-  :root[data-skin="editorial"] #dice-pad #dp-mod-val{ font-family:'Syne',sans-serif; color:var(--e-on-strong); }
-  :root[data-skin="editorial"] #dp-hint{ font-family:'Syne',sans-serif; color:var(--e-on-strong); opacity:.6; letter-spacing:.08em; }
-  :root[data-skin="editorial"] #dice-pad #dp-label,
-  :root[data-skin="editorial"] #dice-pad #dp-name{
-    background:color-mix(in srgb, var(--e-strong), #000 22%); color:var(--e-on-strong);
-    border:1px solid var(--e-hair-strong); border-radius:2px; font-family:'Newsreader',serif; }
-  :root[data-skin="editorial"] #dice-pad #dp-label::placeholder{ color:var(--e-on-strong); opacity:.4; }
-  :root[data-skin="editorial"] #dice-pad #dp-roll{
-    background:var(--e-accent); color:var(--e-dice-text);
-    border:1px solid var(--e-accent); border-radius:3px;
-    font-family:'Syne',sans-serif; font-weight:800; letter-spacing:.1em; }
-  :root[data-skin="editorial"] #dp-reel-wrap{
-    background:var(--e-strong); border:1px solid var(--e-hair-strong); border-radius:4px; box-shadow:none; }
-  :root[data-skin="editorial"] #dp-reel{ font-family:'Syne',sans-serif; font-weight:800; color:var(--e-accent); text-shadow:none; }
-  :root[data-skin="editorial"] #dp-result-line{ font-family:'Syne',sans-serif; color:var(--e-on-strong); opacity:.75; }
-  :root[data-skin="editorial"] #dp-result-line .total{ color:var(--e-accent); opacity:1; }
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
 
   /* phone tab bar = strong chrome, accent active underline */
-  :root[data-skin="editorial"] body.input-only #dp-tabs{
-    background:var(--e-strong); border-bottom:1px solid var(--e-hair-strong); }
-  :root[data-skin="editorial"] body.input-only .dp-tab{
-    color:var(--e-on-strong); opacity:.6;
-    font-family:'Syne',sans-serif; font-weight:800; letter-spacing:.14em;
-    border-bottom:2px solid transparent; }
-  :root[data-skin="editorial"] body.input-only .dp-tab.active{
-    color:var(--e-accent); opacity:1; background:transparent; border-bottom-color:var(--e-accent); }
-  :root[data-skin="editorial"] body.input-only .dp-tab:active{ background:color-mix(in srgb, var(--e-strong), #000 14%); }
+  
+  
+  
+  
 
   /* ══ Layer 3: right-edge rail + sliding drawers (editorial, TV view only) ══ */
-  :root[data-skin="editorial"]{ --ed-drawer-w: min(400px, 92vw); }
+  
 
   /* Off in vellum: rail is layout-neutral (its fixed children keep their own
      placement), launchers + scrim hidden. */
@@ -3303,235 +3222,141 @@
   #ed-scrim{ display:none; }
   .ed-launch{ display:none; }
 
-  :root[data-skin="editorial"] body:not(.input-only) #ed-rail{
-    display:flex; flex-direction:column; gap:10px;
-    position:fixed; top:auto; bottom:28px; right:0; transform:none;
-    z-index:36; padding:8px;
-    transition:right .32s cubic-bezier(.4,0,.1,1); }
-  :root[data-skin="editorial"] body:not(.input-only).ed-drawer-open #ed-rail{ right:var(--ed-drawer-w); }
+  
+  
 
   /* uniform rail buttons (new launchers + adopted action buttons) */
-  :root[data-skin="editorial"] body:not(.input-only) #ed-rail .ed-launch,
-  :root[data-skin="editorial"] body:not(.input-only) #ed-rail #dm-help-btn,
-  :root[data-skin="editorial"] body:not(.input-only) #ed-rail #phone-mode-btn{
-    position:static !important; inset:auto !important; opacity:1 !important;
-    display:flex !important; flex-direction:column; align-items:center; justify-content:center; gap:4px;
-    width:76px; min-height:64px; box-sizing:border-box; padding:9px 6px;
-    background:var(--e-strong); color:var(--e-on-strong);
-    border:1px solid var(--e-hair-strong); border-radius:5px;
-    font-family:'Syne',sans-serif; font-weight:700; font-size:9px; letter-spacing:.1em; text-transform:uppercase;
-    line-height:1.2; text-align:center; cursor:pointer; box-shadow:none;
-    transition:background .15s, color .15s, border-color .15s; }
-  :root[data-skin="editorial"] body:not(.input-only) #ed-rail .ed-launch:hover,
-  :root[data-skin="editorial"] body:not(.input-only) #ed-rail #dm-help-btn:hover{
-    border-color:var(--e-accent); color:var(--e-accent); background:var(--e-strong); }
-  :root[data-skin="editorial"] body:not(.input-only) #ed-rail .ed-launch.active{
-    background:var(--e-accent); color:var(--e-dice-text); border-color:var(--e-accent); }
-  :root[data-skin="editorial"] body:not(.input-only) #ed-rail .ed-ic{ font-size:19px; line-height:1; }
+  
+  
+  
+  
   /* phone-mode = prominent, always-accent, larger tap target */
-  :root[data-skin="editorial"] body:not(.input-only) #ed-rail #phone-mode-btn{
-    background:var(--e-accent); color:var(--e-dice-text); border-color:var(--e-accent); min-height:78px; gap:6px; }
+  
   /* phone handset glyph — small in Vellum's chip, prominent in the editorial rail */
   #phone-mode-btn .ed-ic svg{ width:15px; height:15px; vertical-align:middle; display:inline-block; }
-  :root[data-skin="editorial"] body:not(.input-only) #ed-rail #phone-mode-btn .ed-ic{ font-size:0; line-height:0; }
-  :root[data-skin="editorial"] body:not(.input-only) #ed-rail #phone-mode-btn .ed-ic svg{ width:28px; height:28px; }
-  :root[data-skin="editorial"] body:not(.input-only) #ed-rail #phone-mode-btn:hover{
-    background:var(--e-accent-ink); color:var(--e-dice-text); border-color:var(--e-accent-ink); }
+  
+  
+  
 
   /* scrim */
-  :root[data-skin="editorial"] body:not(.input-only) #ed-scrim{ position:fixed; inset:0; z-index:29; background:rgba(0,0,0,.2); display:none; }
-  :root[data-skin="editorial"] body:not(.input-only) #ed-scrim.on{ display:block; }
+  
+  
 
   /* PARTY INPUT drawer — override layer-2 bottom-center placement on the TV */
-  :root[data-skin="editorial"] body:not(.input-only) #input-panel{
-    top:0; bottom:0; left:auto; right:0; transform:translateX(102%);
-    width:var(--ed-drawer-w); height:100vh; max-height:100vh;
-    border:0; border-left:1px solid var(--e-hair-strong); border-radius:0;
-    display:flex; flex-direction:column; z-index:32; backdrop-filter:none;
-    box-shadow:-2px 0 50px rgba(0,0,0,.4);
-    transition:transform .32s cubic-bezier(.4,0,.1,1); }
-  :root[data-skin="editorial"] body:not(.input-only) #input-panel.ed-open{ transform:translateX(0); }
-  :root[data-skin="editorial"] body:not(.input-only) #input-panel #input-body{
-    display:flex !important; flex:1 1 auto; overflow-y:auto; padding:14px 18px 20px; }
-  :root[data-skin="editorial"] body:not(.input-only) #input-panel #input-panel-header{
-    padding:18px 18px 13px; border-bottom:1px solid var(--e-hair-strong); cursor:default; }
-  :root[data-skin="editorial"] body:not(.input-only) #input-panel #input-panel-label{ font-size:11px; letter-spacing:.28em; }
-  :root[data-skin="editorial"] body:not(.input-only) #input-panel #input-toggle-arrow{ display:none; }
+  
+  
+  
+  
+  
+  
 
   /* SETTINGS drawer (audio-controls) */
-  :root[data-skin="editorial"] body:not(.input-only) #audio-controls{
-    top:0; bottom:0; right:0; left:auto; transform:translateX(102%);
-    width:var(--ed-drawer-w); height:100vh; z-index:32;
-    display:flex; flex-direction:column; gap:0; padding:0;
-    background:var(--e-strong); color:var(--e-on-strong);
-    border-left:1px solid var(--e-hair-strong); box-shadow:-2px 0 50px rgba(0,0,0,.4);
-    transition:transform .32s cubic-bezier(.4,0,.1,1); }
-  :root[data-skin="editorial"] body:not(.input-only) #audio-controls.ed-open{ transform:translateX(0); }
+  
+  
 
   /* DICE drawer — hosts the relocated phone #dice-pad on the TV view, slides in
      from the right like the other drawers. Editorial-only (the rail is too). */
   #dice-drawer{ display:none; }
-  :root[data-skin="editorial"] body:not(.input-only) #dice-drawer{
-    display:flex; position:fixed; top:0; bottom:0; right:0; left:auto; transform:translateX(102%);
-    width:var(--ed-drawer-w); height:100vh; z-index:32; flex-direction:column;
-    background:var(--e-strong); color:var(--e-on-strong);
-    border-left:1px solid var(--e-hair-strong); box-shadow:-2px 0 50px rgba(0,0,0,.4);
-    transition:transform .32s cubic-bezier(.4,0,.1,1); }
-  :root[data-skin="editorial"] body:not(.input-only) #dice-drawer.ed-open{ transform:translateX(0); }
-  :root[data-skin="editorial"] body:not(.input-only) #dice-drawer::before{
-    content:"Dice"; display:block; padding:18px 18px 13px;
-    font-family:'Syne',sans-serif; font-weight:800; font-size:11px; letter-spacing:.28em;
-    text-transform:uppercase; color:var(--e-accent); border-bottom:1px solid var(--e-hair-strong); }
+  
+  
+  
   /* Show the relocated pad inside the drawer (overrides the base #dice-pad{display:none}). */
-  :root[data-skin="editorial"] body:not(.input-only) #dice-drawer #dice-pad{
-    display:flex !important; flex-direction:column; gap:12px; padding:18px 18px 22px;
-    border-top:0; background:transparent; flex:1 1 auto; overflow-y:auto; }
-  :root[data-skin="editorial"] body:not(.input-only) #audio-controls::before{
-    content:"Settings"; display:block; padding:18px 18px 13px;
-    font-family:'Syne',sans-serif; font-weight:800; font-size:11px; letter-spacing:.28em; color:var(--e-accent);
-    border-bottom:1px solid var(--e-hair-strong); }
-  :root[data-skin="editorial"] body:not(.input-only) #audio-controls .audio-row{
-    display:flex; align-items:center; justify-content:space-between; gap:16px;
-    padding:16px 18px; border-bottom:1px solid var(--e-hair-strong); cursor:pointer; }
-  :root[data-skin="editorial"] body:not(.input-only) #audio-controls .audio-label{
-    font-family:'Syne',sans-serif; font-weight:700; font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--e-on-strong); opacity:.75; }
-  :root[data-skin="editorial"] body:not(.input-only) #audio-controls .theme-label,
-  :root[data-skin="editorial"] body:not(.input-only) #audio-controls .speed-label,
-  :root[data-skin="editorial"] body:not(.input-only) #audio-controls .narrate-label{
-    font-family:'Syne',sans-serif; font-weight:800; font-size:11px; letter-spacing:.06em; color:var(--e-accent); text-transform:uppercase; }
+  
+  
+  
+  
+  
 
   /* phone-mode character menu, repositioned beside the rail */
-  :root[data-skin="editorial"] body:not(.input-only) #phone-mode-menu{
-    top:auto; bottom:24px; right:100px; left:auto;
-    background:var(--e-strong); border:1px solid var(--e-hair-strong); border-radius:6px; box-shadow:-2px 0 40px rgba(0,0,0,.45); }
-  :root[data-skin="editorial"] body:not(.input-only) #phone-mode-menu .pm-header{ font-family:'Syne',sans-serif; color:var(--e-accent); }
-  :root[data-skin="editorial"] body:not(.input-only) #phone-mode-menu .pm-opt{ font-family:'Newsreader',serif; color:var(--e-on-strong); }
-  :root[data-skin="editorial"] body:not(.input-only) #phone-mode-menu .pm-opt:hover{ background:color-mix(in srgb,var(--e-strong),#000 18%); color:var(--e-accent); }
+  
+  
+  
+  
 
   /* ══ Layer 4: party rail fill + logo, dice readability, modals, composer sizing ══ */
 
   /* B1 — party rail fills full height; the d20 logo nests in its top */
-  :root[data-skin="editorial"] body:not(.input-only) #sidebar{
-    top:0; bottom:0; height:100vh; padding-top:108px; padding-bottom:30px; }
-  :root[data-skin="editorial"] body:not(.input-only) #corner-logo{
-    top:26px; left:30px; width:60px; height:60px; opacity:.95; z-index:33; }
+  
+  
 
   /* B2 — dice call-out: looser leading + lighter weight so wrapped rolls read clearly */
-  :root[data-skin="editorial"] .dice-result{ font-weight:600; line-height:2.05; letter-spacing:.05em; padding:1.05em 1.4em; }
+  
 
   /* D1 — phone "Full Display" return button, themed + tappable */
-  :root[data-skin="editorial"] body.input-only #full-mode-btn{
-    background:var(--e-strong); color:var(--e-on-strong);
-    border:1px solid var(--e-hair-strong); border-left:3px solid var(--e-accent); border-radius:7px;
-    font-family:'Syne',sans-serif; font-weight:700; font-size:10px; letter-spacing:.14em; text-transform:uppercase;
-    opacity:1; padding:11px 16px; min-height:40px; }
+  
 
   /* D2 — phone composer keeps comfortable padding at any font size */
-  :root[data-skin="editorial"] body.input-only #player-input-text{
-    padding:16px !important; box-sizing:border-box; }
+  
 
   /* E — character sheet modal themed (was vellum parchment) */
-  :root[data-skin="editorial"] #sheet-modal{ background:rgba(0,0,0,.55); }
-  :root[data-skin="editorial"] #sheet-panel{
-    background:var(--e-canvas); color:var(--e-ink);
-    border:1px solid var(--e-hair-strong); border-radius:4px;
-    box-shadow:0 30px 90px rgba(0,0,0,.5); }
-  :root[data-skin="editorial"] #sheet-panel .sm-name{
-    font-family:'Syne',sans-serif; font-weight:800; letter-spacing:.16em; color:var(--e-accent); }
-  :root[data-skin="editorial"] #sheet-panel .sm-stat-label,
-  :root[data-skin="editorial"] #sheet-panel .sm-label{
-    font-family:'Syne',sans-serif; color:var(--e-mut); }
-  :root[data-skin="editorial"] #sheet-panel .sm-stat-val,
-  :root[data-skin="editorial"] #sheet-panel .sm-value{ font-family:'Syne',sans-serif; color:var(--e-ink); }
-  :root[data-skin="editorial"] #sheet-panel,
-  :root[data-skin="editorial"] #sheet-panel p,
-  :root[data-skin="editorial"] #sheet-panel li,
-  :root[data-skin="editorial"] #sheet-panel td,
-  :root[data-skin="editorial"] #sheet-panel th{ font-family:'Newsreader',serif; color:var(--e-ink); }
-  :root[data-skin="editorial"] #sheet-panel strong{ color:var(--e-accent-ink); }
-  :root[data-skin="editorial"] #sheet-close{ color:var(--e-mut); }
-  :root[data-skin="editorial"] #sheet-close:hover{ color:var(--e-accent); }
+  
+  
+  
+  
+  
+  
+  
+  
+  
   /* character-sheet inner sections — retype the Vellum gold to the editorial system */
-  :root[data-skin="editorial"] #sheet-panel .sm-identity{ font-family:'Syne',sans-serif; color:var(--e-mut); }
-  :root[data-skin="editorial"] #sheet-panel .sm-xp{ font-family:'Syne',sans-serif; color:var(--e-mut); }
-  :root[data-skin="editorial"] #sheet-panel .sm-section-title{
-    font-family:'Syne',sans-serif; font-weight:800; letter-spacing:.22em; color:var(--e-accent); }
-  :root[data-skin="editorial"] #sheet-panel .sm-divider{ background:color-mix(in srgb, var(--e-ink), transparent 84%); }
+  
+  
+  
+  
   /* ability scores */
-  :root[data-skin="editorial"] #sheet-panel .sm-ab-name{ font-family:'Syne',sans-serif; color:var(--e-mut); }
-  :root[data-skin="editorial"] #sheet-panel .sm-ab-score{ font-family:'Syne',sans-serif; font-weight:700; color:var(--e-ink); }
-  :root[data-skin="editorial"] #sheet-panel .sm-ab-mod{ font-family:'Syne',sans-serif; color:var(--e-accent); }
+  
+  
+  
   /* combat / HP strip */
-  :root[data-skin="editorial"] #sheet-panel .sm-stat-label{ font-family:'Syne',sans-serif; color:var(--e-mut); }
-  :root[data-skin="editorial"] #sheet-panel .sm-stat-val{ font-family:'Syne',sans-serif; font-weight:700; color:var(--e-ink); }
+  
+  
   /* attacks table */
-  :root[data-skin="editorial"] #sheet-panel .sm-attacks-table th{
-    font-family:'Syne',sans-serif; font-weight:800; letter-spacing:.06em; color:var(--e-ink);
-    border-bottom-color:color-mix(in srgb, var(--e-ink), transparent 78%); }
-  :root[data-skin="editorial"] #sheet-panel .sm-attacks-table td{
-    font-family:'Newsreader',serif; color:var(--e-ink); border-bottom-color:color-mix(in srgb, var(--e-ink), transparent 88%); }
-  :root[data-skin="editorial"] #sheet-panel .sm-attacks-table td.atk-name{ color:var(--e-ink); }
-  :root[data-skin="editorial"] #sheet-panel .sm-attacks-table td.atk-notes{ color:var(--e-mut); font-style:italic; }
+  
+  
+  
+  
   /* features & passives */
-  :root[data-skin="editorial"] #sheet-panel .sm-feature-name{ font-family:'Syne',sans-serif; font-weight:700; color:var(--e-ink); }
-  :root[data-skin="editorial"] #sheet-panel .sm-feature-name[data-srd-name]{ color:var(--e-accent); cursor:pointer; }
-  :root[data-skin="editorial"] #sheet-panel .sm-feature-name[data-srd-name]:hover{ color:var(--e-accent-ink); }
-  :root[data-skin="editorial"] #sheet-panel .sm-feature-text{ font-family:'Newsreader',serif; color:var(--e-ink); opacity:.82; }
+  
+  
+  
+  
   /* spell/cantrip labels + tags */
-  :root[data-skin="editorial"] #sheet-panel .sm-sub-label{ font-family:'Syne',sans-serif; color:var(--e-mut); }
-  :root[data-skin="editorial"] #sheet-panel .sm-spell-meta{ font-family:'Newsreader',serif; color:var(--e-mut); }
-  :root[data-skin="editorial"] #sheet-panel .sm-spell-tag{
-    font-family:'Newsreader',serif; color:var(--e-ink);
-    background:transparent; border:1px solid color-mix(in srgb, var(--e-ink), transparent 78%); border-radius:3px; }
-  :root[data-skin="editorial"] #sheet-panel .sm-spell-tag:hover{ border-color:var(--e-accent); color:var(--e-accent); }
+  
+  
+  
+  
   /* relationships + empty state */
-  :root[data-skin="editorial"] #sheet-panel .sm-rel-name{ font-family:'Syne',sans-serif; color:var(--e-accent); }
-  :root[data-skin="editorial"] #sheet-panel .sm-rel-role{ color:var(--e-mut); }
-  :root[data-skin="editorial"] #sheet-panel .sm-rel-note{ color:var(--e-ink); opacity:.78; }
-  :root[data-skin="editorial"] #sheet-panel .sm-no-data{ font-family:'Newsreader',serif; color:var(--e-mut); }
+  
+  
+  
+  
   /* portrait icon: drop the purple drop-shadow on the editorial paper (broken
      icons are removed via onerror in JS, so no clumsy placeholder box) */
-  :root[data-skin="editorial"] #sheet-panel .sm-header-icon{ filter:none; opacity:.85; }
+  
 
   /* F — Party Input drawer composer fills the abundant vertical space */
-  :root[data-skin="editorial"] body:not(.input-only) #input-panel #player-input-text{
-    min-height:240px; padding:18px; font-size:16px; line-height:1.5; }
+  
 
   /* SRD lookup modal themed (mirrors the sheet modal) */
-  :root[data-skin="editorial"] #srd-modal{ background:rgba(0,0,0,.55); }
-  :root[data-skin="editorial"] #srd-panel{
-    background:var(--e-canvas); color:var(--e-ink);
-    border:1px solid var(--e-hair-strong); border-radius:4px;
-    box-shadow:0 30px 90px rgba(0,0,0,.5); }
-  :root[data-skin="editorial"] #srd-category-badge{
-    font-family:'Syne',sans-serif; font-weight:800; letter-spacing:.28em; color:var(--e-accent); }
-  :root[data-skin="editorial"] #srd-body{ font-family:'Newsreader',serif; color:var(--e-ink); }
-  :root[data-skin="editorial"] #srd-body .srd-title{
-    font-family:'Syne',sans-serif; font-weight:800; letter-spacing:.06em; color:var(--e-ink); }
-  :root[data-skin="editorial"] #srd-body .srd-meta{ font-family:'Newsreader',serif; color:var(--e-mut); }
-  :root[data-skin="editorial"] #srd-body strong{ color:var(--e-accent-ink); }
-  :root[data-skin="editorial"] #srd-loading{ font-family:'Syne',sans-serif; color:var(--e-mut); }
-  :root[data-skin="editorial"] #srd-not-found{ font-family:'Newsreader',serif; color:var(--e-mut); }
-  :root[data-skin="editorial"] #srd-close{ color:var(--e-mut); }
-  :root[data-skin="editorial"] #srd-close:hover{ color:var(--e-accent); }
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
 
   /* Party rail — Factions / Quests ("DM notes"). Headers/names re-typed to the
      editorial system; the semantic standing/status colors are left intact. */
-  :root[data-skin="editorial"] body:not(.input-only) #sb-factions,
-  :root[data-skin="editorial"] body:not(.input-only) #sb-quests{
-    border-top:1px solid var(--e-hair-strong); margin-top:16px; padding-top:14px; }
-  :root[data-skin="editorial"] body:not(.input-only) .sb-factions-header,
-  :root[data-skin="editorial"] body:not(.input-only) .sb-quests-header{
-    font-family:'Syne',sans-serif; font-weight:800; font-size:9px; letter-spacing:.24em; text-transform:uppercase;
-    color:var(--e-accent); opacity:1; margin-bottom:9px; }
-  :root[data-skin="editorial"] body:not(.input-only) .sb-faction-item,
-  :root[data-skin="editorial"] body:not(.input-only) .sb-quest-item{ padding:4px 0; }
-  :root[data-skin="editorial"] body:not(.input-only) .sb-faction-name,
-  :root[data-skin="editorial"] body:not(.input-only) .sb-quest-name{
-    font-family:'Newsreader',serif; font-size:13px; color:var(--e-on-strong); opacity:.82; }
-  :root[data-skin="editorial"] body:not(.input-only) .sb-faction-standing,
-  :root[data-skin="editorial"] body:not(.input-only) .sb-quest-status{
-    font-family:'Syne',sans-serif; font-weight:700; font-size:8.5px; letter-spacing:.1em; }
+  
+  
+  
+  
+  
 
   /* ══ Phone display-settings popover (#phone-settings) — both skins, phone only ══ */
   #phone-settings{ display:none; }
@@ -3644,14 +3469,14 @@
 <style id="tv-overrides">
   /* TV mode: much larger left party panel (characters, factions, quests) */
   :root.tv-view{ --sb-zoom:1.22; }
-  html.tv-view body #sidebar, :root.tv-view[data-skin="editorial"] body:not(.input-only) #sidebar{
+  html.tv-view body #sidebar{
     zoom:var(--sb-zoom) !important; bottom:auto !important; height:calc((100vh - 60px) / var(--sb-zoom)) !important; }
-  :root.tv-view[data-skin="editorial"] body:not(.input-only) #sidebar{ top:0 !important; height:calc(100vh / var(--sb-zoom)) !important; }
+  
   html.tv-view body #text-scroll{ padding-left:var(--tv-left, calc(210px * var(--sb-zoom) + 5.5vw)) !important; }
   html.tv-view body #text-scroll.sidebar-hidden{ padding-left:60px; }
   html.tv-view body #new-content-pill{ left:calc(50% + 190px); }
   /* TV mode: compact party cards (vertical) */
-  html.tv-view body #sidebar, :root.tv-view[data-skin="editorial"] body:not(.input-only) #sidebar{ top:0 !important; padding-top:12px !important; padding-bottom:8px !important; height:calc(100vh / var(--sb-zoom)) !important; }
+  html.tv-view body #sidebar{ top:0 !important; padding-top:12px !important; padding-bottom:8px !important; height:calc(100vh / var(--sb-zoom)) !important; }
   html.tv-view body #corner-logo, html.tv-view body #sidebar-toggle{ display:none !important; }
   html.tv-view body .sb-player{ margin-bottom:7px !important; padding-bottom:7px !important; }
   html.tv-view body .sb-class-icon{ display:none !important; }
@@ -3685,14 +3510,9 @@
   html.tv-view #sidebar .sb-label, html.tv-view #sidebar .sb-factions-header, html.tv-view #sidebar .sb-quests-header{ color:rgba(205,165,80,.9) !important; }
   html.tv-view #sidebar .sb-faction-standing, html.tv-view #sidebar .sb-quest-status{ filter:brightness(1.35); }
   /* TV View: tight spacing around Factions / Quests */
-  html.tv-view body #sb-factions, html.tv-view body #sb-quests,
-  :root.tv-view[data-skin="editorial"] body:not(.input-only) #sb-factions,
-  :root.tv-view[data-skin="editorial"] body:not(.input-only) #sb-quests{ margin-top:3px !important; padding-top:3px !important; }
-  html.tv-view body .sb-factions-header, html.tv-view body .sb-quests-header,
-  :root.tv-view[data-skin="editorial"] body:not(.input-only) .sb-factions-header,
-  :root.tv-view[data-skin="editorial"] body:not(.input-only) .sb-quests-header{ margin-bottom:1px !important; line-height:1.1 !important; }
-  :root.tv-view[data-skin="editorial"] body:not(.input-only) .sb-faction-item,
-  :root.tv-view[data-skin="editorial"] body:not(.input-only) .sb-quest-item{ padding:0 !important; line-height:1.25 !important; }
+  html.tv-view body #sb-factions, html.tv-view body #sb-quests{ margin-top:3px !important; padding-top:3px !important; }
+  html.tv-view body .sb-factions-header, html.tv-view body .sb-quests-header{ margin-bottom:1px !important; line-height:1.1 !important; }
+  
   html.tv-view body .sb-player{ margin-bottom:4px !important; padding-bottom:4px !important; }
   html.tv-view body #sidebar{ padding-top:8px !important; }
   /* Story text fades out toward the top, smoothly and in proportion to the screen:
@@ -3962,7 +3782,7 @@
   <button id="ph-set-toggle" type="button" title="Display settings" aria-label="Display settings">⚙</button>
   <div id="ph-set-menu" role="menu">
     <button class="ph-set-opt" id="ph-theme-opt" type="button"><span>Theme</span><strong id="ph-theme-val">Dark</strong></button>
-    <label class="ph-set-opt ph-set-row" id="ph-skin-opt"><span>Style</span><select id="ph-skin-select" class="ph-set-select" aria-label="Display style"><option value="vellum">Vellum</option><option value="editorial">Editorial</option></select></label>
+    <label class="ph-set-opt ph-set-row" id="ph-skin-opt"><span>Style</span><select id="ph-skin-select" class="ph-set-select" aria-label="Display style"><option value="vellum">Vellum</option></select></label>
     <button class="ph-set-opt" id="ph-roll-opt" type="button" hidden><span>Rolls</span><strong id="ph-roll-val">Players</strong></button>
   </div>
 </div>

@@ -48,10 +48,10 @@ class StorageTest(unittest.TestCase):
         self.assertTrue(s["sound_effects"])        # the TV default was sound on
 
     def test_valid_changes_are_saved(self):
-        settings.save({"theme": "light", "skin": "editorial", "type_speed": "instant",
+        settings.save({"theme": "light", "skin": "vellum", "type_speed": "instant",
                        "roll_on_screen": True, "sound_effects": False, "text_size": 1.2})
         s = settings.load()
-        self.assertEqual((s["theme"], s["skin"], s["type_speed"]), ("light", "editorial", "instant"))
+        self.assertEqual((s["theme"], s["skin"], s["type_speed"]), ("light", "vellum", "instant"))
         self.assertTrue(s["roll_on_screen"])
         self.assertFalse(s["sound_effects"])
         self.assertEqual(s["text_size"], 1.2)
@@ -132,13 +132,13 @@ class RouteAndPageTest(unittest.TestCase):
         fake_audio.set_sfx.assert_called_once_with(False)
 
     def test_the_page_is_seeded_with_the_saved_settings(self):
-        settings.save({"theme": "light", "skin": "editorial", "text_size": 1.1})
+        settings.save({"theme": "light", "skin": "vellum", "text_size": 1.1})
         html = self.client.get("/").get_data(as_text=True)
         m = re.search(r"window\._DISPLAY = (\{.*?\});", html, re.S)
         self.assertIsNotNone(m, "the page carries no seeded settings")
         seeded = json.loads(m.group(1))
         self.assertEqual((seeded["theme"], seeded["skin"], seeded["text_size"]),
-                         ("light", "editorial", 1.1))
+                         ("light", "vellum", 1.1))
 
     @unittest.skipUnless(NODE, "node not available")
     def test_every_script_in_the_rendered_page_compiles(self):
@@ -191,7 +191,7 @@ class PlayScreenTest(unittest.TestCase):
 
     def test_the_settings_page_has_the_display_section_and_a_done_button(self):
         self.assertIn("Display (every screen)", self.page)
-        for key in ("theme", "skin", "type_speed", "sound_effects", "roll_on_screen"):
+        for key in ("theme", "type_speed", "sound_effects", "roll_on_screen"):
             self.assertIn(f'data-key="{key}"', self.page)
         self.assertIn("text-size", self.page)
         self.assertIn("dnd-close-settings", self.page)

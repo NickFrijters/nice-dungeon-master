@@ -65,7 +65,6 @@ A running adventure is either **Roleplay** or **Combat**. The screen switches au
 - INTERFACE: Screenshot all interfaces and look for graphical inconsistencies or things that don't look nice - fix them (interview me where you think that's necessary).
 - INTERFACE: Interview me about the following: It should not be possible that text scrolls out of the screen without the players confirming that they've read it, or the voice being played. Now on large texts, not everything is visible on TV - which is an issue.
 - CLEANUP: No "PHONE" screen will ever be used, remove that function from the screen and code completely.
-- CLEANUP: We will always use the Vellum style instead of the Editorial style. So remove the Editorial style from the interface and code completely.
 - PERSISTENCY: After every DM input, and after every players-submit, the game state should be processed and saved. So when the browser closes or the app goes back to the main menu, nothing is lost. Or is this already the case?
 - TTS: Please do further research of we can use another one TTS model (requirements: super fast) for a more realistic English voice, preferably a voice that would be great for a DM. Try Kokoro-82M (hexgrad/Kokoro-82M) first.
 - INTERFACE: Interview me about the visualization of the text (being narrated on screen) in sync with the TTS.
