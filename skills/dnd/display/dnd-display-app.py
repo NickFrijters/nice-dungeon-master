@@ -1321,6 +1321,42 @@ def _list_campaigns() -> list[dict]:
     return found
 
 
+def _dm_listening() -> bool:
+    """True while a Claude session is waiting for input (its wait loop beats every few seconds)."""
+    try:
+        return _time.time() - os.path.getmtime(rt(".dm-heartbeat")) < 300
+    except OSError:
+        return False
+
+
+def _open_campaign_here(name: str) -> None:
+    """Show the campaign's party and mark it active, without waiting for Claude.
+
+    The party comes straight from the character files, so the sidebar is right
+    the moment a campaign is picked. Claude's own load, which has the full
+    sheets, merges over it by name. A campaign that is already open with its
+    characters on screen is left alone, so live HP is not reset by 'Continue'.
+    """
+    try:
+        import party as _party
+        players = _party.load_party(name)
+    except Exception:
+        players = []
+    with _stats_lock:
+        shown = {p.get("name") for p in _current_stats.get("players", [])}
+    already = (_active_campaign_name() == name and bool(players)
+               and {p["name"] for p in players} <= shown)
+    if already:
+        return
+    # Always replace: a campaign with no character files must not keep the last party on screen.
+    body: dict = {"campaign": name, "players": players, "replace_players": True}
+    try:
+        with app.test_client() as c:       # the same code path as a push from Claude
+            c.post("/stats", json=body, headers={"X-DND-Token": _lan_token or ""})
+    except Exception:
+        pass
+
+
 @app.route("/menu")
 def menu():
     return render_template("menu.html", lan_token=_lan_token or "")
@@ -1329,6 +1365,7 @@ def menu():
 @app.route("/menu/campaigns")
 def menu_campaigns():
     return jsonify({"active": _active_campaign_name(),
+                    "dm_listening": _dm_listening(),
                     "campaigns": _list_campaigns()})
 
 
@@ -1352,6 +1389,7 @@ def menu_load():
         return "could not queue", 500
     global _MENU_FIRST
     _MENU_FIRST = False
+    _open_campaign_here(name)
     return "", 204
 
 

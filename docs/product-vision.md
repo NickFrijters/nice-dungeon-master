@@ -60,11 +60,9 @@ A running adventure is either **Roleplay** or **Combat**. The screen switches au
 ## Manual additions done by Nick in this .md file, read this as "next things" or the backlog.
 ## -- if I make changes here, always automatically include in the next commit.
 ## -- remove items from this list once they are built
-- BUG: I think this is a bug..? When I load my test adventure, I only see character "Aldric"..?
-- INTERFACE: Does the TV exactly mirror the PC screen? If so, can we remove the toggle altogether because they will show the same? In reality, I will only be typing or inputting in one of the two devices so there doesn't need to be any guardrails to block input from the other. Interview me first if you think that's necessary.
-- INTERFACE: Interview me about the visualization of the text (being typed) in sync with the TTS.
+- INTERFACE: Add the option to save and exit. This quits the running session and returns to the main menu. Place it in the bottom left menu.
+- INTERFACE: Als ik "Party input" open klap wil ik onder elkaar een regel per character met elk een tekst invoer veld(bovenaan een regel voor "Everybody"). Geen "stage" knoppen, maar maak het visueel als een veld tekstinvoer bevat. De "GO" knop verstuurt simpelweg alle ingevoerde tekstvelden naar de DM. Does the TV exactly mirror the PC screen? If so, can we remove the toggle altogether because they will show the same? In reality, I will only be typing or inputting in one of the two devices so there doesn't need to be any guardrails to block input from the other. Interview me first if you think that's necessary.
 - INTERFACE: Loading between DM responses should always visualize what it's doing and how many things it has to do next (loading bar with several parts, or another way to show progress). Because waiting is always annoying for players. Goal is that every waiting time is accompanied by a tracker, always.
-- CLEANUP: No "PHONE" screen will ever be used, remove that function from the screen and code completely.
 - INTERFACE: Fade the narration text near the top of the screen so it looks prettier
 - INTERFACE: The text font that's currently used for narration is flavourful and clear, I want to use that font as the only font used throughout the whole app (do I? interview me first about the consequences)
 - INTERFACE: Clearer visualization of character sheets, needs investigation and interviewing
@@ -72,13 +70,13 @@ A running adventure is either **Roleplay** or **Combat**. The screen switches au
 - INTERFACE: Build the combat screen
 - INTERFACE: Screenshot all interfaces and look for graphical inconsistencies or things that don't look nice - fix them (interview me where you think that's necessary).
 - INTERFACE: Interview me about the following: It should not be possible that text scrolls out of the screen without the players confirming that they've read it, or the voice being played. Now on large texts, not everything is visible on TV - which is an issue.
+- CLEANUP: No "PHONE" screen will ever be used, remove that function from the screen and code completely.
 - CLEANUP: C:\Users\frijt\Documents\Claude\nice-dungeon-master\design-mockups shows a kind of visualization that I really dislike, why do we (still) have this folder with images?
 - PERSISTENCY: When opening a campaign from the main menu, always start with a recap instead of showing the whole history.
 - PERSISTENCY: After every DM input, and after every players-submit, the game state should be processed and saved. So when the browser closes or the app goes back to the main menu, nothing is lost.
-- INTERFACE: Add the option to save and exit. This quits the running session and returns to the main menu.
 - TTS: Please do further research of we can use another one TTS model (requirements: super fast) for a more realistic English voice, preferably a voice that would be great for a DM. Try Kokoro-82M (hexgrad/Kokoro-82M) first.
-- PERFORMANCE: Waiting for the DM should never take more than 5 seconds (this probably needs data management improvements).
-- INTERFACE: Als ik "Party input" open klap wil ik onder elkaar een regel per character met elk een tekst invoer veld(bovenaan een regel voor "Everybody"). Geen "stage" knoppen, maar maak het visueel als een veld tekstinvoer bevat. De "GO" knop verstuurt simpelweg alle ingevoerde tekstvelden naar de DM.
+- INTERFACE: Interview me about the visualization of the text (being narrated on screen) in sync with the TTS.
+- PERFORMANCE: Waiting for the DM should never take more than 10 seconds (this probably needs data management improvements). That means that if we need larger pieces of text which take long to generate, cut it into pieces and continue working while the characters read or hear the first part.
 - PERSISTENCY: Do an extremely thorough analysis on the continuity and persistent memory of our data keeping and the DM narration. For example: If a character destroys the door of a local inn, that should have effects when the same character visits the inn again 50 sessions later. The inn keeper won't forget that!
 - PERSISTENCY: Do a full analysis on adventure/campaign persistency. For example: Making sure that we're aiming towards (but not bound to) the general adventure/campaign setting. So that we don't drift off further from it with every session.
 - PERFORMANCE: Persistent image saving and rendering. Keep a very thorough database of previously downloaded images. Save all provided campaign/adventure images and all self-downloaded images from internet. To be able to use those in all future campaigns or on request.

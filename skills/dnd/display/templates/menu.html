@@ -26,12 +26,19 @@
   .soon { opacity:.55; }
   #status { margin-top:24px; color:var(--gold); min-height:1.5em; }
   .empty { color:var(--dim); font-style:italic; }
+  .notice { background:#2a1d12; border:1px solid var(--gold); border-radius:10px; padding:12px 16px; margin-bottom:18px; line-height:1.4; }
+  .notice code { color:var(--gold); }
 </style>
 </head>
 <body>
 <main>
   <h1>Nice Dungeon Master</h1>
   <p class="sub">Choose how tonight begins.</p>
+
+  <div id="no-dm" class="notice" hidden>
+    <strong>No Dungeon Master is connected.</strong> You can open a campaign and look around, but nobody will answer until
+    Claude is running. Start it with <code>/dm:dnd</code> (or the desktop shortcut).
+  </div>
 
   <h2>Campaigns</h2>
   <div id="campaigns"><p class="empty">Looking for campaigns…</p></div>
@@ -116,11 +123,13 @@ async function refresh() {
   try {
     const data = await (await fetch('/menu/campaigns')).json();
     render(data);
+    document.getElementById('no-dm').hidden = !!data.dm_listening;
     if (waitingFor && data.active === waitingFor) { location.href = '/'; return; }
   } catch (e) { /* server busy; try again */ }
 }
 refresh();
 setInterval(() => { if (waitingFor) refresh(); }, 2000);
+setInterval(() => { if (!waitingFor && !quitting) refresh(); }, 5000);   // keeps the 'no Dungeon Master' notice honest
 </script>
 </body>
 </html>

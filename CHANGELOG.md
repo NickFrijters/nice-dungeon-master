@@ -10,6 +10,14 @@ Versions before **1.6.0** are reconstructed retroactively from git history; the 
 
 ## [Unreleased]
 
+### Fixed — loading a campaign showed only a placeholder "Aldric"
+
+Two things combined. (1) The display's saved party had been overwritten by test data: an upstream test posts a fake "Aldric" to a display it starts, and nothing stopped it from using the real runtime folder. (2) Picking a campaign in the Main Menu relied on Claude to push the characters, and when no Claude session was listening the stale party stayed on screen.
+
+- **The display now loads the party itself.** `/menu/load` reads the campaign's character files (`scripts/party.py`) and puts all its characters, with HP, AC, XP and hit dice, on screen at once; Claude's fuller load merges over them by name. 'Continue' on a campaign that is already open leaves live HP alone, and a campaign without characters no longer keeps the previous party.
+- **The menu says when nobody is listening.** `autorun_wait.py` writes a heartbeat (`.dm-heartbeat`) while Claude waits; the Main Menu shows "No Dungeon Master is connected" when it is missing or older than five minutes.
+- **Tests can no longer touch real data.** `scripts/run-tests.sh` runs the suite against a throwaway campaign root, runtime folder and voice cache, and a tripwire test fails any plain run that would use the real folder while real campaigns exist.
+
 ## [2.19.0] — 2026-11-15 — English voice at 100%
 
 ### Changed — English-only voice at normal speed

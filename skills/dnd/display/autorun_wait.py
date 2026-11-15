@@ -30,6 +30,20 @@ os.makedirs(RT, exist_ok=True)
 
 QFILE = os.path.join(RT, ".input_queue")
 SESSION_FILE = os.path.join(RT, ".autorun-session")
+# Touched every few seconds while a Claude session is waiting for input, so the
+# Main Menu can tell whether anyone is there to answer it.
+HEARTBEAT_FILE = os.path.join(RT, ".dm-heartbeat")
+
+
+def _beat():
+    try:
+        with open(HEARTBEAT_FILE, "w", encoding="utf-8") as f:
+            f.write(str(time.time()))
+    except OSError:
+        pass
+
+
+_beat()
 
 # Invalidate any previous wait loop by writing a new session id (python write — TCC-ok)
 my_session = secrets.token_hex(8)
@@ -53,7 +67,9 @@ subprocess.run([sys.executable, PUSH, "--autorun-waiting", "true", "--autorun-cy
 
 # Poll loop — exit when queue appears, session changes, or 9 minutes pass
 content = ""
-for _ in range(1800):  # 0.3s * 1800 = 9 min
+for _i in range(1800):  # 0.3s * 1800 = 9 min
+    if _i % 10 == 0:
+        _beat()
     if os.path.exists(QFILE):
         try:
             content = open(QFILE, encoding="utf-8").read()
@@ -67,6 +83,8 @@ for _ in range(1800):  # 0.3s * 1800 = 9 min
     except Exception:
         break
     time.sleep(0.3)
+
+_beat()
 
 # Clean up our session file if it's still ours
 try:
