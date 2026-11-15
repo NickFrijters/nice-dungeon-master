@@ -35,6 +35,8 @@
       var v = window.localStorage.getItem('dnd-theme');
       if (v === 'dark' || v === 'light') {
         document.documentElement.setAttribute('data-theme', v);
+      } else {
+        document.documentElement.setAttribute('data-theme', 'dark');  // default dark, not the TV/OS preference
       }
       // 'auto' or missing → leave the attribute off; CSS @media handles it.
 
@@ -56,7 +58,10 @@
 
       // Reading text size — a font-size multiplier (not page zoom). Applied here
       // to avoid a flash at the default size before the picker JS runs.
-      var ts = parseFloat(window.localStorage.getItem('dnd-text-scale'));
+      var q = location.search; var phoneView = /[?&](view=input|char=|character=)/.test(q);
+      if (!phoneView && window.sessionStorage.getItem('dnd-view') !== 'pc') document.documentElement.classList.add('tv-view');
+      var ts = parseFloat(window.localStorage.getItem('dnd-text-scale-tv3'));
+      if (!ts) ts = 0.75;  /* TV default */
       if (ts && ts >= 0.5 && ts <= 3) {
         document.documentElement.style.setProperty('--text-scale', String(ts));
       }
@@ -1144,6 +1149,15 @@
   }
 
   /* ── XP award feed block ── */
+  .img-block { margin: .9em 0; text-align: center; cursor: zoom-in; }
+  .img-block img { max-width: 100%; max-height: 17vh; border-radius: 8px; box-shadow: 0 4px 22px rgba(0,0,0,.55); background: rgba(0,0,0,.25); }
+  .img-block.portrait img { max-height: 20vh; }
+  .img-cap { margin-top: .35em; font-size: .85em; opacity: .75; font-style: italic; }
+  #img-lightbox { position: fixed; inset: 0; z-index: 99999; display: none; align-items: center; justify-content: center; flex-direction: column;
+                  background: rgba(0,0,0,.94); cursor: zoom-out; }
+  #img-lightbox.open { display: flex; }
+  #img-lightbox img { max-width: 96vw; max-height: 88vh; object-fit: contain; filter: drop-shadow(0 0 30px rgba(0,0,0,.8)); }
+  #img-lightbox .lb-cap { color: #e8dcc0; margin-top: .6em; font-size: 1.4em; font-style: italic; text-align: center; padding: 0 4vw; }
   .xp-block {
     margin-bottom: 1.4em; padding: 10px 16px;
     border-left: 2px solid rgba(140,200,120,0.35);
@@ -1545,10 +1559,52 @@
     color: rgba(220, 185, 100, 1.0);
     background: rgba(180, 140, 60, 0.08);
   }
+  .tts-cache-badge { margin-left:8px; font-family:'Cinzel',serif; font-size:9px; letter-spacing:.08em; text-transform:uppercase; opacity:.9; white-space:nowrap; }
+  .tts-cache-badge.hit  { color: rgba(110, 200, 140, .9); }
+  .tts-cache-badge.miss { color: rgba(235, 175, 80, .95); }
+  html.tv-view .tts-cache-badge { display:none; }
   .tts-play-btn.tts-playing { color: rgba(210, 90, 70, 0.9); }
   .tts-play-btn.tts-loading { color: rgba(180, 140, 60, 0.45); }
   @keyframes tts-spin { to { transform: rotate(360deg); } }
   .tts-spin { animation: tts-spin 0.9s linear infinite; }
+  /* Per-block TTS status line: voice - state - progress */
+  .tts-status {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    margin: 2px 0 10px; padding: 0 8px;
+    font: 12px/1.45 ui-monospace, Consolas, monospace; letter-spacing: 0.03em;
+    color: rgba(180, 140, 60, 0.6);
+  }
+  .tts-st-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex: none; }
+  .tts-st-voice { text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.85; }
+  .tts-st-text { flex: 0 1 auto; }
+  .tts-st-track { flex: 1 1 90px; min-width: 70px; max-width: 220px; height: 3px; border-radius: 2px;
+    background: rgba(180, 140, 60, 0.16); overflow: hidden; }
+  .tts-st-fill { display: block; height: 100%; width: 0%; background: currentColor; transition: width 0.25s linear; }
+  .tts-status.st-gen  { color: rgba(220, 185, 100, 0.95); }
+  .tts-status.st-gen .tts-st-dot { animation: tts-pulse 1s ease-in-out infinite; }
+  .tts-status.st-gen .tts-st-fill { width: 35%; animation: tts-slide 1.2s ease-in-out infinite; }
+  .tts-status.st-play { color: rgba(110, 190, 120, 0.95); }
+  .tts-status.st-done { color: rgba(110, 190, 120, 0.6); }
+  .tts-status.st-done .tts-st-fill { width: 100%; }
+  .tts-status.st-err  { color: rgba(215, 95, 80, 0.95); }
+  .tts-status.st-fallback { color: rgba(220, 160, 70, 0.95); }
+  .tts-st-retry {
+    margin-left: auto; cursor: pointer; background: none; color: inherit;
+    border: 1px solid currentColor; border-radius: 4px; padding: 1px 8px;
+    font: inherit; letter-spacing: 0.05em; opacity: 0.75;
+  }
+  .tts-st-retry:hover { opacity: 1; background: rgba(180, 140, 60, 0.12); }
+  @keyframes tts-pulse { 50% { opacity: 0.25; } }
+  /* Turn progress bar: sits under the last text from Stage until text AND voice are done */
+  #turn-bar { margin: 14px auto 40px; padding: 0 8px; max-width: 760px; width: 100%; box-sizing: border-box; }
+  #turn-bar .tb-track { height: 4px; border-radius: 2px; background: rgba(180, 140, 60, 0.18); overflow: hidden; }
+  #turn-bar .tb-fill { height: 100%; width: 0%; background: rgba(220, 185, 100, 0.95); border-radius: 2px; transition: width 0.2s linear; }
+  #turn-bar.tb-indet .tb-fill { width: 30%; animation: tb-slide 1.3s ease-in-out infinite; }
+  #turn-bar.tb-done .tb-fill { background: rgba(110, 190, 120, 0.95); width: 100%; }
+  #turn-bar .tb-label { margin-top: 5px; font: 12px/1.4 ui-monospace, Consolas, monospace; letter-spacing: 0.04em; color: rgba(180, 140, 60, 0.75); }
+  #turn-bar.tb-fade { opacity: 0; transition: opacity 0.8s ease; }
+  @keyframes tb-slide { 0% { margin-left: 0; } 50% { margin-left: 70%; } 100% { margin-left: 0; } }
+  @keyframes tts-slide { 0% { margin-left: 0; } 50% { margin-left: 65%; } 100% { margin-left: 0; } }
 
   /* ── Player input panel ── */
   #input-panel {
@@ -3522,6 +3578,165 @@
   body.input-only #phone-status.ps-sending{ opacity:.8; }
   body.input-only #phone-status.ps-resolving{ color:var(--e-accent, #FF7A2D); }
 </style>
+<style id="tv-overrides">
+  /* TV mode: much larger left party panel (characters, factions, quests) */
+  :root.tv-view{ --sb-zoom:1.22; }
+  html.tv-view body #sidebar, :root.tv-view[data-skin="editorial"] body:not(.input-only) #sidebar{
+    zoom:var(--sb-zoom) !important; bottom:auto !important; height:calc((100vh - 60px) / var(--sb-zoom)) !important; }
+  :root.tv-view[data-skin="editorial"] body:not(.input-only) #sidebar{ top:0 !important; height:calc(100vh / var(--sb-zoom)) !important; }
+  html.tv-view body #text-scroll{ padding-left:var(--tv-left, calc(210px * var(--sb-zoom) + 5.5vw)) !important; }
+  html.tv-view body #text-scroll.sidebar-hidden{ padding-left:60px; }
+  html.tv-view body #new-content-pill{ left:calc(50% + 190px); }
+  /* TV mode: compact party cards (vertical) */
+  html.tv-view body #sidebar, :root.tv-view[data-skin="editorial"] body:not(.input-only) #sidebar{ top:0 !important; padding-top:12px !important; padding-bottom:8px !important; height:calc(100vh / var(--sb-zoom)) !important; }
+  html.tv-view body #corner-logo, html.tv-view body #sidebar-toggle{ display:none !important; }
+  html.tv-view body .sb-player{ margin-bottom:7px !important; padding-bottom:7px !important; }
+  html.tv-view body .sb-class-icon{ display:none !important; }
+  html.tv-view body .sb-name{ padding-right:0 !important; font-size:11px !important; letter-spacing:1px !important; margin-bottom:0 !important; white-space:nowrap; }
+  html.tv-view body .sb-identity{ padding-right:0 !important; margin-bottom:3px !important; line-height:1.25 !important; }
+  html.tv-view body .sb-hp-row{ margin-bottom:1px !important; }
+  html.tv-view body .sb-bar-track{ margin-bottom:1px !important; }
+  html.tv-view body .sb-xp-row{ margin-top:1px !important; margin-bottom:0 !important; }
+  html.tv-view body .sb-quick-stats{ margin-top:2px !important; line-height:1.4 !important; }
+  html.tv-view body .sb-inspiration{ margin-top:2px !important; }
+  html.tv-view body .sb-slots{ margin-top:2px !important; }
+  html.tv-view body .sb-features{ display:none !important; }
+  html.tv-view body .sb-faction-item, html.tv-view body .sb-quest-item{ padding:0 !important; }
+  html.tv-view body .sb-factions-header, html.tv-view body .sb-quests-header{ margin-bottom:2px !important; }
+  /* inline bars, PC View too: the bar sits between the label and the numbers */
+  .sb-hp-row .sb-bar-track, .sb-xp-row .sb-bar-track{ flex:1 1 0; min-width:0; height:4px; margin:0 6px; background:rgba(255,255,255,0.14); }
+  .sb-hp-row .sb-bar-fill, .sb-xp-row .sb-bar-fill{ min-width:2px; }
+  .sb-hp-nums, .sb-xp-nums{ flex:none; width:58px; margin-left:0 !important; text-align:right; white-space:nowrap; }
+  /* inline bars: icon + LABEL [=====bar=====] numbers, equal bar width for HP and XP */
+  html.tv-view body .sb-hp-row, html.tv-view body .sb-xp-row{ display:flex !important; align-items:center !important; gap:0; margin-bottom:2px !important; }
+  html.tv-view body .sb-hp-row .sb-bar-track, html.tv-view body .sb-xp-row .sb-bar-track{ flex:1 1 0 !important; min-width:0; height:5px !important; margin:0 7px !important; background:rgba(255,255,255,0.16) !important; border-radius:3px; }
+  html.tv-view body .sb-label{ flex:none !important; width:22px !important; margin-left:5px !important; }
+  html.tv-view body .sb-hp-nums, html.tv-view body .sb-xp-nums{ flex:none !important; width:62px !important; margin-left:0 !important; text-align:right !important; white-space:nowrap; }
+  html.tv-view body .sb-quick-stats{ white-space:nowrap; letter-spacing:.5px !important; }
+  html.tv-view body .sb-quick-stats span.val{ margin-right:6px !important; }
+  html.tv-view body .sb-inspiration{ line-height:1 !important; margin-top:1px !important; }
+  /* TV View: bolder, brighter side-panel text so thin letters stay readable when smaller */
+  html.tv-view #sidebar, html.tv-view #sidebar *{ font-weight:700 !important; }
+  html.tv-view #sidebar .sb-identity, html.tv-view #sidebar .sb-quick-stats, html.tv-view #sidebar .sb-faction-name,
+  html.tv-view #sidebar .sb-quest-name, html.tv-view #sidebar .sb-xp-nums{ color:rgba(235,220,185,.92) !important; }
+  html.tv-view #sidebar .sb-label, html.tv-view #sidebar .sb-factions-header, html.tv-view #sidebar .sb-quests-header{ color:rgba(205,165,80,.9) !important; }
+  html.tv-view #sidebar .sb-faction-standing, html.tv-view #sidebar .sb-quest-status{ filter:brightness(1.35); }
+  /* TV View: tight spacing around Factions / Quests */
+  html.tv-view body #sb-factions, html.tv-view body #sb-quests,
+  :root.tv-view[data-skin="editorial"] body:not(.input-only) #sb-factions,
+  :root.tv-view[data-skin="editorial"] body:not(.input-only) #sb-quests{ margin-top:3px !important; padding-top:3px !important; }
+  html.tv-view body .sb-factions-header, html.tv-view body .sb-quests-header,
+  :root.tv-view[data-skin="editorial"] body:not(.input-only) .sb-factions-header,
+  :root.tv-view[data-skin="editorial"] body:not(.input-only) .sb-quests-header{ margin-bottom:1px !important; line-height:1.1 !important; }
+  :root.tv-view[data-skin="editorial"] body:not(.input-only) .sb-faction-item,
+  :root.tv-view[data-skin="editorial"] body:not(.input-only) .sb-quest-item{ padding:0 !important; line-height:1.25 !important; }
+  html.tv-view body .sb-player{ margin-bottom:4px !important; padding-bottom:4px !important; }
+  html.tv-view body #sidebar{ padding-top:8px !important; }
+  /* Story text fades out toward the top: fully invisible at the frame edge, fully visible further down */
+  #text-scroll{
+    -webkit-mask-image:linear-gradient(to bottom, transparent 0, transparent 54px, rgba(0,0,0,.5) 96px, #000 150px, #000 100%);
+            mask-image:linear-gradient(to bottom, transparent 0, transparent 54px, rgba(0,0,0,.5) 96px, #000 150px, #000 100%);
+  }
+  /* GO button + TV staged-actions panel */
+  #go-btn{ background:rgba(60,150,80,.25); color:rgba(170,235,170,.95); border:1px solid rgba(110,200,120,.6); border-radius:4px;
+    font:700 12px 'Cinzel',serif; letter-spacing:.15em; padding:7px 16px; cursor:pointer; }
+  #go-btn:hover:not(:disabled){ background:rgba(60,150,80,.45); }
+  #go-btn:disabled{ opacity:.35; cursor:default; }
+  #tv-staged{ display:none; margin:1.2em 0 .5em; padding:.7em 1em; border:1px dashed rgba(180,140,60,.45); border-radius:6px; background:rgba(0,0,0,.25); }
+  html.tv-view #tv-staged.show{ display:block; }
+  #tv-staged .tvs-head{ font:700 .7em 'Cinzel',serif; letter-spacing:.2em; text-transform:uppercase; color:rgba(205,165,80,.9); margin-bottom:.35em; }
+  #tv-staged.sent .tvs-head{ color:rgba(120,210,140,.95); }
+  #tv-staged .tvs-line{ margin:.15em 0; }
+  #tv-staged .tvs-name{ font-weight:700; color:rgba(220,190,110,.95); }
+  /* Sheet tabs */
+  #sm-tabs{ display:flex; gap:6px; margin:10px 0 12px; }
+  .sm-tab{ background:none; border:1px solid rgba(180,140,60,.35); color:rgba(200,185,150,.7); font:700 11px 'Cinzel',serif; letter-spacing:.18em;
+    text-transform:uppercase; padding:5px 14px; border-radius:3px; cursor:pointer; }
+  .sm-tab.active{ background:rgba(180,140,60,.2); color:rgba(235,205,120,1); border-color:rgba(200,165,80,.8); }
+  .sm-tabpane{ display:none; }
+  .sm-tabpane.active{ display:block; }
+  /* TV View: sheet fills the screen, no scrolling, bigger and clearer */
+  html.tv-view #sheet-panel{ width:94vw !important; max-height:92vh !important; overflow:hidden !important; padding:calc(2.2vh * var(--sf,1)) 2.4vw !important; font-size:calc(2.1vh * var(--sf,1)); }
+  html.tv-view #sheet-close{ display:none !important; }
+  html.tv-view .sm-name{ font-size:calc(4.2vh * var(--sf,1)) !important; letter-spacing:.2em !important; }
+  html.tv-view .sm-identity{ font-size:calc(2.4vh * var(--sf,1)) !important; margin-bottom:calc(1.2vh * var(--sf,1)) !important; opacity:.9; }
+  html.tv-view .sm-stat-label{ font-size:calc(1.6vh * var(--sf,1)) !important; }
+  html.tv-view .sm-stat-val{ font-size:calc(3.2vh * var(--sf,1)) !important; }
+  html.tv-view .sm-combat-strip{ gap:3vw !important; }
+  html.tv-view .sm-xp{ font-size:calc(1.9vh * var(--sf,1)) !important; }
+  html.tv-view .sm-ab-grid{ gap:1vw !important; margin-top:calc(1.2vh * var(--sf,1)); }
+  html.tv-view .sm-ab-name{ font-size:calc(2vh * var(--sf,1)) !important; }
+  html.tv-view .sm-ab-score{ font-size:calc(3.6vh * var(--sf,1)) !important; }
+  html.tv-view .sm-ab-mod{ font-size:calc(2.4vh * var(--sf,1)) !important; }
+  html.tv-view .sm-tab{ font-size:calc(2.1vh * var(--sf,1)); padding:.calc(7vh * var(--sf,1)) 1.6vw; pointer-events:none; }
+  html.tv-view .sm-section-title{ font-size:calc(2.2vh * var(--sf,1)) !important; margin:calc(1vh * var(--sf,1)) 0 .calc(8vh * var(--sf,1)) !important; }
+  html.tv-view .sm-attacks-table th, html.tv-view .sm-attacks-table td{ font-size:calc(2.2vh * var(--sf,1)) !important; padding:.calc(5vh * var(--sf,1)) .8vw !important; }
+  html.tv-view .sm-spell-meta{ font-size:calc(2.2vh * var(--sf,1)) !important; }
+  html.tv-view .sm-sub-label{ font-size:calc(1.9vh * var(--sf,1)) !important; }
+  html.tv-view .sm-spell-tag{ font-size:calc(2.2vh * var(--sf,1)) !important; padding:.calc(4vh * var(--sf,1)) 1vw !important; }
+  html.tv-view .sm-tabpane[data-pane="features"].active{ column-count:2; column-gap:3vw; }
+  html.tv-view .sm-tabpane[data-pane="features"][data-count="9"].active, html.tv-view .sm-tabpane[data-pane="features"][data-count^="1"].active{ column-count:3; }
+  html.tv-view .sm-feature{ break-inside:avoid; margin-bottom:calc(1.6vh * var(--sf,1)) !important; }
+  html.tv-view .sm-feature-name{ font-size:calc(2.5vh * var(--sf,1)) !important; }
+  html.tv-view .sm-feature-text{ font-size:calc(2.2vh * var(--sf,1)) !important; line-height:1.4 !important; }
+  html.tv-view .sm-inventory-list{ column-count:2; column-gap:3vw; }
+  html.tv-view .sm-inventory-list li{ font-size:calc(2.4vh * var(--sf,1)) !important; }
+  html.tv-view .sm-rel-name, html.tv-view .sm-rel-role, html.tv-view .sm-rel-note{ font-size:calc(2.1vh * var(--sf,1)) !important; }
+  /* TV View: spell/rule pop-up readable and without scrolling */
+  html.tv-view #srd-panel{ width:78vw !important; max-height:90vh !important; overflow:hidden !important; padding:calc(3vh * var(--sf,1)) 2.6vw !important; }
+  html.tv-view #srd-close{ display:none !important; }
+  html.tv-view #srd-category-badge{ font-size:calc(1.8vh * var(--sf,1)) !important; }
+  html.tv-view #srd-body{ font-size:calc(2.5vh * var(--sf,1)) !important; line-height:1.55 !important; }
+  html.tv-view #srd-body .srd-title{ font-size:calc(4vh * var(--sf,1)) !important; }
+  html.tv-view #srd-body .srd-meta{ font-size:calc(2.3vh * var(--sf,1)) !important; }
+  /* TV View: sheet + pop-up text as bright, bold and large as the story text */
+  html.tv-view #sheet-panel, html.tv-view #srd-panel{ color:rgba(240,228,198,.97) !important; }
+  html.tv-view #sheet-panel *, html.tv-view #srd-panel *{ font-weight:600; }
+  html.tv-view .sm-name{ color:rgba(240,205,110,1) !important; font-weight:700 !important; }
+  html.tv-view .sm-identity{ color:rgba(235,222,190,.95) !important; font-size:calc(2.9vh * var(--sf,1)) !important; opacity:1 !important; }
+  html.tv-view .sm-stat-label{ color:rgba(225,190,105,.98) !important; font-size:calc(1.9vh * var(--sf,1)) !important; }
+  html.tv-view .sm-stat-val{ color:rgba(245,235,210,1) !important; font-size:calc(3.6vh * var(--sf,1)) !important; }
+  html.tv-view .sm-xp{ color:rgba(225,190,105,.98) !important; font-size:calc(2.2vh * var(--sf,1)) !important; }
+  html.tv-view .sm-ab-name{ color:rgba(225,190,105,.98) !important; font-size:calc(2.3vh * var(--sf,1)) !important; }
+  html.tv-view .sm-ab-score{ color:rgba(245,235,210,1) !important; font-size:calc(4vh * var(--sf,1)) !important; }
+  html.tv-view .sm-ab-mod{ color:rgba(240,215,140,1) !important; font-size:calc(2.8vh * var(--sf,1)) !important; }
+  html.tv-view .sm-tab{ color:rgba(235,222,190,.95) !important; font-size:calc(2.4vh * var(--sf,1)) !important; }
+  html.tv-view .sm-tab.active{ color:rgba(255,230,140,1) !important; }
+  html.tv-view .sm-section-title{ color:rgba(235,200,110,1) !important; font-size:calc(2.6vh * var(--sf,1)) !important; }
+  html.tv-view .sm-attacks-table th{ color:rgba(225,190,105,.98) !important; font-size:calc(2.3vh * var(--sf,1)) !important; }
+  html.tv-view .sm-attacks-table td{ color:rgba(240,228,198,.97) !important; font-size:calc(2.8vh * var(--sf,1)) !important; }
+  html.tv-view .sm-attacks-table td.atk-name{ color:rgba(250,238,205,1) !important; }
+  html.tv-view .sm-attacks-table td.atk-notes{ color:rgba(225,212,180,.95) !important; }
+  html.tv-view .sm-spell-meta{ color:rgba(240,228,198,.97) !important; font-size:calc(2.8vh * var(--sf,1)) !important; }
+  html.tv-view .sm-sub-label{ color:rgba(225,190,105,.98) !important; font-size:calc(2.2vh * var(--sf,1)) !important; }
+  html.tv-view .sm-spell-tag{ color:rgba(245,235,210,1) !important; font-size:calc(2.8vh * var(--sf,1)) !important; border-color:rgba(200,165,80,.7) !important; background:rgba(180,140,60,.16) !important; }
+  html.tv-view .sm-spell-tag.cantrip{ color:rgba(225,205,255,1) !important; border-color:rgba(180,150,235,.8) !important; background:rgba(150,110,220,.2) !important; }
+  html.tv-view .sm-feature-name{ color:rgba(240,205,110,1) !important; font-size:calc(3vh * var(--sf,1)) !important; }
+  html.tv-view .sm-feature-text{ color:rgba(240,228,198,.97) !important; font-size:calc(2.7vh * var(--sf,1)) !important; line-height:1.4 !important; }
+  html.tv-view .sm-inventory-list li{ color:rgba(240,228,198,.97) !important; font-size:calc(2.9vh * var(--sf,1)) !important; }
+  html.tv-view .sm-rel-name{ color:rgba(240,205,110,1) !important; }
+  html.tv-view .sm-rel-role, html.tv-view .sm-rel-note{ color:rgba(235,222,190,.95) !important; font-size:calc(2.5vh * var(--sf,1)) !important; }
+  html.tv-view #srd-category-badge{ color:rgba(225,190,105,.98) !important; font-size:calc(2vh * var(--sf,1)) !important; }
+  html.tv-view #srd-body{ color:rgba(240,228,198,.97) !important; font-size:calc(3vh * var(--sf,1)) !important; }
+  html.tv-view #srd-body .srd-title{ color:rgba(245,210,115,1) !important; font-size:calc(4.6vh * var(--sf,1)) !important; }
+  html.tv-view #srd-body .srd-meta{ color:rgba(225,200,140,.98) !important; font-size:calc(2.7vh * var(--sf,1)) !important; font-style:normal !important; }
+  /* TV View: keep only the loading bar of the voice/DM line; no labels, retry or voice controls */
+  html.tv-view .tts-bar, html.tv-view .tts-st-voice, html.tv-view .tts-st-text, html.tv-view .tts-st-retry{ display:none !important; }
+  /* TV View: hide interactive panels completely */
+  html.tv-view #input-panel, html.tv-view #ed-launch-input, html.tv-view #ed-launch-settings,
+  html.tv-view #audio-controls, html.tv-view #controls-toggle, html.tv-view #controls-toggle-row,
+  html.tv-view #phone-mode-btn, html.tv-view #phone-mode-menu, html.tv-view #dm-help-btn{ display:none !important; }
+  html.tv-view body #text-scroll{ padding-right:5.5vw !important; }
+  html.tv-view body #text-content{ max-width:1500px !important; }
+  #view-toggle{ position:fixed; left:8px; bottom:6px; z-index:80; background:rgba(0,0,0,.35); color:rgba(200,185,150,.55);
+    border:1px solid rgba(180,140,60,.25); border-radius:3px; font:600 9px 'Cinzel',serif; letter-spacing:2px; text-transform:uppercase;
+    padding:3px 8px; cursor:pointer; opacity:.55; }
+  #view-toggle:hover{ opacity:1; }
+  #tv-link{ position:fixed; left:92px; bottom:8px; z-index:80; font:600 9px 'Cinzel',serif; letter-spacing:1.5px; text-transform:uppercase;
+    color:rgba(120,210,150,.85); display:none; pointer-events:none; }
+  #tv-link.warn{ color:rgba(235,190,90,.95); }
+  html.tv-view #tv-link{ display:none !important; }
+</style>
 </head>
 <body>
 
@@ -3700,6 +3915,7 @@
     <div id="input-footer" data-tab-section="move">
       <button id="skip-turn-btn" style="display:none" title="Skip this character's turn">Skip Turn</button>
       <button id="stage-btn">Stage</button>
+      <button id="go-btn" type="button" disabled title="Send everything that is staged to the DM">GO ▶</button>
     </div>
     <!-- Phone-only dice pad (shown by ?view=input) -->
     <div id="dice-pad" data-tab-section="roll">
@@ -4543,6 +4759,7 @@ function getOrCreateBlock() {
     const p = document.createElement('p');
     currentEl.appendChild(p);
     textContent.appendChild(currentEl);
+    _ttsMountEarly();
     scrollToBottom();
   }
   return currentEl.querySelector('p:last-child');
@@ -4551,10 +4768,12 @@ function getOrCreateBlock() {
 function typeNextChar() {
   if (charQueue.length === 0) {
     isTyping = false;
+    _turnTypingDone();
     return;
   }
 
   const item = charQueue.shift();
+  if (_turn && typeof item === 'string') _turn.typed++;
   const p    = getOrCreateBlock();
 
   if (currentCursor) currentCursor.classList.remove('typing-cursor');
@@ -4585,12 +4804,157 @@ function typeNextChar() {
   if (currentCursor) currentCursor.classList.add('typing-cursor');
 
   scrollToBottom();
-  setTimeout(typeNextChar, charDelay);
+  setTimeout(typeNextChar, _nextDelay());
 }
+
+let _narratedEarly = false;   // set when a live chunk was sent to TTS on arrival
+
+// -- Turn progress bar + voice/text sync --------------------------------
+// From the Stage press until the narration's TEXT and VOICE are both finished,
+// a bar sits under the last text. When auto-narrate is on, arriving narration is
+// HELD until the voice audio is ready; then typing and audio start together and
+// the typing is paced so the text ends when the voice ends.
+let _turn = null;            // {phase, t0, total, typed, voice, audioDur, audioT0, audioEnded, typingDone}
+let _turnTimer = null;
+let _heldItems = [];         // typed items waiting for the voice
+let _heldTimer = null;
+let _userCharDelay = null;   // user's typing speed, restored after a paced reveal
+let _pace = null;            // {start, base, n, durMs}: time-based pacing so text ends with the voice
+
+// Delay before the next character. Normally charDelay; while pacing against a
+// voice track, aim at where the text SHOULD be by now, so timer overhead can
+// never make the text finish after the voice.
+function _nextDelay() {
+  if (!_pace || !_turn) return charDelay;
+  const done = Math.max(0, _turn.typed - _pace.base);
+  const due = _pace.start + (done / _pace.n) * _pace.durMs;
+  return Math.max(0, Math.min(charDelay, due - performance.now()));
+}
+
+function _turnEl() {
+  let el = document.getElementById('turn-bar');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'turn-bar';
+    el.innerHTML = '<div class="tb-track"><div class="tb-fill"></div></div><div class="tb-label"></div>';
+    const tc = document.getElementById('text-content');
+    tc.insertAdjacentElement('afterend', el);
+  }
+  el.classList.remove('tb-fade', 'tb-done');
+  return el;
+}
+
+function _turnStart() {                       // Stage pressed: the session starts processing
+  if (_turn) return;
+  _turn = { phase: 'wait', t0: Date.now(), total: 0, typed: 0, voice: false,
+            audioDur: 0, audioT0: 0, audioEnded: true, typingDone: false };
+  _turnEl().classList.add('tb-indet');
+  clearInterval(_turnTimer);
+  _turnTimer = setInterval(_turnTick, 120);
+  _turnTick();
+  scrollToBottom();
+}
+
+function _turnBegin(totalChars, voiceExpected) {   // narration arrived
+  if (!_turn) {
+    _turn = { phase: 'run', t0: Date.now(), total: 0, typed: 0, voice: false,
+              audioDur: 0, audioT0: 0, audioEnded: true, typingDone: false };
+    _turnEl();
+    clearInterval(_turnTimer);
+    _turnTimer = setInterval(_turnTick, 120);
+  }
+  _turn.total += totalChars;
+  _turn.typingDone = false;
+  if (voiceExpected) { _turn.voice = true; _turn.audioEnded = false; _turn.phase = 'prep'; _turn.prepT0 = Date.now(); }
+  else if (_turn.phase === 'wait') _turn.phase = 'run';
+}
+
+function _turnTypingDone(force) {
+  if (_userCharDelay !== null && !_heldItems.length) { charDelay = _userCharDelay; _userCharDelay = null; }
+  if (!_heldItems.length) _pace = null;
+  if (!_turn || _heldItems.length) return;
+  if (force) _turn.typed = _turn.total;
+  _turn.typingDone = true;
+  // finalise the block (adds its TTS bar / Retry button) shortly after typing ends
+  setTimeout(() => { if (!isTyping && charQueue.length === 0 && !_heldItems.length) flushNewBlock(); }, IDLE_GAP);
+}
+
+function _turnVoiceEnded() { if (_turn) _turn.audioEnded = true; }
+
+function _turnFinish() {
+  const el = document.getElementById('turn-bar');
+  clearInterval(_turnTimer); _turnTimer = null;
+  _turn = null;
+  if (!el) return;
+  el.classList.remove('tb-indet'); el.classList.add('tb-done');
+  el.querySelector('.tb-label').textContent = 'done';
+  setTimeout(() => { el.classList.add('tb-fade'); setTimeout(() => { if (!_turn && el.parentNode) el.remove(); }, 900); }, 1200);
+}
+
+function _turnTick() {
+  const t = _turn; if (!t) return;
+  const el = document.getElementById('turn-bar'); if (!el) return;
+  const fill = el.querySelector('.tb-fill'), label = el.querySelector('.tb-label');
+  const secs = s0 => Math.round((Date.now() - s0) / 1000);
+  if (t.phase === 'wait') {
+    el.classList.add('tb-indet'); label.textContent = 'waiting for the DM... ' + secs(t.t0) + 's'; return;
+  }
+  if (t.phase === 'prep') {
+    el.classList.add('tb-indet'); label.textContent = 'preparing voice... ' + secs(t.prepT0 || t.t0) + 's'; return;
+  }
+  el.classList.remove('tb-indet');
+  const typedFrac = t.total ? Math.min(1, t.typed / t.total) : (t.typingDone ? 1 : 0);
+  let audioFrac = 1, cur = 0;
+  if (t.voice) {
+    if (t.audioEnded) audioFrac = 1;
+    else if (t.audioDur && _ttsCtx) { cur = Math.min(t.audioDur, _ttsCtx.currentTime - t.audioT0); audioFrac = Math.max(0, cur / t.audioDur); }
+    else audioFrac = 0;
+  }
+  const frac = Math.min(typedFrac, audioFrac);
+  fill.style.width = Math.round(frac * 100) + '%';
+  label.textContent = t.voice && !t.audioEnded
+    ? 'narrating ' + _ttsFmt(cur) + ' / ' + _ttsFmt(t.audioDur)
+    : (t.typingDone ? 'finishing...' : 'writing...');
+  if (t.typingDone && _heldItems.length === 0 && (!t.voice || t.audioEnded)) _turnFinish();
+}
+
+// Release held narration: start typing now, paced so it ends with the voice.
+function _releaseHeld(durSec) {
+  if (!_heldItems.length) return;
+  clearTimeout(_heldTimer);
+  const items = _heldItems; _heldItems = [];
+  const n = items.filter(i => typeof i === 'string').length || 1;
+  if (durSec && charDelay > 0 && !document.hidden) {
+    if (_userCharDelay === null) _userCharDelay = charDelay;
+    charDelay = Math.max(8, Math.min(90, Math.round(durSec * 1000 / n)));
+    _pace = { start: performance.now(), base: _turn ? _turn.typed : 0, n, durMs: durSec * 1000 * 0.98 };
+  } else if (!durSec && _turn) {
+    _turn.voice = false;              // voice failed: the bar follows the text alone
+  }
+  if (_turn) _turn.phase = 'run';
+  for (const it of items) charQueue.push(it);
+  startTyping();
+}
+
+// Hidden / occluded tabs get their timers throttled to ~1/s (or 1/min), which
+// stalls the typewriter for minutes and delays TTS (the bar is only added once a
+// block is finalised). Show text instantly there and still finalise the block.
+function _flushWhileHidden() {
+  instantFlush();
+  _turnTypingDone(true);
+  clearTimeout(idleTimer);
+  idleTimer = setTimeout(() => {
+    if (!isTyping && charQueue.length === 0) flushNewBlock();
+  }, IDLE_GAP * 2);
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden && charQueue.length) { isTyping = false; _flushWhileHidden(); }
+});
 
 function startTyping() {
   if (isTyping) return;
-  if (charDelay === 0) { instantFlush(); return; }
+  if (document.hidden) { _flushWhileHidden(); return; }
+  if (charDelay === 0) { instantFlush(); _turnTypingDone(true); return; }
   isTyping = true;
   typeNextChar();
 }
@@ -4736,7 +5100,8 @@ function flushNewBlock() {
   // Add a soft divider if there was content
   if (currentEl) {
     _addBlockBadge(currentEl);
-    _addTtsBar(currentEl);
+    _addTtsBar(currentEl, _narratedEarly);   // already voiced on arrival? don't voice twice
+    _narratedEarly = false;
     const div = document.createElement('div');
     div.className = 'divider';
     div.textContent = '✦';
@@ -4815,7 +5180,7 @@ let _pendingTimer  = null;
 let _pendingSince  = 0;
 
 function _typewriterActive() {
-  return isTyping || charQueue.length > 0;
+  return isTyping || charQueue.length > 0 || _heldItems.length > 0;
 }
 
 function _releasePending() {
@@ -4839,6 +5204,7 @@ function _schedulePendingFlush() {
       _pendingTimer = setTimeout(tick, PENDING_BLOCK_GAP);   // re-arm
       return;
     }
+    if (_heldItems.length) _releaseHeld(null);   // voice never came: stop holding the text
     if (_typewriterActive()) instantFlush();   // valve fired: old behaviour
     _releasePending();
   };
@@ -5157,6 +5523,47 @@ function _renderMilestoneBlockNow(name, label, reason, isReplay) {
 }
 
 // ── XP award block ─────────────────────────────────────────────────────────
+function _imgSrc(s) { return '/img/' + encodeURIComponent(s); }
+function _imgLightbox(open, im, silent) {
+  let lb = document.getElementById('img-lightbox');
+  if (!lb) {
+    lb = document.createElement('div'); lb.id = 'img-lightbox';
+    lb.innerHTML = '<img alt=""><div class="lb-cap"></div>';
+    lb.addEventListener('click', function(){ _imgLightbox(false, null, false); });
+    document.body.appendChild(lb);
+  }
+  clearTimeout(window._imgLbTimer);
+  if (open && im) {
+    lb.querySelector('img').src = _imgSrc(im.src);
+    lb.querySelector('.lb-cap').textContent = im.caption || '';
+    lb.classList.add('open');
+    if (im.big && !im._manual) window._imgLbTimer = setTimeout(function(){ _imgLightbox(false, null, false); }, 14000);
+  } else {
+    lb.classList.remove('open');
+  }
+  if (!silent && window._relaySend && !document.documentElement.classList.contains('tv-view'))
+    window._relaySend({ t: 'img', open: !!(open && im), im: open && im ? { src: im.src, caption: im.caption || '', big: false } : null });
+}
+window._relayHandlers = window._relayHandlers || [];
+window._relayHandlers.push(function(m){
+  if (m && m.t === 'img' && document.documentElement.classList.contains('tv-view')) _imgLightbox(!!m.open, m.im, true);
+});
+function renderImageBlock(im, replay) {
+  _flushForBlock();
+  const block = document.createElement('div');
+  block.className = 'img-block' + (im.kind === 'npc' || im.kind === 'monster' ? ' portrait' : (im.kind === 'map' ? ' wide' : ''));
+  const img = document.createElement('img');
+  img.src = _imgSrc(im.src); img.alt = im.caption || ''; img.loading = 'eager';
+  img.addEventListener('load', function(){ scrollToBottom(); });
+  block.appendChild(img);
+  if (im.caption) { const c = document.createElement('div'); c.className = 'img-cap'; c.textContent = im.caption; block.appendChild(c); }
+  block.addEventListener('click', function(){ _imgLightbox(true, { src: im.src, caption: im.caption, _manual: true }, false); });
+  textContent.appendChild(block);
+  _reanchorCursor();
+  scrollToBottom();
+  // never auto-enlarge: large view only on click (relayed PC -> TV)
+}
+
 function renderXpBlock(xpData) {
   _flushForBlock();
   const block = document.createElement('div');
@@ -5184,6 +5591,7 @@ function renderXpBlock(xpData) {
 
 // ── Replay batch (reconnect / session resume) ─────────────────────────
 function renderReplayBatch(items) {
+  items = (items || []).slice(-6);  // on refresh show only the last few blocks, not the whole history
   flushNewBlock();
   items.forEach(item => {
     if (!item) return;
@@ -5193,6 +5601,10 @@ function renderReplayBatch(items) {
     }
     if (item.milestone_award) {
       renderMilestoneBlock(item.milestone_award, item.label || 'Milestone', item.reason || '', true);
+      return;
+    }
+    if (item.image) {
+      renderImageBlock(item.image, true);
       return;
     }
     if (item.xp_award) {
@@ -5219,7 +5631,7 @@ function renderReplayBatch(items) {
         _appendInlineSegments(p, _mdParse(line));
         block.appendChild(p);
       });
-      _addTtsBar(block);
+      _addTtsBar(block, true);   // replayed history: never auto-narrate
       textContent.appendChild(block);
     }
   });
@@ -5296,7 +5708,38 @@ function handleIncomingText(text) {
     .replace(/\[[\d;?]*[a-zA-Z]/g, '')           // strip leftover CSI remnants
     .replace(/\r/g, '')
     .replace(/\t/g, '  ');
-  for (const item of _mdParse(cleaned)) {
+  const _items = _mdParse(cleaned);
+  const _nChars = _items.filter(i => typeof i === 'string').length;
+  const _plain = cleaned.replace(/[*_`#>]+/g, '').replace(/\s+/g, ' ').trim();
+
+  // Voice: start it on ARRIVAL and HOLD the text until the audio is ready, so
+  // text and voice start together. Skipped if something is already speaking or
+  // the tab is hidden; the text then types normally.
+  if (_ttsAutoNarrate && !window._tvPeerConnected && _TTS_AVAILABLE && !_ttsActivePlayBtn && !_narratedEarly &&
+      !document.hidden && _plain && _heldItems.length === 0) {
+    const blk = document.createElement('div');
+    const para = document.createElement('p');
+    para.textContent = _plain;
+    blk.appendChild(para);
+    _narratedEarly = true;
+    _earlyBlock = blk;
+    _ttsMakeStatus(blk)._fullText = _plain;
+    blk._syncHook = (dur, ctx) => {
+      if (_turn) { _turn.audioDur = dur; _turn.audioT0 = ctx.currentTime; _turn.audioEnded = false; }
+      _releaseHeld(dur);
+    };
+    blk._syncFail = () => _releaseHeld(null);
+    _turnBegin(_nChars, true);
+    _heldItems = _items;
+    clearTimeout(_heldTimer);
+    _heldTimer = setTimeout(() => _releaseHeld(null), 25000);   // never hold text forever
+    _ttsPlayBlock(document.createElement('button'), blk);
+    _ttsMountEarly();
+    return;
+  }
+
+  _turnBegin(_nChars, false);
+  for (const item of _items) {
     charQueue.push(item);
   }
 
@@ -5332,7 +5775,7 @@ function renderReplay(text) {
     _appendInlineSegments(p, _mdParse(line));
     block.appendChild(p);
   });
-  _addTtsBar(block);
+  _addTtsBar(block, true);   // replayed history: never auto-narrate
   textContent.appendChild(block);
 
   // Add a divider after replay so live text starts fresh
@@ -5426,7 +5869,7 @@ function _buildPlayerCard(p, solo) {
   hpFill.style.width = hpPct + '%';
   hpFill.style.backgroundColor = _hpColor(hpPct);
   hpTrack.appendChild(hpFill);
-  card.appendChild(hpTrack);
+  hpRow.insertBefore(hpTrack, hpRow.querySelector('.sb-hp-nums'));  // TV: bar inline between label and numbers
 
   if (hp.temp) {
     const tempEl = document.createElement('div');
@@ -5452,7 +5895,7 @@ function _buildPlayerCard(p, solo) {
     const xpPct = (xp.next && xp.current != null) ? Math.max(0, Math.min(100, (xp.current / xp.next) * 100)) : 0;
     xpFill.style.width = xpPct + '%';
     xpTrack.appendChild(xpFill);
-    card.appendChild(xpTrack);
+    xpRow.insertBefore(xpTrack, xpRow.querySelector('.sb-xp-nums'));  // TV: bar inline
   }
 
   // Quick combat stats
@@ -5467,7 +5910,7 @@ function _buildPlayerCard(p, solo) {
   if (quickLines.length) {
     const qs = document.createElement('div');
     qs.className = 'sb-quick-stats';
-    qs.innerHTML = quickLines.join('<br>');
+    qs.innerHTML = quickLines.join(' ');  // TV: one line
     card.appendChild(qs);
   }
 
@@ -5671,7 +6114,7 @@ function openSheet(name) {
     ['HP',       hp.current != null ? `${hp.current}/${hp.max}` : '—'],
     ['AC',       p.ac       ?? '—'],
     ['Init',     p.initiative ?? '—'],
-    ['Speed',    p.speed    != null ? p.speed + ' ft' : '—'],
+    ['Speed',    p.speed    != null ? p.speed + (p.speed <= 18 ? ' m' : ' ft') : '—'],
     ['Hit Dice', hd.die     ? `${hd.remaining ?? '?'}/${hd.max ?? '?'} ${hd.die}` : '—'],
   ];
   if (hp.temp) stripData.splice(1, 0, ['Temp HP', '+' + hp.temp]);
@@ -5888,8 +6331,65 @@ function openSheet(name) {
     content.appendChild(noData);
   }
 
+  _smBuildTabs(content);
   document.getElementById('sheet-modal').classList.add('open');
   document.getElementById('sheet-panel').scrollTop = 0;
+  _smFit();
+}
+
+// -- Sheet tabs: Stats | Features | Inventory (so a TV needs no scrolling) --
+let _smTab = 'stats';
+function _smBuildTabs(content) {
+  const kids = Array.from(content.children);
+  const panes = { stats: [], spells: [], features: [], items: [] };
+  const head = [];
+  let cur = 'head';
+  kids.forEach(k => {
+    if (k.classList.contains('sm-divider')) { k.remove(); return; }
+    if (k.classList.contains('sm-section-title')) {
+      const t = (k.textContent || '').trim();
+      if (/^Ability/i.test(t)) cur = 'head';
+      else if (/^Attacks/i.test(t)) cur = 'stats';
+      else if (/^Spellcasting/i.test(t)) cur = 'spells';
+      else if (/^Features/i.test(t)) cur = 'features';
+      else cur = 'items';
+    }
+    (cur === 'head' ? head : panes[cur]).push(k);
+  });
+  content.innerHTML = '';
+  const headEl = document.createElement('div'); headEl.className = 'sm-head';
+  head.forEach(k => headEl.appendChild(k)); content.appendChild(headEl);
+  const names = { stats: 'Attacks', spells: 'Spells', features: 'Features', items: 'Inventory' };
+  const bar = document.createElement('div'); bar.id = 'sm-tabs';
+  Object.keys(panes).forEach(key => {
+    if (!panes[key].length) return;
+    const pane = document.createElement('div'); pane.className = 'sm-tabpane'; pane.dataset.pane = key;
+    panes[key].forEach(k => pane.appendChild(k)); pane.dataset.count = panes[key].length;
+    content.appendChild(pane);
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'sm-tab'; b.dataset.tab = key; b.textContent = names[key];
+    b.addEventListener('click', e => { e.stopPropagation(); _smSetTab(key, false); });
+    bar.appendChild(b);
+  });
+  content.insertBefore(bar, headEl.nextSibling);
+  _smSetTab('stats', true);
+}
+function _smFit() {
+  const panel = document.getElementById('sheet-panel'); if (!panel) return;
+  if (!document.documentElement.classList.contains('tv-view')) { panel.style.removeProperty('--sf'); return; }
+  let f = 1; panel.style.setProperty('--sf', String(f));
+  for (let i = 0; i < 20 && panel.scrollHeight > panel.clientHeight + 1 && f > 0.4; i++) {
+    f -= 0.05; panel.style.setProperty('--sf', f.toFixed(2));
+  }
+}
+window.addEventListener('resize', () => { if (document.getElementById('sheet-modal').classList.contains('open')) _smFit(); });
+function _smSetTab(key, silent) {
+  const content = document.getElementById('sheet-content'); if (!content) return;
+  if (!content.querySelector('.sm-tabpane[data-pane="' + key + '"]')) key = 'stats';
+  _smTab = key;
+  content.querySelectorAll('.sm-tabpane').forEach(p => p.classList.toggle('active', p.dataset.pane === key));
+  content.querySelectorAll('.sm-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === key));
+  _smFit();
+  if (!silent && window._relaySend && !document.documentElement.classList.contains('tv-view')) window._relaySend({ t: 'sheet-tab', tab: key });
 }
 
 function closeSheet() {
@@ -6382,9 +6882,22 @@ async function _playSfx(name) {
   });
 })();
 
+function _sfxApply() {
+  try {
+    fetch('/audio-toggle', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sfx: _sfxOn }),
+    });
+  } catch (_) {}
+}
+// TV default: sound effects ON unless switched off here before.
+try { if (localStorage.getItem('dnd-sfx') !== '0') { _sfxOn = true; _setTrack(_sfxTrack, true); _sfxApply(); } } catch (_) {}
+
 document.getElementById('sfx-row').addEventListener('click', () => {
   _sfxOn = !_sfxOn;
   _setTrack(_sfxTrack, _sfxOn);
+  try { localStorage.setItem('dnd-sfx', _sfxOn ? '1' : '0'); } catch (_) {}
   try {
     fetch('/audio-toggle', {
       method: 'POST',
@@ -6410,7 +6923,7 @@ document.getElementById('speed-row').addEventListener('click', () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════
-// TTS — per-block narrator audio playback (Gemini Flash TTS)
+// TTS — per-block narrator audio playback (local Pocket TTS)
 // Only .dm-block and .npc-block get a TTS bar. Player/dice/tutor blocks
 // are excluded by omission in their renderers.
 //
@@ -6458,6 +6971,11 @@ function _ttsSetIdle(btn) {
 }
 
 function _ttsStopActive() {
+  if (_ttsActiveSource && _turn && _turn.voice) _turnVoiceEnded();   // user stopped the voice
+  if (_ttsActiveStatusBlock && _ttsActiveStatusBlock._ttsStatusEl) {
+    const st = _ttsActiveStatusBlock._ttsStatusEl.dataset.state;
+    if (st === 'gen' || st === 'play' || st === 'fallback') _ttsSetStatus(_ttsActiveStatusBlock, 'idle', 'stopped');
+  }
   if (_ttsActiveSource) {
     try { _ttsActiveSource.stop(); } catch (_) {}
     _ttsActiveSource = null;
@@ -6470,16 +6988,97 @@ function _ttsStopActive() {
 
 function _ttsExtractText(blockEl) {
   const clone = blockEl.cloneNode(true);
-  const bar = clone.querySelector('.tts-bar');
-  if (bar) bar.remove();
+  clone.querySelectorAll('.tts-bar, .tts-status').forEach(n => n.remove());
   return (clone.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 2000);
 }
 
-async function _ttsPlayBlock(btn, blockEl) {
+// -- Per-block TTS status (voice / state / progress) -------------------
+let _ttsActiveStatusBlock = null;
+let _earlyBlock = null;              // detached block whose TTS started on arrival
+
+function _ttsTag(blockEl) { return ''; }
+
+function _ttsFmt(t) { t = Math.max(0, Math.round(t)); return Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0'); }
+
+function _ttsMakeStatus(blockEl) {
+  if (blockEl._ttsStatusEl) return blockEl._ttsStatusEl;
+  const el = document.createElement('div');
+  el.className = 'tts-status st-idle';
+  el.innerHTML = '<span class="tts-st-dot"></span><span class="tts-st-voice"></span>' +
+                 '<span class="tts-st-text"></span><span class="tts-st-track"><span class="tts-st-fill"></span></span>' +
+                 '<button type="button" class="tts-st-retry" title="Stop the voice and ask the local voice again">&#8635; Retry</button>';
+  el._block = blockEl;
+  el.querySelector('.tts-st-retry').addEventListener('click', e => {
+    e.stopPropagation();
+    _ttsForceRetry(el._block, el._fullText);
+  });
+  blockEl._ttsStatusEl = el;
+  _ttsSetStatus(blockEl, 'idle', 'ready');
+  return el;
+}
+
+function _ttsClearTick(el) { if (el && el._tick) { clearInterval(el._tick); el._tick = null; } }
+
+function _ttsSetStatus(blockEl, state, text, pct) {
+  const el = blockEl && blockEl._ttsStatusEl;
+  if (!el) return;
+  _ttsClearTick(el);
+  el.dataset.state = state;
+  el.className = 'tts-status st-' + state;
+  el.querySelector('.tts-st-voice').textContent = 'Pocket TTS';
+  el.querySelector('.tts-st-text').textContent = text;
+  el.querySelector('.tts-st-fill').style.width = (pct == null ? '' : Math.round(pct * 100) + '%');
+}
+
+// Place the status line under its block: as a sibling when the block is already
+// in the feed, inside it for replayed blocks that are not attached yet.
+function _ttsMountStatus(blockEl) {
+  const el = _ttsMakeStatus(blockEl);
+  if (el.parentNode) return el;
+  if (blockEl.parentNode && blockEl.parentNode.id === 'text-content') blockEl.after(el);
+  else blockEl.appendChild(el);
+  return el;
+}
+
+// A voice that started on arrival is voiced from a detached block; hang its
+// status under the real block as soon as the typewriter has created it.
+function _ttsMountEarly() {
+  if (!_earlyBlock || !currentEl) return;
+  const el = _earlyBlock._ttsStatusEl;
+  if (el && !el.parentNode && !currentEl._ttsStatusEl) {
+    currentEl._ttsStatusEl = el;
+    el._block = currentEl;
+    currentEl.after(el);
+    _earlyBlock = null;
+  }
+}
+
+function _ttsErrText(err) {
+  const m = (err && err.message) || 'error', b = (err && err.body) || '';
+  if (/no local voice|503/i.test(m)) return 'local voice not installed';
+  if (/empty/i.test(m)) return 'empty audio from the local voice';
+  if (/502/.test(m)) return 'local voice failed' + (b ? ' (' + b.slice(0, 60) + ')' : '');
+  if (/^TTS \d+/.test(m)) return 'voice server error (' + m.slice(4) + ')';
+  return 'voice failed: ' + m.slice(0, 40);
+}
+
+// Ask the local voice again for a block: stop any audio and retry.
+function _ttsForceRetry(blockEl, fullText) {
+  if (!blockEl) return;
+  _ttsStopActive();
+  const btn = (blockEl.querySelector && blockEl.querySelector(':scope > .tts-bar .tts-play-btn')) || document.createElement('button');
+  btn.classList.remove('tts-playing', 'tts-loading');
+  _ttsPlayBlock(btn, blockEl, { force: true, text: fullText });
+}
+
+async function _ttsPlayBlock(btn, blockEl, opts) {
+  const force = !!(opts && opts.force);
   if (btn.classList.contains('tts-playing')) { _ttsStopActive(); return; }
   _ttsStopActive();
-  const text = _ttsExtractText(blockEl);
+  const text = (opts && opts.text) || _ttsExtractText(blockEl);
   if (!text) return;
+  _ttsMakeStatus(blockEl);
+  _ttsActiveStatusBlock = blockEl;
 
   const ctx = _getTtsCtx();
   const resumeP = ctx.state !== 'running' ? ctx.resume() : Promise.resolve();
@@ -6489,13 +7088,24 @@ async function _ttsPlayBlock(btn, blockEl) {
   btn.setAttribute('aria-label', 'Loading…');
   _ttsActivePlayBtn = btn;
 
+  const _genStart = Date.now();
+  _ttsSetStatus(blockEl, 'gen', 'generating speech... 0s');
+  blockEl._ttsStatusEl._tick = setInterval(() => {
+    const t = blockEl._ttsStatusEl && blockEl._ttsStatusEl.querySelector('.tts-st-text');
+    if (t) t.textContent = 'generating speech... ' + Math.round((Date.now() - _genStart) / 1000) + 's';
+  }, 500);
+
   try {
     const resp = await fetch('/tts', {
       method: 'POST',
       headers: _authHeaders(),
       body: JSON.stringify({ text }),
     });
-    if (!resp.ok) throw new Error(resp.status === 503 ? 'No local voice' : 'TTS ' + resp.status);
+    if (!resp.ok) {
+      const e = new Error(resp.status === 503 ? 'No local voice' : 'TTS ' + resp.status);
+      try { e.body = await resp.text(); } catch (_) { e.body = ''; }
+      throw e;
+    }
     const pcm = await resp.arrayBuffer();
     if (!pcm.byteLength) throw new Error('TTS empty');
     if (_ttsActivePlayBtn !== btn) return;          // stopped or replaced while loading
@@ -6518,8 +7128,19 @@ async function _ttsPlayBlock(btn, blockEl) {
     btn.setAttribute('aria-label', 'Stop narration');
     _ttsActiveSource = source;
 
+    const _dur = audioBuffer.duration, _t0 = ctx.currentTime;
+    _ttsSetStatus(blockEl, 'play', 'playing 0:00 / ' + _ttsFmt(_dur) + _ttsTag(blockEl), 0);
+    blockEl._ttsStatusEl._tick = setInterval(() => {
+      const el = blockEl._ttsStatusEl; if (!el) return;
+      const cur = Math.min(_dur, ctx.currentTime - _t0);
+      el.querySelector('.tts-st-text').textContent = 'playing ' + _ttsFmt(cur) + ' / ' + _ttsFmt(_dur) + _ttsTag(blockEl);
+      el.querySelector('.tts-st-fill').style.width = Math.round(cur / _dur * 100) + '%';
+    }, 250);
+
     source.onended = () => {
       if (_ttsActiveSource === source) {
+        _ttsSetStatus(blockEl, 'done', 'done ' + _ttsFmt(_dur) + _ttsTag(blockEl), 1);
+        if (blockEl._syncHook) _turnVoiceEnded();
         _ttsActiveSource = null;
         if (_ttsActivePlayBtn === btn) {
           _ttsSetIdle(btn);
@@ -6527,8 +7148,11 @@ async function _ttsPlayBlock(btn, blockEl) {
         }
       }
     };
+    if (blockEl._syncHook) blockEl._syncHook(_dur, ctx);   // text starts with the voice
     source.start(0);
   } catch (err) {
+    if (blockEl._syncFail) blockEl._syncFail();
+    _ttsSetStatus(blockEl, 'err', _ttsErrText(err) + (force ? ' - press Retry to try again' : ' - retries on next block'));
     if (_ttsActivePlayBtn === btn) {
       btn.textContent = (err.message || 'ERR').slice(0, 14);
       btn.classList.remove('tts-loading', 'tts-playing');
@@ -6543,7 +7167,33 @@ async function _ttsPlayBlock(btn, blockEl) {
   }
 }
 
-function _addTtsBar(blockEl) {
+// -- Cache badges: is this block's voice clip already stored, or will it be generated? --
+let _ttsCacheTimer = null;
+function _ttsScheduleCacheRefresh(ms) {
+  clearTimeout(_ttsCacheTimer);
+  _ttsCacheTimer = setTimeout(_ttsRefreshCacheBadges, ms == null ? 250 : ms);
+}
+async function _ttsRefreshCacheBadges() {
+  const bars = Array.from(document.querySelectorAll('.tts-bar')).filter(b => b.querySelector('.tts-cache-badge')).slice(-30);
+  if (!bars.length) return;
+  const texts = bars.map(b => _ttsExtractText(b.parentElement));
+  try {
+    const r = await fetch('/tts-cached', { method: 'POST', headers: _authHeaders(), body: JSON.stringify({ texts }) });
+    if (!r.ok) return;
+    const j = await r.json();
+    bars.forEach((b, i) => {
+      const el = b.querySelector('.tts-cache-badge'); if (!el || j.cached[i] == null) return;
+      const hit = !!j.cached[i];
+      el.textContent = hit ? '\u25cf cached' : '\u25cb will generate';
+      el.classList.toggle('hit', hit); el.classList.toggle('miss', !hit);
+      el.title = hit ? 'Stored clip: plays instantly'
+                     : 'Not stored yet: the first play takes a couple of seconds to generate';
+    });
+  } catch (_) {}
+}
+setInterval(() => { if (!document.hidden) _ttsRefreshCacheBadges(); }, 20000);
+
+function _addTtsBar(blockEl, noAutoNarrate) {
   if (!_TTS_AVAILABLE || !blockEl) return;
   if (blockEl.querySelector(':scope > .tts-bar')) return;  // already added
 
@@ -6557,9 +7207,16 @@ function _addTtsBar(blockEl) {
   playBtn.addEventListener('click', e => { e.stopPropagation(); _ttsPlayBlock(playBtn, blockEl); });
   bar.appendChild(playBtn);
 
-  blockEl.appendChild(bar);
+  const _cb = document.createElement('span');
+  _cb.className = 'tts-cache-badge'; _cb.textContent = '…';
+  bar.appendChild(_cb);
+  playBtn.addEventListener('click', () => { _ttsScheduleCacheRefresh(5000); setTimeout(_ttsRefreshCacheBadges, 15000); });
 
-  if (_ttsAutoNarrate) {
+  blockEl.appendChild(bar);
+  _ttsScheduleCacheRefresh();
+  _ttsMountStatus(blockEl);
+
+  if (_ttsAutoNarrate && !noAutoNarrate && !window._tvPeerConnected) {
     // Defer one tick so the bar is in the DOM before triggering the click path
     setTimeout(() => _ttsPlayBlock(playBtn, blockEl), 0);
   }
@@ -6603,9 +7260,9 @@ const _THEME_LABEL = { dark: 'Dark', light: 'Light', auto: 'Auto' };
 function _readStoredTheme() {
   try {
     const v = localStorage.getItem('dnd-theme');
-    return (v === 'dark' || v === 'light' || v === 'auto') ? v : 'auto';
+    return (v === 'dark' || v === 'light' || v === 'auto') ? v : 'dark';
   } catch (_) {
-    return 'auto';
+    return 'dark';
   }
 }
 
@@ -6729,13 +7386,13 @@ function _effectiveTheme(theme) {
   const val = document.getElementById('ts-val');
   if (!dec || !inc || !val) return;
   const MIN = 0.8, MAX = 2.0, STEP = 0.1;
-  let scale = parseFloat(localStorage.getItem('dnd-text-scale'));
-  if (!(scale >= MIN && scale <= MAX)) scale = 1;
+  let scale = parseFloat(localStorage.getItem('dnd-text-scale-tv3'));
+  if (!(scale >= MIN && scale <= MAX)) scale = 0.75;  // TV default
   const clamp = x => Math.min(MAX, Math.max(MIN, Math.round(x * 100) / 100));
   function apply() {
     document.documentElement.style.setProperty('--text-scale', String(scale));
     val.textContent = Math.round(scale * 100) + '%';
-    try { localStorage.setItem('dnd-text-scale', String(scale)); } catch (_) {}
+    try { localStorage.setItem('dnd-text-scale-tv3', String(scale)); } catch (_) {}
   }
   apply();
   dec.addEventListener('click', e => { e.stopPropagation(); scale = clamp(scale - STEP); apply(); });
@@ -6751,7 +7408,7 @@ function _effectiveTheme(theme) {
   const val = document.getElementById('vb-val');
   if (!slider || !val) return;
   const stored = parseInt(localStorage.getItem('dnd-narration-words') || '', 10);
-  if (stored >= 250 && stored <= 2500) slider.value = String(stored);
+  if (stored >= 250 && stored <= 2500) slider.value = String(stored); else slider.value = '500';  // TV default
   function label() { val.textContent = slider.value + 'w'; }
   label();
   function persist() {
@@ -6813,6 +7470,25 @@ function _buildCharTabs(players) {
     });
     _charTabs.appendChild(btn);
   });
+  _applyInputGate();
+}
+
+// -- Input gate: only the characters the DM is waiting on can type --
+let _inputAllowed = null;   // null = everyone
+function _applyInputGate() {
+  const allowed = _inputAllowed ? _inputAllowed.map(n => n.toLowerCase()) : null;
+  const tabs = Array.from(_charTabs.querySelectorAll('.char-tab'));
+  tabs.forEach(b => {
+    const ok = !allowed || allowed.includes((b.dataset.char || '').toLowerCase());
+    b.style.display = ok ? '' : 'none';
+  });
+  const visible = tabs.filter(b => b.style.display !== 'none');
+  if (allowed && !visible.some(b => b.dataset.char === _selectedChar) && visible.length) visible[0].click();
+  const none = allowed && visible.length === 0;
+  _inputText.disabled = !!none; _stageBtn.disabled = !!none;
+  const goB = document.getElementById('go-btn'); if (goB && none) goB.disabled = true;
+  _inputText.placeholder = none ? 'The DM is resolving this — no input needed right now.' : 'Enter action or dialogue…';
+  _charTabs.dataset.gate = allowed ? (visible.map(b => b.dataset.char).join(', ') || 'none') : 'all';
 }
 
 // ── Render staged queue ───────────────────────────────────────────
@@ -6868,13 +7544,14 @@ function _renderStagedQueue(data) {
     acts.className = 'staged-actions';
 
     const readyBtn = document.createElement('button');
-    readyBtn.className = 'ready-btn' + (info.ready ? ' is-ready' : '');
-    readyBtn.textContent = info.ready ? '✓ Ready' : 'Ready';
-    readyBtn.addEventListener('click', () => _toggleReady(char));
+    readyBtn.className = 'ready-btn';
+    readyBtn.textContent = 'Edit';
+    readyBtn.title = 'Take this action back into the text box to change it';
+    readyBtn.addEventListener('click', () => _editStaged(char));
 
     acts.appendChild(readyBtn);
 
-    if (!info.ready) {
+    if (false) {
       const skipBtn = document.createElement('button');
       skipBtn.className = 'skip-btn';
       skipBtn.textContent = 'Skip';
@@ -6904,7 +7581,7 @@ function _renderStagedQueue(data) {
     const readyCount = entries.filter(([, v]) => v.ready).length;
     _inputBadge.textContent = readyCount === entries.length
       ? `${entries.length} ready` : `${entries.length} staged`;
-    if (_inputPanel.classList.contains('collapsed')) {
+    if (document.body.classList.contains('input-only') && _inputPanel.classList.contains('collapsed')) {
       _inputPanel.classList.remove('collapsed');
       _inputArrow.textContent = '▼';
     }
@@ -6931,6 +7608,28 @@ function _renderStagedQueue(data) {
   } else {
     _waitingEl.style.display = 'none';
   }
+  // GO mode: nothing fires until GO is pressed
+  if (entries.length > 0) {
+    _waitingEl.style.display = 'flex';
+    _waitingEl.innerHTML = '<span class="queue-label">Waiting for GO — discuss and edit freely</span>' +
+      entries.map(([c]) => '<span class="queue-check">' + c + '</span>').join('');
+  }
+  const _gb = document.getElementById('go-btn');
+  if (_gb) { _gb.disabled = entries.length === 0; _gb.textContent = entries.length ? 'GO ▶ (' + entries.length + ')' : 'GO ▶'; }
+}
+
+async function _editStaged(char) {
+  const info = (_stagedData || {})[char]; if (!info) return;
+  const tab = _charTabs && _charTabs.querySelector('.char-tab[data-char="' + char.replace(/"/g, '') + '"]');
+  if (tab) tab.click();
+  _inputText.value = info.text;
+  await _unstageAction(char);
+  _inputText.focus();
+}
+
+async function _goNow() {
+  const b = document.getElementById('go-btn'); if (b) b.disabled = true;
+  try { await fetch('/player-input/go', { method: 'POST', headers: _authHeaders(), body: '{}' }); } catch (_) {}
 }
 
 // ── Autorun cycle countdown ───────────────────────────────────────
@@ -6945,7 +7644,7 @@ function _startAutorunCountdown(interval, ts) {
   cancelAnimationFrame(_autorunRaf);
 
   // Auto-expand the panel so the countdown is visible
-  if (_inputPanel && _inputPanel.classList.contains('collapsed')) {
+  if (document.body.classList.contains('input-only') && _inputPanel && _inputPanel.classList.contains('collapsed')) {
     _inputPanel.classList.remove('collapsed');
     if (_inputArrow) _inputArrow.textContent = '▼';
   }
@@ -7037,7 +7736,8 @@ async function _stageAction() {
         localStorage.removeItem('dnd_staged_input');
         localStorage.removeItem('dnd_awaiting_approval');
         _inputText.value = '';
-        _toggleReady(_selectedChar);   // one-tap: staging immediately sends to the DM
+        // GO mode: staging does not send; the GO button does
+        _turnStart();                  // loading bar until text AND voice are done
         _setPhoneStatus('sent');
         _sent = true;
         break;
@@ -7098,6 +7798,7 @@ async function _skipTurn(char) {
 }
 
 _stageBtn.addEventListener('click', _stageAction);
+document.getElementById('go-btn').addEventListener('click', _goNow);
 _skipTurnBtn.addEventListener('click', () => _skipTurn(_selectedChar));
 
 // Ctrl/Cmd+Enter stages from textarea
@@ -7360,7 +8061,7 @@ function _setControlsVisible(visible) {
 }
 if (_controlsBtn) {
   _controlsBtn.addEventListener('click', () => _setControlsVisible(!_controlsVisible));
-  try { if (localStorage.getItem('dnd-controls-visible') === '0') _setControlsVisible(false); } catch (e) {}
+  try { if (localStorage.getItem('dnd-controls-visible') !== '1') _setControlsVisible(false); } catch (e) {}  // TV default: hidden
 }
 
 // Toggle button becomes visible once sidebar has data (called from SSE handler)
@@ -7412,6 +8113,8 @@ function connect() {
         updateRulesetBadge(payload.stats.ruleset);
       }
     }
+    if (payload.input_gate !== undefined) { _inputAllowed = payload.input_gate; _applyInputGate(); }
+    if (window._tvStagedUpdate) window._tvStagedUpdate(payload);
     if (payload.staged_inputs !== undefined) {
       _handleStagedInputs(payload.staged_inputs);
     }
@@ -7477,6 +8180,7 @@ function connect() {
       _setSidebarVisible(true);   // reset to visible for next campaign
       clearDisplay();
     }
+    if (payload.relay) { (window._relayHandlers || []).forEach(function(h){ try { h(payload.relay); } catch (_) {} }); return; }
     if (payload.replay_batch) {
       renderReplayBatch(payload.replay_batch);
     }
@@ -7499,7 +8203,10 @@ function connect() {
     if (payload.xp_award) {
       renderXpBlock(payload.xp_award);
     }
-    if (payload.text && !payload.inspiration_award && !payload.milestone_award && !payload.milestone_spend && !payload.xp_award) {
+    if (payload.image) {
+      renderImageBlock(payload.image, false);
+    }
+    if (payload.text && !payload.image && !payload.inspiration_award && !payload.milestone_award && !payload.milestone_spend && !payload.xp_award) {
       if (payload.action) {
         renderActionBlock(payload.action, payload.text);
       } else if (payload.player) {
@@ -8254,6 +8961,174 @@ function _initDicePad() {
   }
   window._onDiceRequestCancelled = _onDiceRequestCancelled;
 }
+</script>
+<span id="tv-link"></span>
+<button id="view-toggle" type="button" title="Switch between TV View and PC View (Alt+V)"></button>
+<script>
+(function(){
+  var b=document.getElementById('view-toggle'), r=document.documentElement;
+  function label(){ b.textContent = r.classList.contains('tv-view') ? 'PC view' : 'TV view'; }
+  function flip(){
+    var tv=!r.classList.contains('tv-view');
+    r.classList.toggle('tv-view', tv);
+    try{ sessionStorage.setItem('dnd-view', tv?'tv':'pc'); }catch(e){}
+    label();
+  }
+  if (/[?&](view=input|char=|character=)/.test(location.search)) { b.style.display='none'; return; }
+  label(); b.addEventListener('click', flip);
+  document.addEventListener('keydown', function(e){ if(e.altKey && (e.key==='v'||e.key==='V')){ e.preventDefault(); flip(); } });
+})();
+</script>
+<script>
+// TV View: start the story column right after the side panel, measured (not assumed), with equal small margins.
+(function(){
+  var r=document.documentElement;
+  function fit(){
+    var sb=document.getElementById('sidebar');
+    if(!r.classList.contains('tv-view') || !sb){ r.style.removeProperty('--tv-left'); return; }
+    var right=sb.getBoundingClientRect().right;
+    var gap=Math.round(window.innerWidth*0.055);
+    r.style.setProperty('--tv-left', Math.round(right+gap)+'px');
+  }
+  window.addEventListener('resize', fit);
+  window.addEventListener('load', function(){ fit(); setTimeout(fit,500); setTimeout(fit,2000); });
+  var sbEl=document.getElementById('sidebar');
+  if (sbEl && 'ResizeObserver' in window) new ResizeObserver(fit).observe(sbEl);
+  new MutationObserver(fit).observe(r,{attributes:true,attributeFilter:['class']});
+  setInterval(fit, 3000);
+})();
+</script>
+<script>
+// TV View: show what the players staged at the bottom of the story, until the DM starts processing it.
+(function(){
+  var last={}, sent=false, el=null;
+  function box(){
+    var tc=document.getElementById('text-content'); if(!tc) return null;
+    if(!el){ el=document.createElement('div'); el.id='tv-staged';
+      new MutationObserver(function(){ if(el.classList.contains('show') && tc.lastElementChild!==el) tc.appendChild(el); }).observe(tc,{childList:true}); }
+    return el;
+  }
+  function render(){
+    var e=box(); if(!e) return;
+    var names=Object.keys(last);
+    if(!names.length){ e.className=''; e.innerHTML=''; return; }
+    e.className='show'+(sent?' sent':'');
+    var head = sent ? 'Sent to the DM…' : 'Staged actions — waiting for GO';
+    var h='<div class="tvs-head"></div>';
+    e.innerHTML=h; e.firstChild.textContent=head;
+    names.forEach(function(n){
+      var d=document.createElement('div'); d.className='tvs-line';
+      var a=document.createElement('span'); a.className='tvs-name'; a.textContent=n+': ';
+      var b=document.createElement('span'); b.textContent=last[n].text;
+      d.appendChild(a); d.appendChild(b); e.appendChild(d);
+    });
+    var tc=document.getElementById('text-content'); if(tc.lastElementChild!==e) tc.appendChild(e);
+    var sc=document.getElementById('text-scroll'); if(sc) sc.scrollTop=sc.scrollHeight;
+  }
+  window._tvStagedUpdate=function(p){
+    if(p.dm_processing){ last={}; sent=false; render(); return; }
+    if(p.staged_inputs!==undefined){
+      var d=p.staged_inputs||{};
+      if(Object.keys(d).length){ last=d; sent=false; }
+      else if(p.queue_status && p.queue_status.length && Object.keys(last).length){ sent=true; }
+      else { last={}; sent=false; }
+      render();
+    }
+  };
+})();
+</script>
+<script>
+// Spell / rule pop-ups opened from a character sheet on the PC also open on the TV.
+(function(){
+  var r=document.documentElement, modal=document.getElementById('srd-modal'), body=document.getElementById('srd-body'), panel=document.getElementById('srd-panel');
+  if(!modal) return;
+  function isTV(){ return r.classList.contains('tv-view'); }
+  function fit(){
+    if(!isTV()){ panel.style.removeProperty('--sf'); return; }
+    var f=1; panel.style.setProperty('--sf','1');
+    for(var i=0;i<24 && panel.scrollHeight>panel.clientHeight+1 && f>0.4;i++){ f-=0.05; panel.style.setProperty('--sf',f.toFixed(2)); }
+  }
+  new MutationObserver(fit).observe(body,{childList:true,subtree:true});
+  window.addEventListener('resize', function(){ if(modal.classList.contains('open')) fit(); });
+  var orig=openSrdModal;
+  openSrdModal=function(name,category,level){
+    orig(name,category,level);
+    if(!isTV() && window._relaySend) window._relaySend({t:'srd',open:true,name:name,category:category||'',level:level||null});
+  };
+  new MutationObserver(function(){
+    if(isTV() || modal.classList.contains('open') || !window._relaySend) return;
+    window._relaySend({t:'srd',open:false});
+  }).observe(modal,{attributes:true,attributeFilter:['class']});
+  window._relayHandlers=window._relayHandlers||[];
+  window._relayHandlers.push(function(m){
+    if(!m || m.t!=='srd' || !isTV()) return;
+    if(m.open && m.name) openSrdModal(m.name,m.category||'',m.level||null); else closeSrdModal();
+  });
+})();
+</script>
+<script>
+// Controller sync: opening/closing a character sheet in PC View mirrors to TV View (same browser, other tab).
+(function(){
+  var modal=document.getElementById('sheet-modal'); if(!modal) return;
+  window._relayHandlers = window._relayHandlers || [];
+  window._relaySend = function(msg){ try { fetch('/relay', { method:'POST', headers:_authHeaders(), body:JSON.stringify({msg:msg}) }).catch(function(){}); } catch(_){} };
+  var r=document.documentElement;
+  function isTV(){ return r.classList.contains('tv-view'); }
+  new MutationObserver(function(){
+    if (isTV()) return;
+    var open=modal.classList.contains('open');
+    _relaySend({t:'sheet', open:open, name: open ? (typeof _openSheetName!=='undefined' ? _openSheetName : null) : null});
+  }).observe(modal,{attributes:true,attributeFilter:['class']});
+  window._relayHandlers.push(function(m){
+    if(!m || m.t!=='sheet' || !isTV()) return;
+    if (m.open && m.name) openSheet(m.name); else closeSheet();
+  });
+  window._relayHandlers.push(function(m){ if(m && m.t==='sheet-tab' && isTV() && typeof _smSetTab==='function') _smSetTab(m.tab, true); });
+})();
+</script>
+<script>
+// TV link: a PC View tab can play narration on the TV View tab (the cast tab) instead of locally.
+(function(){
+  if (/[?&](view=input|char=|character=)/.test(location.search)) return;
+  var r=document.documentElement, link=document.getElementById('tv-link');
+  var lastSeen=0, audioReady=false;
+  function isTV(){ return r.classList.contains('tv-view'); }
+  function ctxRunning(){ try { return !!(typeof _ttsCtx!=='undefined' && _ttsCtx && _ttsCtx.state==='running'); } catch(e){ return false; } }
+  function hello(){ if(isTV()) _relaySend({t:'tv-hello', audio: ctxRunning()}); }
+  function refresh(){
+    var on = (Date.now()-lastSeen) < 5000 && !isTV();
+    window._tvPeerConnected = on;
+    if (!link) return;
+    if (on) { link.style.display='block'; link.className = audioReady ? '' : 'warn';
+      link.textContent = audioReady ? '● TV connected – sound plays on TV' : '● TV connected – click once on the TV tab to enable sound'; }
+    else link.style.display='none';
+  }
+  setInterval(function(){ hello(); refresh(); }, 2000);
+  setTimeout(function(){ _relaySend({t:'ping'}); }, 1500);
+  // PC side: intercept the speaker buttons
+  document.addEventListener('click', function(e){
+    if (isTV() || !window._tvPeerConnected) return;
+    var b = e.target.closest && e.target.closest('.tts-play-btn'); if(!b) return;
+    var bar=b.closest('.tts-bar'); var blk = bar && bar.parentElement; if(!blk) return;
+    e.stopImmediatePropagation(); e.preventDefault();
+    _relaySend({t:'tts', text: _ttsExtractText(blk)});
+  }, true);
+  window._relayHandlers.push(function(m){
+    m = m || {};
+    if (m.t==='ping') { hello(); return; }
+    if (m.t==='tv-hello' && !isTV()) { lastSeen=Date.now(); audioReady=!!m.audio; refresh(); return; }
+    if (m.t==='tts' && isTV() && m.text) {
+      var found=null;
+      document.querySelectorAll('.tts-bar').forEach(function(bar){
+        var blk=bar.parentElement; if(!found && blk && _ttsExtractText(blk)===m.text) found=bar.querySelector('.tts-play-btn');
+      });
+      if (!ctxRunning()) { try{ _getTtsCtx().resume(); }catch(_){}; try{ _showToast('Click once on this screen to enable sound', 6000); }catch(_){} }
+      if (found) found.click();
+      else { var d=document.createElement('div'); var p=document.createElement('p'); p.textContent=m.text; d.appendChild(p);
+             _ttsPlayBlock(document.createElement('button'), d, {text:m.text}); }
+    }
+  });
+})();
 </script>
 </body>
 </html>

@@ -30,6 +30,8 @@ Open the web **Main Menu**. After this, the player works in the browser and you 
    - `DM rolls everything openly` → write `roll_mode: auto`. You resolve PC rolls yourself with full math shown.
 
    Default to `roll_mode: players` if the question is dismissed.
+
+   **Q3 *"Language?"*** — `English` (default) · `Nederlands (Dutch)` · Other. Write `language: en` or `language: nl` (or the ISO code) to `state.md → ## Session Flags`. If not English: write ALL player-facing campaign content (world, NPCs, quests) and ALL narration, NPC dialogue, rules answers and display text in that language, keep game terms consistent via `state.md → ## Glossary` (settle one translation per term the first time it appears). For Dutch (`nl`): use ONLY metric units (cm/m, g/kg) everywhere — narration, sheets, spell ranges (5 ft = 1,5 m; 30 ft = 9 m; 60 ft = 18 m), and note it in `## DM Style Notes` (metrisch). **Hybrid language (Nick's rule, 2026-11-14):** in a Dutch campaign keep ALL game terms and labels in ENGLISH (STR/DEX/CON/INT/WIS/CHA, Armor Class, Hit Points, Saving Throw, Perception, Advantage, Spell Slot, Initiative, Race/Class/Alignment, names of features, spells, skills and attacks); say the English word and explain it briefly in Dutch. Narration, NPC speech and explanations stay Dutch. Write this as the first line of `## DM Style Notes` and do not translate sheet labels. Character sheet PDFs: `python ~/.claude/dnd/tools/sheet_pdf.py <campaign>`. Script names, flags and file/section headings stay English. For a family table (a child playing), keep vocabulary simple and the tone warm.
 2. **Ruleset selection (added 2026-05-08).** Read the default with `python3 ${CLAUDE_SKILL_DIR}/scripts/settings.py show` (`default_ruleset`) and recommend it. Ask: *"D&D 5e ruleset for this campaign? **2014** (SRD 5.1, default — full mechanics, classic Player's Handbook structure) or **2024** (SRD 5.2, weapon mastery + origin feats + background ASIs + revised exhaustion)?"* Default to `2014` if no answer or ambiguous. Write the chosen value to `state.md` header line as `**Ruleset:** 2014` or `**Ruleset:** 2024`.
 
    If 2024 was chosen: verify the dataset exists with `ls ${CLAUDE_SKILL_DIR}/data/dnd5e_srd_2024.json`. If missing, run `python3 ${CLAUDE_SKILL_DIR}/scripts/build_srd.py --ruleset 2024` (one-time, ~3 min). Until the dataset exists, lookup-based features will fall back to 2014.
@@ -125,6 +127,8 @@ Open the web **Main Menu**. After this, the player works in the browser and you 
    - Exit code `2` (`missing`) → state.md not found; do not proceed with /dm:dnd load. Surface error to DM.
 
    Future migrations (e.g. when 2026 ruleset arrives) follow the same pattern: a small migrator script under `scripts/migrate_<topic>.py` invoked here as a `--check` then `--yes` pair.
+
+2b. **Read `language:` from `## Session Flags`** (default `en`). If not `en`, run the whole session in that language (narration, NPC speech, rules answers, recap, display sends) and use `## Glossary` for game terms. Legacy campaigns without the flag are English; the player can switch any time by asking (write the new value to Session Flags).
 
 3. **Read campaign ruleset** for this session: `python3 ${CLAUDE_SKILL_DIR}/scripts/paths.py campaign-ruleset <name>` (or import `campaign_ruleset` directly). Stash the result; pass `--ruleset <value>` to `lookup.py`, `build_supplemental.py`, and `combat.py` mastery calls so they route to the correct dataset. The display companion picks up the same value automatically via `push_stats.py --set-campaign`.
 

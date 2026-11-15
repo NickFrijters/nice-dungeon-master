@@ -10,6 +10,21 @@ Versions before **1.6.0** are reconstructed retroactively from git history; the 
 
 ## [Unreleased]
 
+## [2.11.0] — 2026-11-15 — TV/PC display merged
+
+### Added — the owner's TV/PC display work, merged into the fork
+
+The display features that had only existed as patched copies in a local plugin install are now part of the repo, merged (three-way, against upstream 2.7.0) with the Main Menu, Settings and local-voice work:
+
+- **TV View / PC View**: TV View is a no-input mirror (relay) of the PC; clicking PC View on one screen puts the others into TV View. Spell and rule pop-ups opened on the PC open on the TV too.
+- **GO mode and the input gate** (`/player-input/go`, `/input-gate`): the DM controls who may enter input and when staged actions fire.
+- **Per-block voice status line** (voice, state, progress) with a Retry button, and a **turn progress bar** that runs until both text and voice are done. Text is held until its voice is ready so they start together. Cache badges show whether a block's clip is already stored.
+- **Character sheet tabs** and **Dutch explanations** for spells, features, conditions and items (`/srd-lookup` uses `~/.claude/dnd/tools/srd_nl.json` for campaigns with `language: nl`).
+- **Flavour images**: `send.py --image ID --caption "..."` and `/img/<file>` from `<campaign>/images/`.
+- **Language question** at campaign start (English or Dutch, with the Dutch hybrid rule).
+
+Adapted on the way in: everything that talked to the remote voice (voice menu, quota and API-call wording, model tags, retry-Gemini) now speaks of the local Pocket TTS voice only. `DND_DISPLAY_PORT` runs a second display beside the live one for testing.
+
 ## [2.10.2] — 2026-11-15 — Tests stay out of the real folder
 
 ### Fixed — tests wrote into the real runtime folder

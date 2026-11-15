@@ -48,6 +48,8 @@ def _harness(script: str) -> dict:
     prelude = """
 let isTyping = false;
 let charQueue = [];
+//: Text held back until its voice is ready (the TV/voice sync work). Empty here.
+let _heldItems = [];
 //: The valve path calls instantFlush() — stubbed so the harness exercises the
 //: real branch rather than crashing on a DOM function it has no use for.
 let instantFlushCalls = 0;

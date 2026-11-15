@@ -340,6 +340,9 @@ def _device_ok(device_id: str, ip: str) -> str:
 # wrapper.py to inject into Claude's PTY stdin.
 
 _staged: dict[str, dict] = {}   # {char_name: {text, ready, timestamp}}
+# GO mode: staging never fires the DM by itself. Players discuss and edit freely until
+# someone presses GO (POST /player-input/go). Set DND_REQUIRE_GO=0 for the old behaviour.
+_REQUIRE_GO = os.environ.get("DND_REQUIRE_GO", "1") != "0"
 _staged_lock = threading.Lock()
 _expected_count = 1             # updated when stats arrive; min 1
 _autorun_threshold: Optional[int] = None  # overrides _expected_count when set via push_stats --autorun-threshold
@@ -379,13 +382,15 @@ def _staged_snapshot() -> dict:
     return {k: {"text": v["text"], "ready": v["ready"]} for k, v in _staged.items()}
 
 
-def _check_auto_trigger() -> None:
+def _check_auto_trigger(force: bool = False) -> None:
     """Move staged-and-ready actions into the DM-gated queue file (.input_queue).
 
     .input_queue is NOT injected immediately — wrapper.py picks it up the next
     time the DM presses Enter (or Claude explicitly triggers via .input_trigger).
     This gives the DM control over when player actions enter Claude's context.
     """
+    if _REQUIRE_GO and not force:
+        return
     with _staged_lock:
         if not _staged:
             return
@@ -393,7 +398,7 @@ def _check_auto_trigger() -> None:
         all_ready       = all(v["ready"] for v in _staged.values())
         threshold       = _autorun_threshold if _autorun_threshold is not None else _expected_count
         enough          = len(_staged) >= threshold or everybody_ready
-        if not (all_ready and enough):
+        if not force and not (all_ready and enough):
             return
         char_names = list(_staged.keys())
         lines      = [f'[{c}]: {e["text"]}' for c, e in _staged.items()]
@@ -411,6 +416,32 @@ def _check_auto_trigger() -> None:
             _queue_status.clear()
             _queue_status.extend(char_names)
     _broadcast({"staged_inputs": {}, "queue_status": list(char_names)})
+
+
+# ─── Input gate: only characters the DM is waiting on may enter input ───────────
+# Explicit gate (POST /input-gate {"allowed": [names] | null}) wins. Otherwise, in
+# combat (a turn_order with a current actor) only that PC may act; on a monster's
+# turn nobody. Outside combat everybody may type. None = no restriction.
+_input_gate: Optional[list] = None
+
+
+def _effective_allowed() -> Optional[list]:
+    if _input_gate is not None:
+        return list(_input_gate)
+    to = _current_stats.get("turn_order") if isinstance(_current_stats, dict) else None
+    if isinstance(to, dict) and to.get("current"):
+        cur = str(to["current"])
+        pcs = [p.get("name", "") for p in _current_stats.get("players", [])]
+        match = [n for n in pcs if n.lower() == cur.lower()]
+        return match  # [] on a monster's turn
+    return None
+
+
+def _gate_blocks(character: str) -> bool:
+    allowed = _effective_allowed()
+    if allowed is None:
+        return False
+    return character.lower() not in [a.lower() for a in allowed]
 
 
 def _token_ok() -> bool:
@@ -1365,6 +1396,42 @@ def favicon():
                                mimetype="image/vnd.microsoft.icon")
 
 
+# --- Dutch explanations: names stay English, the explanation is in the campaign language ---
+_NL_FILE = os.path.join(os.path.expanduser("~"), ".claude", "dnd", "tools", "srd_nl.json")
+_nl_cache = {"mtime": None, "data": {}}
+
+
+def _campaign_language() -> str:
+    try:
+        camp = open(CAMP_FILE, encoding="utf-8").read().strip()
+        txt = (_find_campaign(camp) / "state.md").read_text(encoding="utf-8")
+        m = re.search(r"^language:\s*(\w+)", txt, re.M)
+        return (m.group(1).lower() if m else "en")
+    except Exception:
+        return "en"
+
+
+def _nl_entry(name, category):
+    try:
+        mt = os.path.getmtime(_NL_FILE)
+        if _nl_cache["mtime"] != mt:
+            _nl_cache["data"] = json.load(open(_NL_FILE, encoding="utf-8"))
+            _nl_cache["mtime"] = mt
+    except Exception:
+        return None
+    d = _nl_cache["data"]
+    key = re.sub(r"\s*\(.*?\)\s*$", "", name.strip().lower())
+    if category in ("item", "equipment", "magic_item") and (key + " (item)") in d:
+        return d[key + " (item)"]
+    return d.get(key)
+
+
+def _nl_text(name, e):
+    title = name + ("  [" + e["title_suffix"] + "]" if e.get("title_suffix") else "")
+    meta = e.get("meta") or ["Type: " + str(e.get("cat", "")).title()]
+    return "## " + title + "\n\n" + "\n".join(meta) + "\n\n" + e.get("desc", "")
+
+
 @app.route("/srd-lookup")
 def srd_lookup():
     """Look up a spell, item, condition, feature, or monster by name.
@@ -1385,7 +1452,13 @@ def srd_lookup():
     if not _SRD_AVAILABLE or _lookup is None:
         return jsonify({"found": False, "error": "SRD dataset not loaded"}), 503
 
+    if _campaign_language().startswith("nl"):
+        _e = _nl_entry(name, category)
+        if _e:
+            return jsonify({"found": True, "name": name, "category": _e.get("cat", category or ""), "text": _nl_text(name, _e)})
     text = _lookup.lookup_with_level(name, category=category, level=level)
+    if text and _campaign_language().startswith("nl"):
+        text += "\n\n(Nog geen Nederlandse uitleg beschikbaar; de DM kan die toevoegen.)"
     if text:
         rec = _lookup.lookup_record(name, category=category)
         resolved_cat = (rec or {}).get("_cat", category or "")
@@ -1462,7 +1535,7 @@ def chunk():
         return "Forbidden", 403
     data = request.get_json(silent=True) or {}
     raw = data.get("text", "")
-    if not raw:
+    if not raw and not data.get("image"):
         return "", 204
 
     is_action      = bool(data.get("action"))
@@ -1530,6 +1603,23 @@ def chunk():
         if stats_snapshot is not None:
             _persist_stats()
             _broadcast({"stats": stats_snapshot})
+        return "", 204
+
+    if data.get("image"):
+        im = data.get("image")
+        if not isinstance(im, dict) or not im.get("src"):
+            return "", 204
+        im = {"src": str(im["src"])[:200], "caption": str(im.get("caption", ""))[:240],
+              "big": bool(im.get("big")), "kind": str(im.get("kind", ""))[:20]}
+        payload = {"image": im, "text": im["caption"]}
+        log_entry = {"image": im, "text": im["caption"]}
+        with _text_log_lock:
+            _text_log.append(log_entry)
+        with _tail_lock:
+            _tail_buffer.append(log_entry)
+        _persist_log()
+        _persist_tail()
+        _broadcast(payload)
         return "", 204
 
     if is_xp_award:
@@ -1606,6 +1696,28 @@ def chunk():
     _persist_tail()
     _broadcast(payload)
     return "", 204
+
+
+def _camp_images_dir():
+    try:
+        name = open(CAMP_FILE, encoding="utf-8").read().strip()
+    except Exception:
+        return None
+    if not name or "/" in name or "\\" in name or ".." in name:
+        return None
+    root = os.environ.get("DND_CAMPAIGN_ROOT", "").strip() or os.path.join(os.path.expanduser("~"), ".claude", "dnd")
+    return os.path.join(os.path.expanduser(root), "campaigns", name, "images")
+
+
+@app.route("/img/<path:filename>")
+def serve_campaign_image(filename):
+    """Read-only flavour images of the loaded campaign (<campaign>/images/)."""
+    d = _camp_images_dir()
+    if not d or not os.path.isdir(d):
+        return "no images", 404
+    if not filename.lower().endswith((".png", ".jpg", ".jpeg", ".webp", ".gif")):
+        return "bad type", 404
+    return send_from_directory(d, filename, max_age=3600)
 
 
 @app.route("/stats", methods=["POST"])
@@ -1748,6 +1860,7 @@ def stats():
         if "turn_order" in data:
             new_to = data["turn_order"]
             _current_stats["turn_order"] = new_to
+            _broadcast({"input_gate": _effective_allowed()})
             # Decrement round-based effects for the actor whose turn just started
             if new_to and isinstance(new_to, dict) and new_to.get("current"):
                 actor = new_to["current"].lower()
@@ -2015,6 +2128,52 @@ def _active_campaign_name() -> Optional[str]:
         return open(CAMP_FILE, encoding="utf-8").read().strip() or None
     except OSError:
         return None
+
+
+@app.route("/input-gate", methods=["POST"])
+def input_gate():
+    """DM sets who may enter input. Body: {"allowed": ["Mira", ...]} or {"allowed": null} to clear."""
+    if not _token_ok():
+        return "Forbidden", 403
+    data = request.get_json(silent=True) or {}
+    global _input_gate
+    al = data.get("allowed")
+    _input_gate = [str(x)[:50] for x in al] if isinstance(al, list) else None
+    _broadcast({"input_gate": _effective_allowed()})
+    return jsonify({"allowed": _effective_allowed()})
+
+
+@app.route("/relay", methods=["POST"])
+def relay():
+    """Forward a small control message to every connected display (PC View -> TV View)."""
+    if not _token_ok():
+        return "Forbidden", 403
+    data = request.get_json(silent=True) or {}
+    msg = data.get("msg")
+    if not isinstance(msg, dict) or len(json.dumps(msg)) > 20000:
+        return "bad message", 400
+    _broadcast({"relay": msg})
+    return "", 204
+
+
+@app.route("/tts-cached", methods=["POST"])
+def tts_cached():
+    """Which of these texts already have a stored clip? (no synthesis)
+
+    Body: {"texts": [str, ...]}
+    Response: {"cached": [bool, ...]}
+    """
+    if _tts is None:
+        return jsonify({"cached": []})
+    if not _token_ok():
+        return "Forbidden", 403
+    data = request.get_json(silent=True) or {}
+    d = _tts.cache_dir()
+    out = []
+    for t in (data.get("texts") or [])[:100]:
+        t = str(t or "").strip()[: _tts.MAX_TEXT_CHARS].strip()
+        out.append(bool(t) and (d / f"{_tts.cache_key(t)}.pcm").is_file())
+    return jsonify({"cached": out})
 
 
 @app.route("/tts", methods=["POST"])
@@ -2478,9 +2637,11 @@ def stage_input():
         known = {p["name"] for p in _current_stats.get("players", [])}
     if not _char_ok(character, known):
         return "Forbidden", 403
+    if _gate_blocks(character):
+        return "The DM is not waiting for this character", 409
 
     # In solo mode (1 expected player), skip the manual Ready step and auto-trigger.
-    solo = (_expected_count == 1)
+    solo = (_expected_count == 1) and not _REQUIRE_GO
 
     with _staged_lock:
         _staged[character] = {
@@ -2535,6 +2696,26 @@ def ready_input():
     return "", 204
 
 
+@app.route("/player-input/go", methods=["POST"])
+def go_input():
+    """Final confirmation: send everything that is staged to the DM at once."""
+    if not _token_ok():
+        return "Forbidden", 403
+    device_id = request.headers.get("X-DND-Device", "")
+    status    = _device_ok(device_id, request.remote_addr)
+    if status == "denied":
+        return "Forbidden", 403
+    if status == "pending":
+        return jsonify({"status": "pending"}), 202
+    with _staged_lock:
+        if not _staged:
+            return "Nothing staged", 409
+        for v in _staged.values():
+            v["ready"] = True
+    _check_auto_trigger(force=True)
+    return "", 204
+
+
 @app.route("/player-input/unstage", methods=["POST"])
 def unstage_input():
     """Remove a character's staged action (e.g. player wants to edit it).
@@ -2582,6 +2763,8 @@ def skip_input():
         known = {p["name"] for p in _current_stats.get("players", [])}
     if not _char_ok(character, known):
         return "Forbidden", 403
+    if _gate_blocks(character):
+        return "The DM is not waiting for this character", 409
 
     with _staged_lock:
         _staged[character] = {
@@ -2686,6 +2869,8 @@ def stream():
     with _stats_lock:
         if _current_stats:
             q.put_nowait({"stats": dict(_current_stats)})
+
+    q.put_nowait({"input_gate": _effective_allowed()})
 
     # Send current input queue so the pending indicator is accurate on reconnect.
     with _input_lock:
@@ -2811,4 +2996,7 @@ if __name__ == "__main__":
     # skips it.
     if _tts is not None and os.environ.get("DND_TTS_WARMUP", "on").lower() != "off":
         threading.Thread(target=_tts.warm_up, daemon=True).start()
-    app.run(host=host, port=5001, threaded=True, debug=False, ssl_context=ssl_ctx)
+    # DND_DISPLAY_PORT lets a second copy run beside the live one (testing only);
+    # send.py, push_stats.py and the launcher all assume the default 5001.
+    app.run(host=host, port=int(os.environ.get("DND_DISPLAY_PORT", "5001")),
+            threaded=True, debug=False, ssl_context=ssl_ctx)

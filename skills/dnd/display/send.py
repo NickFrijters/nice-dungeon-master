@@ -181,7 +181,7 @@ def _validate_payload(payload: dict, endpoint: str) -> "list[str]":
         # Chunk payloads must carry recognizable content.
         text = payload.get("text", "")
         has_text = bool(text and str(text).strip())
-        has_award = bool(payload.get("inspiration_award") or payload.get("xp_award")
+        has_award = bool(payload.get("inspiration_award") or payload.get("xp_award") or payload.get("image")
                          or payload.get("milestone_award") or payload.get("milestone_spend"))
         if not has_text and not has_award:
             issues.append("chunk payload has no text and no award flag")
@@ -413,6 +413,11 @@ def main() -> None:
     parser.add_argument("--milestone-label", metavar="TEXT",
         help='Label for the reward type (default: "Milestone"). Examples: '
              '"Bardic Inspiration", "Hero Coin", "Fate Token".')
+    parser.add_argument("--image", metavar="ID_OR_FILE",
+        help="Show a flavour image (id from <campaign>/images/index.json, or a file name there). "
+             "Small in the feed; tap to enlarge. Add --big for a dramatic full-screen moment.")
+    parser.add_argument("--caption", metavar="TEXT", help="Caption under the --image.")
+    parser.add_argument("--big", action="store_true", help="With --image: open it full-screen right away.")
     parser.add_argument("--xp-award", metavar="JSON",
         help='XP award block: \'{"names":["Aldric","Mira"],"xp":250,"reason":"Encounter resolved","total":"3250/6500"}\'')
 
@@ -554,7 +559,7 @@ def main() -> None:
         _other = (args.player or args.npc or args.dice or args.tutor or args.action
                   or args.inspiration_award or args.inspiration_spend
                   or args.milestone_award or args.milestone_spend or args.xp_award
-                  or args.verify)
+                  or args.image or args.verify)
         if not _other:
             return
 
@@ -562,7 +567,7 @@ def main() -> None:
     if _has_content_flag:
         text = sys.stdin.read()
     else:
-        text = "" if sys.stdin.isatty() else sys.stdin.read()
+        text = "" if (sys.stdin.isatty() or args.image) else sys.stdin.read()
     token = _read_token()
 
     # ── Inspiration award/spend ──────────────────────────────────────────────
@@ -605,6 +610,32 @@ def main() -> None:
         _post(STATS_URL, json.dumps({
             "players": [{"name": name, "_milestone_dec": label}]
         }).encode(), token)
+
+    # ── Flavour image block ───────────────────────────────────────────────────
+    if args.image:
+        import pathlib as _pl
+        import os as _os
+        from runtime_paths import rt as _rt
+        _name = ""
+        try:
+            _name = open(_rt(".campaign"), encoding="utf-8").read().strip()
+        except Exception:
+            pass
+        _root = _pl.Path(_os.environ.get("DND_CAMPAIGN_ROOT", "").strip() or "~/.claude/dnd").expanduser()
+        _dir = _root / "campaigns" / _name / "images"
+        _fn, _title, _kind = args.image, "", ""
+        try:
+            _idx = json.load(open(_dir / "index.json", encoding="utf-8"))
+            if args.image in _idx:
+                _fn, _title, _kind = _idx[args.image]["file"], _idx[args.image].get("title", ""), _idx[args.image].get("type", "")
+        except Exception:
+            pass
+        if not (_dir / _fn).is_file():
+            print(f"send.py: image not found: {_dir / _fn}", file=sys.stderr)
+            sys.exit(3)
+        _post(FLASK_URL, json.dumps({"image": {"src": _fn, "caption": args.caption or _title,
+                                              "big": args.big, "kind": _kind},
+                                              "text": args.caption or _title or "image"}).encode(), token)
 
     # ── XP award block ────────────────────────────────────────────────────────
     if args.xp_award:
