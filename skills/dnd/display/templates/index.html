@@ -3784,26 +3784,27 @@
   body.input-only #party-rows, body.input-only #party-footer{ display:none !important; }
   body:not(.input-only) #char-tabs, body:not(.input-only) #player-input-text, body:not(.input-only) #input-footer,
   body:not(.input-only) #staged-queue, body:not(.input-only) #waiting-indicator, body:not(.input-only) #phone-status{ display:none !important; }
-  #party-rows{ display:flex; flex-direction:column; gap:6px; }
-  .party-row{ display:grid; grid-template-columns:minmax(90px,170px) 1fr; align-items:center; gap:10px;
-    padding:3px 8px 3px 10px; border-left:3px solid transparent; border-radius:3px; transition:border-color .15s, background .15s; }
+  body:not(.input-only) #input-body{ padding:0 12px 8px; gap:4px; }
+  #party-rows{ display:flex; flex-direction:column; gap:3px; }
+  .party-row{ display:grid; grid-template-columns:minmax(80px,150px) 1fr; align-items:center; gap:8px;
+    padding:0 6px 0 8px; border-left:3px solid transparent; border-radius:3px; transition:border-color .15s, background .15s; }
   .party-row[hidden]{ display:none; }
-  .party-row .pr-name{ font:700 9px 'Cinzel',serif; letter-spacing:2px; text-transform:uppercase; color:rgba(180,140,60,.6);
+  .party-row .pr-name{ font:700 8.5px 'Cinzel',serif; letter-spacing:1.5px; text-transform:uppercase; color:rgba(180,140,60,.6);
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .party-row.everybody .pr-name{ color:rgba(220,185,100,.95); }
   .party-row input{ width:100%; box-sizing:border-box; background:rgba(8,5,2,.85); border:1px solid rgba(180,140,60,.18);
-    border-radius:3px; color:rgba(220,200,160,.9); font-family:'Fell Straight Quotes','IM Fell English',serif; font-size:13px;
-    padding:7px 10px; outline:none; transition:border-color .15s; }
+    border-radius:3px; color:rgba(220,200,160,.9); font-family:'Fell Straight Quotes','IM Fell English',serif; font-size:12.5px; line-height:1.2;
+    padding:4px 8px; outline:none; transition:border-color .15s; }
   .party-row input:focus{ border-color:rgba(180,140,60,.45); }
   .party-row input::placeholder{ color:rgba(180,140,60,.28); }
   .party-row input:disabled{ opacity:.45; }
   .party-row.filled{ border-left-color:rgba(110,200,120,.85); background:rgba(60,150,80,.08); }
   .party-row.filled .pr-name::before{ content:'\25CF '; color:rgba(110,200,120,.95); }
   .party-row.filled input{ border-color:rgba(110,200,120,.45); }
-  #party-footer{ display:flex; align-items:center; justify-content:flex-end; gap:12px; margin-top:4px; }
-  #party-hint{ margin-right:auto; font-size:11px; color:rgba(180,140,60,.5); }
+  #party-footer{ display:flex; align-items:center; justify-content:flex-end; gap:10px; margin-top:1px; }
+  #party-hint{ margin-right:auto; font-size:10px; color:rgba(180,140,60,.5); }
   #party-go-btn{ background:rgba(60,150,80,.25); color:rgba(170,235,170,.95); border:1px solid rgba(110,200,120,.6); border-radius:4px;
-    font:700 12px 'Cinzel',serif; letter-spacing:.15em; padding:8px 20px; cursor:pointer; }
+    font:700 11px 'Cinzel',serif; letter-spacing:.15em; padding:4px 16px; cursor:pointer; }
   #party-go-btn:hover:not(:disabled){ background:rgba(60,150,80,.45); }
   #party-go-btn:disabled{ opacity:.35; cursor:default; }
   :root[data-theme="light"] .party-row input{ background:rgba(250,244,230,.95); color:rgb(50,35,18); border-color:rgba(140,95,20,.4); }

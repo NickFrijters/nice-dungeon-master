@@ -438,6 +438,15 @@ class PageTest(unittest.TestCase):
         self.assertIn("_buildPartyRows(players);", self.html)
         self.assertIn("_applyRowGate();\n}", self.html)
 
+    def test_the_panel_is_vertically_compact(self):
+        pad = re.search(r"\.party-row input\{[^}]*padding:(\d+)px (\d+)px;", self.html)
+        self.assertTrue(pad)
+        self.assertLessEqual(int(pad.group(1)), 5)                      # slim fields: ~25px rows, not ~38px
+        gap = re.search(r"#party-rows\{ display:flex; flex-direction:column; gap:(\d+)px; \}", self.html)
+        self.assertLessEqual(int(gap.group(1)), 3)
+        self.assertIn("body:not(.input-only) #input-body{ padding:0 12px 8px; gap:4px; }", self.html)
+        self.assertRegex(self.html, r"#party-go-btn\{[^}]*padding:4px 16px;")
+
     def test_a_filled_row_looks_different(self):
         self.assertIn(".party-row.filled{", self.html)
 

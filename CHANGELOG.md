@@ -10,6 +10,12 @@ Versions before **1.6.0** are reconstructed retroactively from git history; the 
 
 ## [Unreleased]
 
+## [2.24.0] — 2026-11-15 — Compact Party Input
+
+### Changed — a vertically compact Party Input
+
+Slimmer rows (about 25 px instead of 38), tighter spacing and a smaller GO and hint line: the open panel is about a third shorter (208 px instead of 312 px for a party of four plus Everybody), so it covers less of the story.
+
 ## [2.23.0] — 2026-11-15 — DM Help and locked sound
 
 ### Fixed — DM Help did nothing

@@ -60,12 +60,10 @@ A running adventure is either **Roleplay** or **Combat**. The screen switches au
 ## Manual additions done by Nick in this .md file, read this as "next things" or the backlog.
 ## -- if I make changes here, always automatically include in the next commit.
 ## -- remove items from this list once they are built
-- BUG: The most recent created DM narration in test adventure didn't trigger any voice.
-- INTERFACE: De party input moet (verticaal) compacter.
+- INTERFACE: Loading between DM responses should always visualize what it's doing and how many things it has to do next (loading bar with several parts, or another way to show progress). Because waiting is always annoying for players. Goal is that every waiting time is accompanied by a tracker, always.
 - PERSISTENCY: When opening a campaign from the main menu, always start with a recap instead of showing the whole history.
 - The main menu doesn't have an option to start a new Campaign. (it should be able to let Claude create one, or provide a PDF with a (published) adventure.
 - INTERFACE: The text font that's currently used for narration is flavourful and clear, I want to use that font as the only font used throughout the whole app (do I? interview me first about the consequences)
-- INTERFACE: Loading between DM responses should always visualize what it's doing and how many things it has to do next (loading bar with several parts, or another way to show progress). Because waiting is always annoying for players. Goal is that every waiting time is accompanied by a tracker, always.
 - INTERFACE: Clearer visualization of character sheets, needs investigation and interviewing
 - INTERFACE: Build the roleplay screen
 - INTERFACE: Build the combat screen
