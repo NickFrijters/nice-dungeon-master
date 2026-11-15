@@ -10,6 +10,20 @@ Versions before **1.6.0** are reconstructed retroactively from git history; the 
 
 ## [Unreleased]
 
+## [2.8.0] — 2026-11-15 — Web Main Menu
+
+### Added — web Main Menu
+
+`/dm:dnd` with nothing after it now starts the display with `--menu` and waits. The browser opens on a Main Menu that lists your campaigns; clicking Load sends `[Menu]: load <name>` to Claude through the existing input queue. Manage characters and Settings are placeholders. See `docs/product-vision.md`.
+
+### Fixed — python3 on Windows
+
+`start-display.sh`, `verify_tail.sh` and the autosave hook no longer need a working `python3`; they use `python3`, `python` or `py`, whichever runs. Backup folders no longer show in the menu.
+
+### Changed
+
+This fork's marketplace is named `nice-dungeon-master` (install with `dm@nice-dungeon-master`).
+
 ## [2.7.0] — 2026-11-08 — Timed effects on in-game time, rests and rolls that follow the rules, 2024 backgrounds and level-up choices, and short replies that survive every script
 
 Twenty changes in one release, so an existing install updates once and receives
