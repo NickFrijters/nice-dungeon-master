@@ -426,14 +426,11 @@ class PageTest(unittest.TestCase):
         self.assertIn('id="party-go-btn"', self.html)
 
     def test_the_old_stage_controls_are_hidden_on_the_main_screen(self):
-        rule = re.search(r"body:not\(\.input-only\) #char-tabs[^{]*\{([^}]*)\}", self.html, re.S)
+        rule = re.search(r"#char-tabs, #player-input-text[^{]*\{([^}]*)\}", self.html, re.S)
         self.assertIsNotNone(rule)
         for hidden in ("#player-input-text", "#input-footer", "#staged-queue", "#waiting-indicator"):
             self.assertIn(hidden, rule.group(0))
         self.assertIn("display:none", rule.group(1).replace(" ", ""))
-
-    def test_the_rows_are_not_shown_in_the_phone_view(self):
-        self.assertIn("body.input-only #party-rows, body.input-only #party-footer{ display:none !important; }", self.html)
 
     def test_the_party_list_feeds_the_rows_and_the_gate_reaches_them(self):
         self.assertIn("_buildPartyRows(players);", self.html)
@@ -445,7 +442,7 @@ class PageTest(unittest.TestCase):
         self.assertLessEqual(int(pad.group(1)), 5)                      # slim fields: ~25px rows, not ~38px
         gap = re.search(r"#party-rows\{ display:flex; flex-direction:column; gap:(\d+)px; \}", self.html)
         self.assertLessEqual(int(gap.group(1)), 3)
-        self.assertIn("body:not(.input-only) #input-body{ padding:0 12px 8px; gap:4px; }", self.html)
+        self.assertIn("#input-body{ padding:0 12px 8px; gap:4px; }", self.html)
         self.assertRegex(self.html, r"#party-go-btn\{[^}]*padding:4px 16px;")
 
     def test_a_filled_row_looks_different(self):

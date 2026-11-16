@@ -144,9 +144,9 @@ class PageAndSkillTest(unittest.TestCase):
         self.assertEqual(ex.group(2), cog.group(2))                                        # same row
         self.assertEqual(int(ex.group(1)) - (int(cog.group(1)) + int(cog.group(3))), 8)    # right next to it
 
-    def test_it_is_on_every_screen_but_the_phone_view(self):
+    def test_it_is_on_every_screen(self):
         self.assertNotIn("html.tv-view #exit-btn", self.html)
-        self.assertIn("body.input-only #exit-btn{ display:none !important; }", self.html)
+        self.assertNotIn("#exit-btn{ display:none !important; }", self.html)
 
     def test_every_screen_follows_the_go_menu_message(self):
         self.assertIn("m.t === 'go-menu'", self.html)

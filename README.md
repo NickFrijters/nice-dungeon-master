@@ -6,7 +6,7 @@
   <img src="skills/dnd/display/icons/logo_primary_fullcolor.png" width="280" alt="D20">
 </div>
 
-> Claude runs the game. You play. The TV shows the story. Your phone is your controller.
+> Claude runs the game. You play. The TV shows the story. Every screen works the same.
 
 An unofficial D&D 5e (2014 ruleset / SRD 5.1) Dungeon Master skill for [Claude Code](https://claude.ai/code) — persistent campaigns, full 5e mechanics, and an optional cinematic display companion that streams typewriter narration, dice rolls, and live character stats to any screen — TV via Chromecast, tablet, phone, or second monitor — while players submit their actions from a phone or tablet.
 
@@ -59,8 +59,8 @@ If you're on Claude Code, you're in the right place.
 - <img src="skills/dnd/display/icons/chat.png" height="18"> **Atmospheric DM** — dark fantasy tone, distinct NPC voices, hidden rolls, a world that reacts to choices
 - <img src="skills/dnd/display/icons/crystal_ball.png" height="18"> **Cinematic display companion** — typewriter narration on your TV, scene-reactive backgrounds, dynamic sky canvas, live party sidebar; cast, mirror, or open on any screen on your network
 - <img src="skills/dnd/display/icons/location.png" height="18"> **Dynamic sky canvas** — sun arc, moon, twinkling stars, and cloud density rendered in real time from world time data; transitions with time of day and weather
-- <img src="skills/dnd/display/icons/focus.png" height="18"> **Player input from the companion UI** — players submit actions from phone/tablet with a one-tap send and a live *Your move → Sent → ✓ DM has your move → narrating* status strip; Claude picks them up automatically in autorun mode
-- <img src="skills/dnd/display/icons/attack.png" height="18"> **Enforced roll handling** — choose at game start whether players roll their own d20s (DM calls for the roll and waits) or the DM rolls openly; per-character override from the phone; the DM never silently auto-rolls a PC
+- <img src="skills/dnd/display/icons/focus.png" height="18"> **Player input from the companion UI** — each character has a row in the Party Input panel (on any screen), and one **GO** sends everything that is filled in; Claude picks them up automatically in autorun mode
+- <img src="skills/dnd/display/icons/attack.png" height="18"> **Enforced roll handling** — choose at game start whether players roll their own d20s (DM calls for the roll and waits) or the DM rolls openly; the DM never silently auto-rolls a PC
 - <img src="skills/dnd/display/icons/scroll.png" height="18"> **Reading controls** — per-player text-size stepper (legible across the room from a Chromecast) and a narration-length slider that sets the DM's per-turn word budget
 - <img src="skills/dnd/display/icons/timer.png" height="18"> **Autorun / taxi mode** — Claude drives the turn loop without DM input; a pie countdown shows the next auto-fire window
 - <img src="skills/dnd/display/icons/shield.png" height="18"> **LAN party support** — serve the companion over your local network; every device in the room sees the same display
@@ -86,7 +86,7 @@ Claude Code CLI  ──→  /dm:dnd commands  ──→  campaign files (~/.clau
                                               session-log.md · characters/
 
 Display pipeline (autorun mode):
-  Players (phone/tablet)  ──→  Companion UI  ──→  Flask SSE server (localhost:5001)
+  Players (any screen)     ──→  Companion UI  ──→  Flask SSE server (localhost:5001)
                                                           ↓
                                                    autorun_wait.py
                                                           ↓
@@ -308,7 +308,6 @@ How a player's own d20s (attacks, checks, saves, death saves) get rolled is chos
 
 **Initiative is always DM-rolled** for every combatant (PCs and NPCs) regardless of mode, as are all NPC/monster rolls.
 
-**Per-player override** — a player can flip just their own character via the phone **Settings → Rolls** toggle. That POSTs to `/roll-pref`, and the DM honors a `[[<Char> roll mode: …]]` directive for that character, overriding the campaign default. Precedence: **per-character toggle > campaign `roll_mode`**.
 
 > This replaces the older always-"players roll their own" assumption: the DM no longer falls back to an auto-rolled `[auto]` result for a PC when the dice server is unavailable. Roll handling is now explicit and enforced.
 
@@ -387,30 +386,22 @@ For iOS: open `http://<your-ip>:8080/cert.pem` in Safari → tap Allow → Setti
 
 ### Player Input from the Companion UI
 
-![Player input panel — staging an action from a phone](screenshots/screenshot-player-input.png)
+![Party Input panel](screenshots/screenshot-player-input.png)
 
-Players open the companion in their phone browser. Each device binds to a party character, and the input view shows that player's turn flow as a plain **status strip** so they always know where their turn stands:
-
-```
-Your move  →  Sending…  →  Sent to the DM  →  ✓ The DM has your move  →  The DM is narrating…  →  Your move
-```
-
-1. **Type and send** — staging is **one tap**. The action sends to the DM immediately (auto-ready) — no separate Stage / Mark Ready step. **Skip** passes the turn without typing.
-2. **Sent → received** — the strip flips to *Sent to the DM*, then to a **`✓ The DM has your move`** toast the moment the DM actually picks the action up off the queue (not just when it's staged), then *The DM is narrating…*, then back to *Your move*. This closes the loop so a player can always tell whether their turn is in.
+Every screen shows the same Party Input panel: one row per character (plus *Everybody*). Type what each character does, then press **GO** (or Ctrl+Enter) to send every filled row to the DM.
 
 The panel shows a **"Next Turn"** countdown pie clock that loops at the configured autorun interval.
 
 **Device approval defaults to trusting any device on your LAN** — convenient for a casual home network. Set `DND_REQUIRE_APPROVAL=1` to restore the per-device approve/deny gate for public or untrusted networks.
 
-### Player Settings (phone)
+### Display Settings
 
-Each device has a **Settings** view with controls that tune the experience for that player or the whole table:
+Every screen has a **Settings** cog (⚙) with controls that tune the experience for the table:
 
 | Control | What it does |
 |---------|--------------|
 | **Text Size** (`A−` / `A+`, click the % to reset) | Scales the reading column via a font-size multiplier (font size, not page zoom) so narration stays legible across the room from a Chromecast. Persists per-browser (`localStorage`), applied anti-FOUC. |
 | **Narration** slider (250–2500 words) | Sets the word-count target the DM aims for each turn. POSTs to `/narration-pref`; the next queued action carries a `[[Narration length…]]` directive the DM honors as a hard per-turn budget. Quick "keep turns short" knob for time-pressed tables. |
-| **Rolls** toggle (shown when the device is bound to a PC) | Flips that character between *Players* (you roll your own d20s) and *Auto-roll* (the DM rolls them openly), overriding the campaign default for that one character. See [Dice & Roll Handling](#dice--roll-handling). |
 | **Sound Effects** toggle | Enables browser-side SFX (see [Sound Effects](#sound-effects)). |
 
 ### Autorun Mode
