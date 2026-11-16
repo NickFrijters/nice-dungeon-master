@@ -295,7 +295,7 @@ _load_pending_devices()
 
 
 # A casual home-LAN game doesn't need a per-device approval gate — it's friction
-# (every phone sits on "Awaiting approval" until the DM taps a card). Default:
+# (every device sits on "Awaiting approval" until the DM taps a card). Default:
 # trust any device that can already reach the server. Set DND_REQUIRE_APPROVAL=1
 # to restore the approve/deny gate (e.g. on an untrusted/shared network).
 _REQUIRE_APPROVAL = os.environ.get("DND_REQUIRE_APPROVAL", "").strip().lower() in ("1", "true", "yes", "on")
@@ -952,21 +952,6 @@ def _detect_scene(text: str) -> Optional[dict]:
 
 _clients: list[queue.Queue] = []
 _clients_lock = threading.Lock()
-# Maps a connected SSE client (queue) → the character it's bound to, if any.
-# Phones connect to /stream?character=<name>; the main display has no character.
-# Lets a dice-request know whether a target PC has a live phone (→ route there)
-# or not (→ open the on-screen roller). Guarded by _clients_lock.
-_client_chars: "dict[queue.Queue, str]" = {}
-
-
-def _phone_present(char: str) -> bool:
-    """True if some connected phone is bound to this character (case-insensitive)."""
-    c = (char or "").strip().lower()
-    if not c:
-        return False
-    with _clients_lock:
-        return c in _client_chars.values()
-
 # ─── Text replay log ──────────────────────────────────────────────────────────
 # Stores cleaned text chunks so late-connecting browsers can catch up.
 # Persisted to LOG_FILE so it survives Flask restarts (Chromecast reconnects, new sessions).
@@ -1229,7 +1214,6 @@ def _broadcast(payload: dict) -> None:
                 dead.append(q)
         for q in dead:
             _clients.remove(q)
-            _client_chars.pop(q, None)
 
 
 # ─── Routes ──────────────────────────────────────────────────────────────────
@@ -2530,45 +2514,6 @@ def narration_pref():
     return {"target_words": n}, 200
 
 
-@app.route("/roll-pref", methods=["POST"])
-def roll_pref():
-    """Per-character roll preference. Body: {"character": str, "mode": "auto"|"players"}.
-
-    Persisted to runtime roll_prefs.json; check_input.py surfaces each override as a
-    [[<Char> roll mode: …]] directive so the DM honors it for that character,
-    overriding the campaign-wide roll_mode in state.md.
-
-    The character name is validated against the active party via _char_ok before
-    persistence — otherwise a crafted value could smuggle prompt text into the DM
-    through the [[<Char> roll mode: …]] template that check_input.py emits.
-    """
-    if not _token_ok():
-        return "Forbidden", 403
-    if not _rate_ok(request.remote_addr or "?"):
-        return "Rate limited", 429
-    data = request.get_json(silent=True) or {}
-    char = (data.get("character") or "").strip()
-    mode = (data.get("mode") or "").strip().lower()
-    if not char or mode not in ("auto", "players"):
-        return {"ok": False}, 400
-    with _stats_lock:
-        known = {p["name"] for p in _current_stats.get("players", [])}
-    if not _char_ok(char, known):
-        return "Forbidden", 403
-    pref = rt("roll_prefs.json")
-    try:
-        prefs = {}
-        if os.path.exists(pref):
-            with open(pref, encoding="utf-8") as f:
-                prefs = json.load(f)
-        prefs[char] = mode
-        with open(pref, "w", encoding="utf-8") as f:
-            json.dump(prefs, f)
-    except (OSError, ValueError):
-        pass
-    return {"ok": True, "character": char, "mode": mode}, 200
-
-
 def _active_campaign_name() -> Optional[str]:
     try:
         return open(CAMP_FILE, encoding="utf-8").read().strip() or None
@@ -2780,14 +2725,14 @@ def player_input():
 
 @app.route("/player-input/dice", methods=["POST"])
 def player_dice():
-    """Server-side dice roll submitted from a player's phone.
+    """Server-side dice roll submitted from the on-screen dice pad.
 
     Body: {"character": "Piper", "spec": "1d20", "modifier": 5,
            "advantage": "normal" | "advantage" | "disadvantage",
            "label": "Stealth check"  (optional)}
 
     Rolls server-side (secrets.randbelow → uniform, non-spoofable), broadcasts
-    a dice-typed entry on the feed, and returns the result so the phone can
+    a dice-typed entry on the feed, and returns the result so the pad can
     finish its slot-machine animation on the real value.
     """
     if not _token_ok():
@@ -2885,7 +2830,7 @@ def player_dice():
 
 @app.route("/dice-request", methods=["POST"])
 def dice_request():
-    """DM-initiated dice request — broadcast to player phones (no persistence).
+    """DM-initiated dice request — broadcast to every screen (no persistence).
 
     Body: {"character": "Piper" | "any",
            "spec": "1d20", "modifier": 5,
@@ -2893,8 +2838,8 @@ def dice_request():
            "label": "Stealth check"  (optional),
            "dc": 15  (optional, informational)}
 
-    Phones bound to ?character=<name> match case-insensitively. "any" / ""
-    targets every phone. No state stored — late-joining phones will not see
+    Names match case-insensitively. "any" / ""
+    targets every roller. No state stored — late-joining screens will not see
     requests issued before they connected.
     """
     if not _token_ok():
@@ -2936,8 +2881,8 @@ def dice_request():
             }
         _broadcast({"dice_pending": _dice_pending_snapshot()})
 
-    # Targets with no live phone bound → the main display should roll on-screen.
-    onscreen_targets = [c for c in chars if c.lower() != "any" and not _phone_present(c)]
+    # Every named target rolls on the screen's dice pad.
+    onscreen_targets = [c for c in chars if c.lower() != "any"]
     payload = {
         "dice_request": {
             "request_id": request_id,
@@ -2990,56 +2935,6 @@ def dice_request_cancel(request_id):
         _dice_pending.pop(request_id, None)
     _broadcast({"dice_pending": _dice_pending_snapshot(), "dice_request_cancelled": request_id})
     return "", 204
-
-
-@app.route("/character/<character>", methods=["GET"])
-def get_character_sheet(character):
-    """Return the markdown content of a PC sheet for the active campaign.
-
-    Used by the phone's Character tab. Resolves the active campaign from
-    CAMP_FILE, then reads:
-        <DND_CAMPAIGN_ROOT>/campaigns/<campaign>/characters/<character>.md
-
-    Falls back to the global roster at ~/.claude/dnd/characters/<character>.md
-    if the campaign-side file is missing — useful when the character was just
-    imported but not yet replicated.
-
-    Returns text/markdown so the phone can render in JS without server-side
-    dependencies (no `markdown` lib required).
-    """
-    if not _token_ok():
-        return "Forbidden", 403
-
-    safe = re.sub(r"[^A-Za-z0-9 _-]", "", character).strip()[:50]
-    if not safe:
-        return "Bad character name", 400
-
-    try:
-        camp = open(CAMP_FILE, encoding="utf-8").read().strip()
-    except Exception:
-        camp = ""
-    # Sanitise the campaign name with the same allowlist + length cap as the
-    # character argument. CAMP_FILE is writable by anyone inside the LAN+token
-    # trust boundary (via push_stats.py --set-campaign), so a malicious value
-    # here could pivot to arbitrary `<name>.md` reads via os.path.join.
-    camp = re.sub(r"[^A-Za-z0-9_-]", "", camp)[:50]
-
-    root = os.environ.get("DND_CAMPAIGN_ROOT", os.path.expanduser("~/.claude/dnd"))
-    candidates = []
-    if camp:
-        candidates.append(os.path.join(root, "campaigns", camp, "characters", f"{safe}.md"))
-    candidates.append(os.path.expanduser(f"~/.claude/dnd/characters/{safe}.md"))
-
-    for path in candidates:
-        if os.path.isfile(path):
-            try:
-                with open(path, "r", encoding="utf-8") as f:
-                    body = f.read()
-            except Exception as e:
-                return f"Read error: {e}", 500
-            return Response(body, mimetype="text/markdown; charset=utf-8")
-
-    return f"No sheet found for '{safe}' in campaign '{camp}'", 404
 
 
 @app.route("/device/approve", methods=["POST"])
@@ -3364,11 +3259,6 @@ def stream():
     q: queue.Queue = queue.Queue(maxsize=256)
     with _clients_lock:
         _clients.append(q)
-        # Register this client's bound character (phones pass ?character=/?char=);
-        # the main display passes neither. Drives dice-request phone-vs-screen routing.
-        _ch = (request.args.get("character") or request.args.get("char") or "").strip().lower()[:48]
-        if _ch:
-            _client_chars[q] = _ch
 
     # Send the current scene immediately on connect so the browser
     # starts with the right background even mid-session.
@@ -3411,9 +3301,9 @@ def stream():
     if snap:
         q.put_nowait({"dice_pending": snap})
 
-    # Replay every active dice_request so phones that connected *after* a DM
+    # Replay every active dice_request so screens that connected *after* a DM
     # broadcast still pre-fill their pad and store the request_id. Without this,
-    # a late-joining or reloaded phone rolls without a request_id, the roll logs
+    # a late-joining or reloaded screen rolls without a request_id, the roll logs
     # but the pending set never drains, and the "Waiting on…" banner gets stuck.
     with _dice_pending_lock:
         active = [(rid, dict(e["meta"]), sorted(e["chars"])) for rid, e in _dice_pending.items() if e["chars"]]
@@ -3422,7 +3312,7 @@ def stream():
             "request_id": rid,
             "characters": chars,
             "character": chars[0] if len(chars) == 1 else "any",
-            "onscreen_targets": [c for c in chars if c.lower() != "any" and not _phone_present(c)],
+            "onscreen_targets": [c for c in chars if c.lower() != "any"],
             "spec": meta.get("spec", "1d20"),
             "modifier": meta.get("modifier", 0),
             "advantage": meta.get("advantage", "normal"),
@@ -3458,7 +3348,6 @@ def stream():
                     _clients.remove(q)
                 except ValueError:
                     pass
-                _client_chars.pop(q, None)
 
     resp = Response(
         generate(),

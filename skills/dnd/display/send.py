@@ -425,23 +425,23 @@ def main() -> None:
     parser.add_argument("--xp-award", metavar="JSON",
         help='XP award block: \'{"names":["Aldric","Mira"],"xp":250,"reason":"Encounter resolved","total":"3250/6500"}\'')
 
-    # ── Dice request (DM → player phones) ────────────────────────────────────
+    # ── Dice request (DM → screens) ────────────────────────────────────
     parser.add_argument("--dice-request", action="store_true",
-        help='Broadcast a dice request to player phones (pre-fills their pad). '
+        help='Broadcast a dice request to the screens (pre-fills the dice pad). '
              'Combine with --character / --spec / --modifier / --advantage / --label / --dc.')
     parser.add_argument("--character", metavar="NAME",
-        help='Target character for --dice-request. Use "any" or omit to target every phone.')
+        help='Target character for --dice-request. Use "any" or omit to target every roller.')
     parser.add_argument("--spec", metavar="NdM", default="1d20",
         help='Dice spec for --dice-request (default 1d20). Examples: 1d20, 2d6, 1d100.')
     parser.add_argument("--modifier", type=int, default=0, metavar="N",
-        help='Modifier to apply on the phone (default 0). May be negative.')
+        help='Modifier to apply on the pad (default 0). May be negative.')
     parser.add_argument("--advantage", choices=["normal", "advantage", "disadvantage"],
         default="normal",
         help='For 1d20 only: normal | advantage | disadvantage (default normal).')
     parser.add_argument("--label", metavar="TEXT",
         help='Human label for the roll (e.g. "Stealth check", "Concentration save").')
     parser.add_argument("--dc", type=int, metavar="N",
-        help='Optional DC; displayed informationally on the phone.')
+        help='Optional DC; displayed informationally on the pad.')
     parser.add_argument("--wait", action="store_true",
         help='With --dice-request: block until every prescribed character has rolled '
              '(polls /dice-request/<id>). Exits non-zero on timeout.')
@@ -490,7 +490,7 @@ def main() -> None:
     # Award flags (--inspiration-*/--xp-*/--milestone-*) fall into category 2:
     # reading piped stdin under the isatty() gate lets bundled narration flow
     # through to the text-send block while bare award calls don't block.
-    # ── Dice request (DM → phones) — broadcast + optional blocking wait ──────
+    # ── Dice request (DM → screens) — broadcast + optional blocking wait ──────
     if args.dice_request:
         # Comma-split character list so the DM can address multiple players at once,
         # e.g. --character "Piper,Mira,Aldric"  → all three must roll before --wait returns.

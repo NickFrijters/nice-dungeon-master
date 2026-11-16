@@ -1,7 +1,7 @@
 # DnD DM Display — Cinematic Spectator Screen
 
 Renders your DM session as a cinematic full-screen display on a browser tab.
-View it on a TV, iPad, tablet, phone, or second monitor — any device on your network.
+View it on a TV, iPad, tablet, or second monitor — any device on your network.
 You continue typing in the terminal as normal.
 
 ```
@@ -192,7 +192,7 @@ Enable autorun:
 /dnd autorun on
 ```
 
-**Player Settings (phone):** each device has a Settings view with a **Text Size** stepper (per-browser font scaling, anti-FOUC), a **Narration** length slider (250–2500 words → `POST /narration-pref`, surfaced to the DM as a `[[Narration length…]]` directive), and — when the device is bound to a PC — a **Rolls** toggle that flips that character between players-roll and DM-auto-roll (`POST /roll-pref`, surfaced as a `[[<Char> roll mode: …]]` directive). See the main README's [Dice & Roll Handling](../../../README.md#dice--roll-handling).
+**Display Settings:** every screen has a Settings view with a **Text Size** stepper (per-browser font scaling, anti-FOUC), a **Narration** length slider (250–2500 words → `POST /narration-pref`, surfaced to the DM as a `[[Narration length…]]` directive). See the main README's [Dice & Roll Handling](../../../README.md#dice--roll-handling).
 
 ### DM Help button
 

@@ -62,7 +62,6 @@ A running adventure is either **Roleplay** or **Combat**. The screen switches au
 ## -- remove items from this list once they are built
 - BUG: Claude is creating your campaign… 2383s (this can take a minute or two) ✓ Sent to the Dungeon Master Creating the campaign Ready to play
 - INTERFACE: Interview me about the following: It should not be possible that text scrolls out of the screen without the players confirming that they've read it, or the voice being played. Now on large texts, not everything is visible on TV - which is an issue.
-- CLEANUP: No "PHONE" screen will ever be used, remove that function from the screen and code completely.
 - PRETTIFY: The "DM Help" info block that pops up, and the "Save and Exit" error block that pops up (can you check what I mean) doesn't match the rest of the interface style.
 - PERSISTENCY: After every DM input, and after every players-submit, the game state should be processed and saved. So when the browser closes or the app goes back to the main menu, nothing is lost. Or is this already the case?
 - INTERFACE: Screenshot all interfaces and look for graphical inconsistencies or things that don't look nice - fix them (interview me where you think that's necessary).

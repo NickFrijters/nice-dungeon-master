@@ -325,12 +325,11 @@ Roll handling is chosen at game start and stored as `roll_mode` in `state.md →
 - **`roll_mode: players` (default) — players roll their own PCs.** For *any* PC d20 (attack, skill/ability check, save, death save), **call for the roll by name and STOP — wait for the player's result before resolving.** Do **not** roll it for them. ⚠ **Never fall back to `dice.py` or an `[auto]` result for a PC** just because the physical-dice phone server isn't running — if no roll comes back, ask the player for the number out loud. You roll **only** NPC/monster dice. (This is a hard constraint: silently auto-rolling a PC is the #1 thing players notice and dislike.)
   - **Prescribe the roll through the display when it's running** (`_display_running = true`): call
     `python3 ${CLAUDE_SKILL_DIR}/display/send.py --dice-request --character "<PC>" --spec 1dN [--modifier ±M] [--advantage advantage|disadvantage] [--label "<check>"] [--dc N] --wait`.
-    The roll routes to that PC's **phone** if one is bound, or **auto-opens the on-screen Dice drawer** on the shared screen when no phone is bound (or the display's *Roll on screen* setting is on) — the same roller either way. `--wait` blocks until the player rolls and then prints their result for you to resolve (it exits non-zero on timeout — fall back to asking out loud). When the display is **not** running, just call for the roll verbally and wait. Never roll the PC yourself under `players`.
+    The roll **auto-opens the on-screen Dice drawer** on the shared screen. `--wait` blocks until the player rolls and then prints their result for you to resolve (it exits non-zero on timeout — fall back to asking out loud). When the display is **not** running, just call for the roll verbally and wait. Never roll the PC yourself under `players`.
 - **`roll_mode: auto` — you roll everything openly.** Resolve PC d20s yourself via `dice.py` and show full math inline (`Piper — Perception: d20+5 = 18 → …`), no waiting. For solo / fast play.
 
 **Initiative** is always DM-rolled via `combat.py init` for all combatants (PCs and NPCs) regardless of `roll_mode`.
 
-**Per-player override:** a player can flip their own PC via the phone Settings → *Rolls* toggle. When that player has a queued action, `check_input.py` prepends a `[[<Char> roll mode: auto|players]]` directive — honor it for that character, overriding the campaign default. Precedence: **per-character directive > campaign `roll_mode`**.
 
 **NPC/monster rolls are always yours** — resolve via `dice.py`, show math inline:
   `Goblin attacks: d20+4 = 17 vs AC 16 — hit! 1d6+2 = 5 piercing damage`
