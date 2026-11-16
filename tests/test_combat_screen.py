@@ -13,9 +13,9 @@ APP = (D / "dnd-display-app.py").read_text(encoding="utf-8")
 
 def _clean_combat():
     # Pull the pure helper out of the app source without starting the app.
-    a = APP.index("def _clean_combat(raw):")
+    a = APP.index("def _clean_map_image(")
     b = APP.index("def _cell_label")
-    ns = {}
+    ns = {"os": os}
     exec(APP[a:b], ns)
     return ns["_clean_combat"]
 
@@ -30,6 +30,29 @@ class CombatScreenTest(unittest.TestCase):
         # playtest fixes: the mat refit on window resize, crowded side lists tighten, big tokens need all squares free
         for needle in ("new ResizeObserver(() => {", "_cbDragging", "side.classList.add('tight')", "const cover = (x, y, f)", "const walled = (x, y)"):
             self.assertIn(needle, HTML)
+
+    def test_map_picture_is_cleaned_placed_and_kept_when_repushed(self):
+        clean = _clean_combat()
+        base = {"cols": 14, "rows": 10, "tokens": []}
+        out = clean({"map": {**base, "image": "../../secret/cellar.PNG"}})
+        self.assertEqual(out["map"]["image"], {"src": "cellar.PNG", "x": 0, "y": 0, "w": 14, "h": 10})   # path stripped, fits the grid
+        self.assertNotIn("image", clean({"map": {**base, "image": "notes.txt"}})["map"])               # only picture files
+        self.assertNotIn("image", clean({"map": base})["map"])
+        placed = clean({"map": {**base, "image": {"src": "cellar.png", "x": -0.4, "y": "-0.4", "w": 14.8, "h": 10.8}}})
+        self.assertEqual(placed["map"]["image"], {"src": "cellar.png", "x": -0.4, "y": -0.4, "w": 14.8, "h": 10.8})
+        # the DM pushes the board again without a placement: what the table aligned stays
+        again = clean({"map": {**base, "image": "cellar.png"}}, placed)
+        self.assertEqual(again["map"]["image"], placed["map"]["image"])
+        # a different picture starts from the default fit
+        other = clean({"map": {**base, "image": "other.png"}}, placed)
+        self.assertEqual(other["map"]["image"], {"src": "other.png", "x": 0, "y": 0, "w": 14, "h": 10})
+
+    def test_align_route_page_and_pushers(self):
+        self.assertIn('@app.route("/combat/image", methods=["POST"])', APP)
+        for needle in ("function _cbAlignUi(", "function _cbImgDrag(", "cb-bgimg", "'/combat/image'"):
+            self.assertIn(needle, HTML)
+        self.assertIn("_resolve_combat_image(payload[\"combat\"])", (D / "push_stats.py").read_text(encoding="utf-8"))
+        self.assertIn("Align map", (ROOT / "skills" / "dnd" / "SKILL-commands.md").read_text(encoding="utf-8"))
 
     def test_server_cleans_the_board(self):
         clean = _clean_combat()

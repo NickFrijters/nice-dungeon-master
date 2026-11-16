@@ -103,6 +103,29 @@ else:
     _SSL_CTX = None
 
 
+def _resolve_combat_image(combat) -> None:
+    """map.image may name a library id, an alias or a file; swap it for the file in the campaign's images folder
+    (copying it in from the shared library when needed). An image that cannot be found is dropped, with a warning."""
+    m = combat.get("map") if isinstance(combat, dict) else None
+    img = m.get("image") if isinstance(m, dict) else None
+    if not img:
+        return
+    d = img if isinstance(img, dict) else {"src": img}
+    try:
+        with open(rt(".campaign"), encoding="utf-8") as f:
+            campaign = f.read().strip()
+        sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "scripts"))
+        import image_library
+        found = image_library.campaign_image(str(d.get("src", "")), campaign)
+    except Exception:
+        found = None
+    if not found:
+        print(f"push_stats.py: map image not found: {d.get('src')} (the map is shown without it)", file=sys.stderr)
+        del m["image"]
+        return
+    m["image"] = {**d, "src": found["file"]}
+
+
 def _read_token() -> str:
     try:
         return open(TOKEN_FILE, encoding="utf-8").read().strip()
@@ -314,6 +337,7 @@ def main() -> None:
         except json.JSONDecodeError as e:
             print(f"Invalid combat JSON: {e}", file=sys.stderr)
             sys.exit(1)
+        _resolve_combat_image(payload["combat"])
 
     # ── NPCs in the scene ──────────────────────────────────────────────────────
     if args.npcs is not None:

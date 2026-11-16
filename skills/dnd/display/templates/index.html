@@ -3224,6 +3224,24 @@
     box-shadow: 0 6px 30px rgba(0,0,0,.7); animation: pageNudge 1.6s ease-in-out infinite; }
   #page-continue.show { display: block; }
   @keyframes pageNudge { 0%,100% { transform: translateX(-50%) translateY(0); } 50% { transform: translateX(-50%) translateY(-4px); } }
+  /* published map picture under the grid */
+  #cb-map .cb-imgclip { position: absolute; overflow: hidden; pointer-events: none; }
+  #cb-map.aligning .cb-imgclip { overflow: visible; }
+  #cb-map .cb-bgimg { position: absolute; max-width: none; user-select: none; -webkit-user-drag: none; pointer-events: none; }
+  #cb-map.aligning .cb-bgimg { pointer-events: auto; cursor: move; opacity: .75; outline: 2px dashed rgba(255,225,130,.8); }
+  #cb-map.has-img .cb-grid { background-image: linear-gradient(to right, rgba(255,255,255,.22) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,.22) 1px, transparent 1px); }
+  #cb-map.aligning .cb-grid { background-image: linear-gradient(to right, rgba(255,225,130,.8) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,225,130,.8) 1px, transparent 1px); }
+  #cb-map.has-img .cb-ter { background: none !important; box-shadow: none !important; animation: none !important; border-radius: 0 !important; }
+  #cb-map.aligning .cb-ter { outline: 1px solid rgba(255,100,90,.7); outline-offset: -1px; }
+  #cb-map.aligning .cb-token { pointer-events: none; opacity: .55; }
+  #cb-legend button { font: 700 11px 'Cinzel', serif; letter-spacing: 1px; color: rgba(255,235,170,1); background: rgba(40,28,10,.9);
+    border: 1px solid rgba(235,205,120,.7); border-radius: 12px; padding: 3px 11px; cursor: pointer; }
+  #cb-legend button:hover { background: rgba(80,55,18,.95); }
+  #cb-map-wrap .cb-align-bar { position: absolute; left: 8px; right: 8px; bottom: 6px; z-index: 9; display: flex; gap: 4px; flex-wrap: wrap; justify-content: center; align-items: center;
+    padding: 5px 8px; border-radius: 10px; background: rgba(20,14,6,.88); border: 1px solid rgba(200,165,80,.45); font: 11px 'Cinzel', serif; color: rgba(205,175,110,.85); }
+  #cb-map-wrap .cb-align-bar button { font: 700 11px 'Cinzel', serif; letter-spacing: 1px; color: rgba(255,235,170,1); background: rgba(40,28,10,.9);
+    border: 1px solid rgba(235,205,120,.7); border-radius: 12px; padding: 2px 9px; cursor: pointer; }
+  #cb-map-wrap .cb-align-bar button:hover { background: rgba(80,55,18,.95); }
 </style>
 </head>
 <body>
@@ -6416,8 +6434,9 @@ function _renderCombat(to) {
   if (m) {
     const t = document.createElement('span'); t.className = 'cb-title'; t.textContent = m.title || 'Battle map'; lg.appendChild(t);
     const s = document.createElement('span'); s.textContent = '1 square = 5 ft'; lg.appendChild(s);
-    const d = document.createElement('span'); d.textContent = 'Drag a token to move it'; lg.appendChild(d);
-  }
+    const d = document.createElement('span'); d.textContent = _cbAligning && m.image ? 'Lining up the map picture' : 'Drag a token to move it'; lg.appendChild(d);
+    if (m.image) _cbAlignUi(lg, m); else { _cbAligning = false; document.querySelectorAll('#cb-map-wrap .cb-align-bar').forEach(e => e.remove()); }
+  } else { _cbAligning = false; document.querySelectorAll('#cb-map-wrap .cb-align-bar').forEach(e => e.remove()); }
   _renderCombatMap(to);
 }
 // Movement cost map for the actor: walls block, water and difficult ground cost double. 5-ft squares, diagonals count 5 ft.
@@ -6457,6 +6476,62 @@ function _cbReach(m, tk) {
   }).observe(wrap);
 })();
 let _cbDragging = false;
+
+// ── Published map picture under the grid ────────────────────────────────────
+// The picture is placed in grid squares (x, y = top-left corner, w, h = size). "Align map" lets the table
+// drag and resize it until the picture's own squares sit exactly on ours; every screen shares the result.
+let _cbAligning = false, _cbImgTimer = null;
+function _cbImgApply(m) {
+  const map = document.getElementById('cb-map'), bg = map && map.querySelector('.cb-bgimg');
+  if (!bg || !map._geom || !m.image) return;
+  const { cell } = map._geom, im = m.image;
+  bg.style.left = (im.x * cell) + 'px'; bg.style.top = (im.y * cell) + 'px';
+  bg.style.width = (im.w * cell) + 'px'; bg.style.height = (im.h * cell) + 'px';
+}
+function _cbImgSet(patch, send) {
+  const m = _combatState && _combatState.map; if (!m || !m.image) return;
+  Object.assign(m.image, patch);
+  ['x', 'y'].forEach(k => m.image[k] = Math.round(Math.max(-60, Math.min(60, m.image[k])) * 1000) / 1000);
+  ['w', 'h'].forEach(k => m.image[k] = Math.round(Math.max(1, Math.min(120, m.image[k])) * 1000) / 1000);
+  _cbImgApply(m);
+  if (send) { clearTimeout(_cbImgTimer); _cbImgTimer = setTimeout(() => _cbImgSend({}), 250); }
+}
+function _cbImgSend(extra) {
+  const m = _combatState && _combatState.map; if (!m || !m.image) return;
+  const { x, y, w, h } = m.image;
+  fetch('/combat/image', { method: 'POST', headers: { 'Content-Type': 'application/json', ...(_dndToken ? { 'X-DND-Token': _dndToken } : {}) },
+    body: JSON.stringify({ x, y, w, h, ...extra }) }).catch(() => {});
+}
+function _cbImgDrag(ev, bg, m) {
+  if (!_cbAligning) return;
+  ev.preventDefault(); bg.setPointerCapture(ev.pointerId); _cbDragging = true;
+  const { cell } = document.getElementById('cb-map')._geom, sx = ev.clientX, sy = ev.clientY, ox = m.image.x, oy = m.image.y;
+  const mv = e => _cbImgSet({ x: ox + (e.clientX - sx) / cell, y: oy + (e.clientY - sy) / cell }, false);
+  const up = () => { bg.removeEventListener('pointermove', mv); bg.removeEventListener('pointerup', up); _cbDragging = false; _cbImgSend({}); };
+  bg.addEventListener('pointermove', mv); bg.addEventListener('pointerup', up);
+}
+function _cbAlignUi(lg, m) {
+  const mk = (label, fn, title) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = label;
+    if (title) b.title = title; b.addEventListener('click', fn); return b; };
+  lg.appendChild(mk(_cbAligning ? 'Done' : 'Align map', () => { _cbAligning = !_cbAligning; _renderCombat(_currentTurnOrder || {}); },
+    'Drag the picture, or use the buttons, until its squares sit on the grid'));
+  const wrap = document.getElementById('cb-map-wrap');
+  wrap.querySelectorAll('.cb-align-bar').forEach(e => e.remove());
+  if (!_cbAligning) return;
+  const tools = document.createElement('div'); tools.className = 'cb-align-bar';
+  const step = e => (e && e.shiftKey ? 0.5 : 0.1);
+  const im = () => m.image;
+  const grow = (dw, dh, e) => { const s = step(e); _cbImgSet({ w: im().w + dw * s, h: im().h + dh * s }, true); };
+  [['\u25C0', e => _cbImgSet({ x: im().x - step(e) }, true)], ['\u25B6', e => _cbImgSet({ x: im().x + step(e) }, true)],
+   ['\u25B2', e => _cbImgSet({ y: im().y - step(e) }, true)], ['\u25BC', e => _cbImgSet({ y: im().y + step(e) }, true)],
+   ['Wider', e => grow(1, 0, e)], ['Narrower', e => grow(-1, 0, e)], ['Taller', e => grow(0, 1, e)], ['Shorter', e => grow(0, -1, e)],
+   ['Bigger', e => { const k = 1 + step(e) / 5; _cbImgSet({ x: im().x - im().w * (k - 1) / 2, y: im().y - im().h * (k - 1) / 2, w: im().w * k, h: im().h * k }, true); }],
+   ['Smaller', e => { const k = 1 - step(e) / 5; _cbImgSet({ x: im().x + im().w * (1 - k) / 2, y: im().y + im().h * (1 - k) / 2, w: im().w * k, h: im().h * k }, true); }],
+   ['Reset', () => { _cbImgSet({ x: 0, y: 0, w: m.cols, h: m.rows }, false); _cbImgSend({ reset: true }); }]
+  ].forEach(([l, f]) => tools.appendChild(mk(l, f)));
+  const hint = document.createElement('span'); hint.textContent = 'Drag the picture \u00b7 Shift = bigger steps'; tools.appendChild(hint);
+  wrap.appendChild(tools);
+}
 function _renderCombatMap(to) {
   const map = document.getElementById('cb-map');
   const m = _combatState && _combatState.map;
@@ -6464,10 +6539,21 @@ function _renderCombatMap(to) {
   map.style.display = '';
   map.textContent = '';
   const wrap = document.getElementById('cb-map-wrap');
-  const cell = Math.max(14, Math.floor(Math.min((wrap.clientWidth - 24) / (m.cols + 0.8), (wrap.clientHeight - 24) / (m.rows + 0.8))));
+  const barEl = wrap.querySelector('.cb-align-bar'), bar = barEl ? barEl.offsetHeight + 10 : 0;   // the alignment buttons sit under the mat
+  const cell = Math.max(14, Math.floor(Math.min((wrap.clientWidth - 24) / (m.cols + 0.8), (wrap.clientHeight - 24 - bar) / (m.rows + 0.8))));
+  map.style.top = `calc(50% - ${bar / 2}px)`;
   const pad = Math.round(cell * 0.8);
   map.style.width = (m.cols * cell + pad) + 'px'; map.style.height = (m.rows * cell + pad) + 'px';
   map._geom = { cell, pad, m };
+  map.classList.toggle('has-img', !!m.image); map.classList.toggle('aligning', !!m.image && _cbAligning);
+  if (m.image) {
+    const clip = document.createElement('div'); clip.className = 'cb-imgclip';
+    clip.style.cssText = `left:${pad}px;top:${pad}px;width:${m.cols * cell}px;height:${m.rows * cell}px`;
+    const bg = document.createElement('img'); bg.className = 'cb-bgimg'; bg.draggable = false; bg.alt = '';
+    bg.src = '/img/' + encodeURIComponent(m.image.src);
+    bg.addEventListener('pointerdown', ev => _cbImgDrag(ev, bg, m));
+    clip.appendChild(bg); map.appendChild(clip); _cbImgApply(m);
+  }
   const grid = document.createElement('div'); grid.className = 'cb-grid';
   grid.style.cssText = `left:${pad}px;top:${pad}px;width:${m.cols * cell}px;height:${m.rows * cell}px;background-size:${cell}px ${cell}px`; map.appendChild(grid);
   for (let x = 0; x < m.cols; x++) {

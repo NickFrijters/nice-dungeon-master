@@ -10,6 +10,13 @@ Versions before **1.6.0** are reconstructed retroactively from git history; the 
 
 ## [Unreleased]
 
+## [2.38.0] — 2026-11-16 — map pictures under the combat grid
+
+### Added
+- Combat view: a published adventure map can now be shown under the battle grid. Give the map an `image` (a library id, alias or file name) and the picture is stretched over the grid, with the grid lines drawn on top and the drawn terrain hidden (it still blocks and slows movement).
+- "Align map" button under the mat: drag the picture, nudge it, make it wider, taller, bigger or smaller until its own squares sit on ours. Shift makes the steps bigger. The alignment is saved, shared with every screen, and kept when the DM pushes the board again with the same picture. Reset puts it back to fitting the grid.
+- `push_stats.py --combat` finds the picture in the campaign, or copies it in from the shared image library; `image_library.campaign_image()` does the lookup. DM instructions explain how to size the grid to the picture.
+
 ## [2.37.1] — 2026-11-16 — combat view playtest fixes
 
 ### Fixed

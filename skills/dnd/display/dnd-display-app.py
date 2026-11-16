@@ -1559,7 +1559,36 @@ def menu_load():
     return "", 204
 
 
-def _clean_combat(raw):
+def _clean_map_image(raw, cols, rows, prev=None):
+    """The picture under the grid: a file in the campaign's images folder, placed in grid squares.
+
+    x, y = where its top-left corner sits (in squares), w, h = how many squares it spans. Default: it
+    exactly covers the grid. A re-push without a placement keeps the one the players already aligned.
+    """
+    if isinstance(raw, str):
+        raw = {"src": raw}
+    if not isinstance(raw, dict):
+        return None
+    src = os.path.basename(str(raw.get("src", "")).replace("\\", "/"))
+    if not src.lower().endswith((".png", ".jpg", ".jpeg", ".webp", ".gif")):
+        return None
+
+    def _f(v, lo, hi):
+        try:
+            return round(max(lo, min(hi, float(v))), 3)
+        except (TypeError, ValueError):
+            return None
+
+    place = {k: _f(raw.get(k), lo, hi) for k, lo, hi in (("x", -60, 60), ("y", -60, 60), ("w", 1, 120), ("h", 1, 120))}
+    if any(v is None for v in place.values()):
+        if prev and prev.get("src") == src:
+            place = {k: prev[k] for k in ("x", "y", "w", "h")}
+        else:
+            place = {"x": 0, "y": 0, "w": cols, "h": rows}
+    return {"src": src, **place}
+
+
+def _clean_combat(raw, prev=None):
     """Keep only what the combat screen draws: enemies, and a map with terrain and tokens."""
     if not isinstance(raw, dict) or not raw:
         return None
@@ -1606,6 +1635,9 @@ def _clean_combat(raw):
             terrain.append({"kind": kind, "x": x, "y": y, "w": min(w, cols - x), "h": min(h, rows - y)})
         out["map"] = {"cols": cols, "rows": rows, "title": str(m.get("title", ""))[:60],
                       "tokens": toks, "terrain": terrain}
+        img = _clean_map_image(m.get("image"), cols, rows, ((prev or {}).get("map") or {}).get("image"))
+        if img:
+            out["map"]["image"] = img
     return out
 
 
@@ -1638,6 +1670,29 @@ def combat_move():
             f.write(f"[Map]: {name} moved from {old} to {_cell_label(x, y)}\n")
     except OSError:
         pass
+    _persist_stats()
+    _broadcast({"stats": current})
+    return "", 204
+
+
+@app.route("/combat/image", methods=["POST"])
+def combat_image():
+    """The table was lining the map picture up with the grid: remember where it sits (shared by every screen)."""
+    if not _token_ok():
+        return "Forbidden", 403
+    if not _from_this_machine():
+        return _THIS_MACHINE_ONLY
+    data = request.get_json(force=True, silent=True) or {}
+    with _stats_lock:
+        m = (_current_stats.get("combat") or {}).get("map")
+        cur = (m or {}).get("image")
+        if not cur:
+            return "no map picture", 404
+        if data.get("reset"):
+            data = {"x": 0, "y": 0, "w": m["cols"], "h": m["rows"]}
+        new = _clean_map_image({"src": cur["src"], **{k: data.get(k, cur[k]) for k in ("x", "y", "w", "h")}}, m["cols"], m["rows"], cur)
+        m["image"] = new
+        current = dict(_current_stats)
     _persist_stats()
     _broadcast({"stats": current})
     return "", 204
@@ -2527,7 +2582,7 @@ def stats():
 
         # combat board replaces entirely (null/{} clears): enemies with HP, plus the battle map
         if "combat" in data:
-            _current_stats["combat"] = _clean_combat(data["combat"])
+            _current_stats["combat"] = _clean_combat(data["combat"], _current_stats.get("combat"))
 
         # npcs in the current scene replace entirely ([] clears): [{name, role, disposition}]
         if "npcs" in data:

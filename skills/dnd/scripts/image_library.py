@@ -365,6 +365,31 @@ def _source_text(s: dict) -> str:
     return " ".join(b for b in bits if b)
 
 
+def campaign_image(key: str, campaign: str):
+    """Find an image for a campaign by library id, alias or file name, copying it in from the shared
+    library when needed. Returns {"file", "title", "kind"} or None. Used to put a map under the combat grid."""
+    key = (key or "").strip()
+    if not key or not campaign:
+        return None
+    try:
+        idir = paths.find_campaign(campaign) / "images"
+        try:
+            cidx = json.loads((idir / "index.json").read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            cidx = {}
+        rec = cidx.get(key)
+        if rec and (idir / rec["file"]).is_file():
+            return {"file": rec["file"], "title": rec.get("title", ""), "kind": rec.get("type", "")}
+        base = os.path.basename(key)
+        if base == key and (idir / base).is_file():
+            return {"file": base, "title": "", "kind": ""}
+        iid = use(key, campaign)
+        m = load_index()[iid]
+        return {"file": m["file"], "title": m.get("title", ""), "kind": m.get("kind", "")}
+    except Exception:
+        return None
+
+
 def library_file(key: str):
     """Path of a library image by id/alias/file name, or None. Used by send.py's fallback."""
     idx = load_index()

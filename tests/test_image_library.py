@@ -206,6 +206,26 @@ class DownloadTests(Base):
                                "file:///etc/passwd")
 
 
+class CampaignImageTests(Base):
+    """campaign_image(): how a map picture for the combat grid is found (by file, campaign id, or the shared library)."""
+
+    def test_finds_by_file_by_campaign_id_and_from_the_library(self):
+        self.campaign("adv", {"cellar.png": PNG_A, "b.png": PNG_B},
+                      {"map-cellar": {"file": "b.png", "title": "Cellar", "type": "map"}})
+        self.assertEqual(il.campaign_image("cellar.png", "adv")["file"], "cellar.png")
+        got = il.campaign_image("map-cellar", "adv")
+        self.assertEqual((got["file"], got["kind"]), ("b.png", "map"))
+        # not in the campaign yet, but in the shared library: it is copied in
+        self.campaign("other", {})
+        iid, _ = il.add_bytes(JPG, title="Crypt", kind="map")
+        got = il.campaign_image(iid, "other")
+        self.assertTrue((self.root / "campaigns" / "other" / "images" / got["file"]).is_file())
+        # unknown, or path tricks: nothing
+        self.assertIsNone(il.campaign_image("nope.png", "adv"))
+        self.assertIsNone(il.campaign_image("../../etc/passwd", "adv"))
+        self.assertIsNone(il.campaign_image("", "adv"))
+
+
 class ImportWiringTests(unittest.TestCase):
     def test_import_campaign_has_extract_images_option(self):
         src = (ROOT / "skills" / "dnd" / "scripts" / "import_campaign.py").read_text(encoding="utf-8")
