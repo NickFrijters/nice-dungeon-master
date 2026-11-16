@@ -1562,8 +1562,9 @@ def menu_load():
 def _clean_map_image(raw, cols, rows, prev=None):
     """The picture under the grid: a file in the campaign's images folder, placed in grid squares.
 
-    x, y = where its top-left corner sits (in squares), w, h = how many squares it spans. Default: it
-    exactly covers the grid. A re-push without a placement keeps the one the players already aligned.
+    x, y = where its top-left corner sits (in squares), w, h = how many squares it spans. When the DM gives
+    no placement, `placed` stays False and the page measures the picture's printed grid and reports the fit
+    (POST /combat/image). A re-push of the same picture without a placement keeps the earlier fit.
     """
     if isinstance(raw, str):
         raw = {"src": raw}
@@ -1580,12 +1581,15 @@ def _clean_map_image(raw, cols, rows, prev=None):
             return None
 
     place = {k: _f(raw.get(k), lo, hi) for k, lo, hi in (("x", -60, 60), ("y", -60, 60), ("w", 1, 120), ("h", 1, 120))}
+    placed = True
     if any(v is None for v in place.values()):
         if prev and prev.get("src") == src:
             place = {k: prev[k] for k in ("x", "y", "w", "h")}
+            placed = bool(prev.get("placed"))
         else:
             place = {"x": 0, "y": 0, "w": cols, "h": rows}
-    return {"src": src, **place}
+            placed = False
+    return {"src": src, **place, "placed": placed}
 
 
 def _clean_combat(raw, prev=None):
@@ -1677,21 +1681,19 @@ def combat_move():
 
 @app.route("/combat/image", methods=["POST"])
 def combat_image():
-    """The table was lining the map picture up with the grid: remember where it sits (shared by every screen)."""
+    """A screen measured the map picture's printed grid and reports where it sits. Accepted once per picture:
+    only while the DM has not given a placement and nothing was reported yet (the first screen wins)."""
     if not _token_ok():
         return "Forbidden", 403
-    if not _from_this_machine():
-        return _THIS_MACHINE_ONLY
     data = request.get_json(force=True, silent=True) or {}
     with _stats_lock:
         m = (_current_stats.get("combat") or {}).get("map")
         cur = (m or {}).get("image")
         if not cur:
             return "no map picture", 404
-        if data.get("reset"):
-            data = {"x": 0, "y": 0, "w": m["cols"], "h": m["rows"]}
-        new = _clean_map_image({"src": cur["src"], **{k: data.get(k, cur[k]) for k in ("x", "y", "w", "h")}}, m["cols"], m["rows"], cur)
-        m["image"] = new
+        if cur.get("placed"):
+            return "", 204
+        m["image"] = _clean_map_image({"src": cur["src"], **{k: data.get(k) for k in ("x", "y", "w", "h")}}, m["cols"], m["rows"], cur) or cur
         current = dict(_current_stats)
     _persist_stats()
     _broadcast({"stats": current})

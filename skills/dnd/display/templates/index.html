@@ -3226,22 +3226,9 @@
   @keyframes pageNudge { 0%,100% { transform: translateX(-50%) translateY(0); } 50% { transform: translateX(-50%) translateY(-4px); } }
   /* published map picture under the grid */
   #cb-map .cb-imgclip { position: absolute; overflow: hidden; pointer-events: none; }
-  #cb-map.aligning .cb-imgclip { overflow: visible; }
   #cb-map .cb-bgimg { position: absolute; max-width: none; user-select: none; -webkit-user-drag: none; pointer-events: none; }
-  #cb-map.aligning .cb-bgimg { pointer-events: auto; cursor: move; opacity: .75; outline: 2px dashed rgba(255,225,130,.8); }
   #cb-map.has-img .cb-grid { background-image: linear-gradient(to right, rgba(255,255,255,.22) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,.22) 1px, transparent 1px); }
-  #cb-map.aligning .cb-grid { background-image: linear-gradient(to right, rgba(255,225,130,.8) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,225,130,.8) 1px, transparent 1px); }
   #cb-map.has-img .cb-ter { background: none !important; box-shadow: none !important; animation: none !important; border-radius: 0 !important; }
-  #cb-map.aligning .cb-ter { outline: 1px solid rgba(255,100,90,.7); outline-offset: -1px; }
-  #cb-map.aligning .cb-token { pointer-events: none; opacity: .55; }
-  #cb-legend button { font: 700 11px 'Cinzel', serif; letter-spacing: 1px; color: rgba(255,235,170,1); background: rgba(40,28,10,.9);
-    border: 1px solid rgba(235,205,120,.7); border-radius: 12px; padding: 3px 11px; cursor: pointer; }
-  #cb-legend button:hover { background: rgba(80,55,18,.95); }
-  #cb-map-wrap .cb-align-bar { position: absolute; left: 8px; right: 8px; bottom: 6px; z-index: 9; display: flex; gap: 4px; flex-wrap: wrap; justify-content: center; align-items: center;
-    padding: 5px 8px; border-radius: 10px; background: rgba(20,14,6,.88); border: 1px solid rgba(200,165,80,.45); font: 11px 'Cinzel', serif; color: rgba(205,175,110,.85); }
-  #cb-map-wrap .cb-align-bar button { font: 700 11px 'Cinzel', serif; letter-spacing: 1px; color: rgba(255,235,170,1); background: rgba(40,28,10,.9);
-    border: 1px solid rgba(235,205,120,.7); border-radius: 12px; padding: 2px 9px; cursor: pointer; }
-  #cb-map-wrap .cb-align-bar button:hover { background: rgba(80,55,18,.95); }
 </style>
 </head>
 <body>
@@ -6434,9 +6421,8 @@ function _renderCombat(to) {
   if (m) {
     const t = document.createElement('span'); t.className = 'cb-title'; t.textContent = m.title || 'Battle map'; lg.appendChild(t);
     const s = document.createElement('span'); s.textContent = '1 square = 5 ft'; lg.appendChild(s);
-    const d = document.createElement('span'); d.textContent = _cbAligning && m.image ? 'Lining up the map picture' : 'Drag a token to move it'; lg.appendChild(d);
-    if (m.image) _cbAlignUi(lg, m); else { _cbAligning = false; document.querySelectorAll('#cb-map-wrap .cb-align-bar').forEach(e => e.remove()); }
-  } else { _cbAligning = false; document.querySelectorAll('#cb-map-wrap .cb-align-bar').forEach(e => e.remove()); }
+    const d = document.createElement('span'); d.textContent = 'Drag a token to move it'; lg.appendChild(d);
+  }
   _renderCombatMap(to);
 }
 // Movement cost map for the actor: walls block, water and difficult ground cost double. 5-ft squares, diagonals count 5 ft.
@@ -6478,59 +6464,78 @@ function _cbReach(m, tk) {
 let _cbDragging = false;
 
 // ── Published map picture under the grid ────────────────────────────────────
-// The picture is placed in grid squares (x, y = top-left corner, w, h = size). "Align map" lets the table
-// drag and resize it until the picture's own squares sit exactly on ours; every screen shares the result.
-let _cbAligning = false, _cbImgTimer = null;
+// The picture is placed in grid squares (x, y = where its top-left corner sits, w, h = how many squares it spans).
+// When the DM gives no placement the page measures the picture's printed grid itself and lines it up (once,
+// shared with every screen); a picture without a printed grid simply covers the grid.
+// <cb-detect>
+// gray: W*H brightness values. Finds the period (px per square) and offset of the printed grid lines for `n` squares
+// across `N` px, returning null when there is no clear grid. Squares are assumed to be within 25% of N/n.
+function _cbFitAxis(P, N, n) {
+  const base = N / n; let best = null, sum = 0;
+  for (let i = 0; i < N; i++) sum += P[i];
+  const mean = sum / N || 1e-9;
+  for (let p = base * 0.8; p <= base * 1.25; p += Math.max(0.05, base * 0.0015)) {
+    for (let o = 0; o < p; o += 0.5) {
+      let on = 0, off = 0, c = 0;
+      for (let tt = o; tt + p / 2 < N - 1; tt += p) { on += P[Math.round(tt)]; off += P[Math.round(tt + p / 2)]; c++; }
+      if (c < 3) continue;
+      const score = (on - off) / c;
+      if (!best || score > best.score) best = { p, o, score };
+    }
+  }
+  return best && best.score / mean > 6 ? best : null;   // a printed grid scores 15-25, rich artwork about 4
+}
+function _cbDetectGrid(g, W, H, cols, rows) {
+  const px = new Float64Array(W), py = new Float64Array(H);
+  for (let y = 1; y < H; y++) for (let x = 1; x < W; x++) {
+    const i = y * W + x;
+    px[x] += Math.abs(g[i] - g[i - 1]); py[y] += Math.abs(g[i] - g[i - W]);
+  }
+  const sm = P => { const r = new Float64Array(P.length); for (let i = 1; i < P.length - 1; i++) r[i] = (P[i - 1] + 2 * P[i] + P[i + 1]) / 4; return r; };
+  const fx = _cbFitAxis(sm(px), W, cols), fy = _cbFitAxis(sm(py), H, rows);
+  if (!fx || !fy) return null;
+  const place = (f, N, n) => {
+    const o = f.o > f.p - 2 ? f.o - f.p : f.o;                           // a line right at the edge counts as the first one
+    const lines = Math.floor((N + 1 - o) / f.p) + 1;                    // grid lines that fall inside the picture
+    const s = Math.max(0, Math.round((lines - 1 - n) / 2));             // first line of our grid: centre it in the picture
+    return [-(o / f.p) - s, N / f.p];
+  };
+  const [x, w] = place(fx, W, cols), [y, h] = place(fy, H, rows);
+  const r = v => Math.round(v * 100) / 100;
+  return { x: r(x), y: r(y), w: r(w), h: r(h) };
+}
+// </cb-detect>
+let _cbFitTried = {};
+function _cbImgSend(place) {
+  fetch('/combat/image', { method: 'POST', headers: { 'Content-Type': 'application/json', ...(_dndToken ? { 'X-DND-Token': _dndToken } : {}) },
+    body: JSON.stringify(place) }).catch(() => {});
+}
+function _cbAutoFit(m) {
+  const key = m.image.src + '|' + m.cols + 'x' + m.rows;
+  if (m.image.placed || _cbFitTried[key]) return;
+  _cbFitTried[key] = true;
+  const im = new Image();
+  im.onload = () => {
+    let place = null;
+    try {
+      const k = Math.min(1, 1200 / Math.max(im.naturalWidth, im.naturalHeight));
+      const W = Math.max(8, Math.round(im.naturalWidth * k)), H = Math.max(8, Math.round(im.naturalHeight * k));
+      const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+      const cx = cv.getContext('2d', { willReadFrequently: true }); cx.drawImage(im, 0, 0, W, H);
+      const d = cx.getImageData(0, 0, W, H).data, g = new Float32Array(W * H);
+      for (let i = 0; i < W * H; i++) g[i] = d[i * 4] * 0.3 + d[i * 4 + 1] * 0.59 + d[i * 4 + 2] * 0.11;
+      place = _cbDetectGrid(g, W, H, m.cols, m.rows);
+    } catch (e) { place = null; }
+    _cbImgSend(place || { x: 0, y: 0, w: m.cols, h: m.rows });   // no printed grid found: the picture covers the grid
+  };
+  im.src = '/img/' + encodeURIComponent(m.image.src);
+}
 function _cbImgApply(m) {
   const map = document.getElementById('cb-map'), bg = map && map.querySelector('.cb-bgimg');
   if (!bg || !map._geom || !m.image) return;
   const { cell } = map._geom, im = m.image;
   bg.style.left = (im.x * cell) + 'px'; bg.style.top = (im.y * cell) + 'px';
   bg.style.width = (im.w * cell) + 'px'; bg.style.height = (im.h * cell) + 'px';
-}
-function _cbImgSet(patch, send) {
-  const m = _combatState && _combatState.map; if (!m || !m.image) return;
-  Object.assign(m.image, patch);
-  ['x', 'y'].forEach(k => m.image[k] = Math.round(Math.max(-60, Math.min(60, m.image[k])) * 1000) / 1000);
-  ['w', 'h'].forEach(k => m.image[k] = Math.round(Math.max(1, Math.min(120, m.image[k])) * 1000) / 1000);
-  _cbImgApply(m);
-  if (send) { clearTimeout(_cbImgTimer); _cbImgTimer = setTimeout(() => _cbImgSend({}), 250); }
-}
-function _cbImgSend(extra) {
-  const m = _combatState && _combatState.map; if (!m || !m.image) return;
-  const { x, y, w, h } = m.image;
-  fetch('/combat/image', { method: 'POST', headers: { 'Content-Type': 'application/json', ...(_dndToken ? { 'X-DND-Token': _dndToken } : {}) },
-    body: JSON.stringify({ x, y, w, h, ...extra }) }).catch(() => {});
-}
-function _cbImgDrag(ev, bg, m) {
-  if (!_cbAligning) return;
-  ev.preventDefault(); bg.setPointerCapture(ev.pointerId); _cbDragging = true;
-  const { cell } = document.getElementById('cb-map')._geom, sx = ev.clientX, sy = ev.clientY, ox = m.image.x, oy = m.image.y;
-  const mv = e => _cbImgSet({ x: ox + (e.clientX - sx) / cell, y: oy + (e.clientY - sy) / cell }, false);
-  const up = () => { bg.removeEventListener('pointermove', mv); bg.removeEventListener('pointerup', up); _cbDragging = false; _cbImgSend({}); };
-  bg.addEventListener('pointermove', mv); bg.addEventListener('pointerup', up);
-}
-function _cbAlignUi(lg, m) {
-  const mk = (label, fn, title) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = label;
-    if (title) b.title = title; b.addEventListener('click', fn); return b; };
-  lg.appendChild(mk(_cbAligning ? 'Done' : 'Align map', () => { _cbAligning = !_cbAligning; _renderCombat(_currentTurnOrder || {}); },
-    'Drag the picture, or use the buttons, until its squares sit on the grid'));
-  const wrap = document.getElementById('cb-map-wrap');
-  wrap.querySelectorAll('.cb-align-bar').forEach(e => e.remove());
-  if (!_cbAligning) return;
-  const tools = document.createElement('div'); tools.className = 'cb-align-bar';
-  const step = e => (e && e.shiftKey ? 0.5 : 0.1);
-  const im = () => m.image;
-  const grow = (dw, dh, e) => { const s = step(e); _cbImgSet({ w: im().w + dw * s, h: im().h + dh * s }, true); };
-  [['\u25C0', e => _cbImgSet({ x: im().x - step(e) }, true)], ['\u25B6', e => _cbImgSet({ x: im().x + step(e) }, true)],
-   ['\u25B2', e => _cbImgSet({ y: im().y - step(e) }, true)], ['\u25BC', e => _cbImgSet({ y: im().y + step(e) }, true)],
-   ['Wider', e => grow(1, 0, e)], ['Narrower', e => grow(-1, 0, e)], ['Taller', e => grow(0, 1, e)], ['Shorter', e => grow(0, -1, e)],
-   ['Bigger', e => { const k = 1 + step(e) / 5; _cbImgSet({ x: im().x - im().w * (k - 1) / 2, y: im().y - im().h * (k - 1) / 2, w: im().w * k, h: im().h * k }, true); }],
-   ['Smaller', e => { const k = 1 - step(e) / 5; _cbImgSet({ x: im().x + im().w * (1 - k) / 2, y: im().y + im().h * (1 - k) / 2, w: im().w * k, h: im().h * k }, true); }],
-   ['Reset', () => { _cbImgSet({ x: 0, y: 0, w: m.cols, h: m.rows }, false); _cbImgSend({ reset: true }); }]
-  ].forEach(([l, f]) => tools.appendChild(mk(l, f)));
-  const hint = document.createElement('span'); hint.textContent = 'Drag the picture \u00b7 Shift = bigger steps'; tools.appendChild(hint);
-  wrap.appendChild(tools);
 }
 function _renderCombatMap(to) {
   const map = document.getElementById('cb-map');
@@ -6539,20 +6544,17 @@ function _renderCombatMap(to) {
   map.style.display = '';
   map.textContent = '';
   const wrap = document.getElementById('cb-map-wrap');
-  const barEl = wrap.querySelector('.cb-align-bar'), bar = barEl ? barEl.offsetHeight + 10 : 0;   // the alignment buttons sit under the mat
-  const cell = Math.max(14, Math.floor(Math.min((wrap.clientWidth - 24) / (m.cols + 0.8), (wrap.clientHeight - 24 - bar) / (m.rows + 0.8))));
-  map.style.top = `calc(50% - ${bar / 2}px)`;
+  const cell = Math.max(14, Math.floor(Math.min((wrap.clientWidth - 24) / (m.cols + 0.8), (wrap.clientHeight - 24) / (m.rows + 0.8))));
   const pad = Math.round(cell * 0.8);
   map.style.width = (m.cols * cell + pad) + 'px'; map.style.height = (m.rows * cell + pad) + 'px';
   map._geom = { cell, pad, m };
-  map.classList.toggle('has-img', !!m.image); map.classList.toggle('aligning', !!m.image && _cbAligning);
+  map.classList.toggle('has-img', !!m.image);
   if (m.image) {
     const clip = document.createElement('div'); clip.className = 'cb-imgclip';
     clip.style.cssText = `left:${pad}px;top:${pad}px;width:${m.cols * cell}px;height:${m.rows * cell}px`;
     const bg = document.createElement('img'); bg.className = 'cb-bgimg'; bg.draggable = false; bg.alt = '';
     bg.src = '/img/' + encodeURIComponent(m.image.src);
-    bg.addEventListener('pointerdown', ev => _cbImgDrag(ev, bg, m));
-    clip.appendChild(bg); map.appendChild(clip); _cbImgApply(m);
+    clip.appendChild(bg); map.appendChild(clip); _cbImgApply(m); _cbAutoFit(m);
   }
   const grid = document.createElement('div'); grid.className = 'cb-grid';
   grid.style.cssText = `left:${pad}px;top:${pad}px;width:${m.cols * cell}px;height:${m.rows * cell}px;background-size:${cell}px ${cell}px`; map.appendChild(grid);

@@ -10,6 +10,11 @@ Versions before **1.6.0** are reconstructed retroactively from git history; the 
 
 ## [Unreleased]
 
+## [2.38.1] — 2026-11-16 — map pictures line up by themselves
+
+### Changed
+- Combat view: a map picture under the grid now lines itself up. The screen measures the picture's printed grid (square size and margins) the first time it appears and places it, so nobody has to align anything. The Align map button is gone. A picture without a printed grid simply covers the grid, and the DM can still give an exact placement when it knows better.
+
 ## [2.38.0] — 2026-11-16 — map pictures under the combat grid
 
 ### Added
