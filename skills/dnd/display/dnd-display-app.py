@@ -1581,15 +1581,28 @@ def _clean_map_image(raw, cols, rows, prev=None):
             return None
 
     place = {k: _f(raw.get(k), lo, hi) for k, lo, hi in (("x", -60, 60), ("y", -60, 60), ("w", 1, 120), ("h", 1, 120))}
+    # area = the part of the picture the battle happens in (fractions 0-1), for big maps of a whole dungeon
+    area = None
+    ra = raw.get("area")
+    if isinstance(ra, dict):
+        ax, ay = _f(ra.get("x"), 0, 0.98), _f(ra.get("y"), 0, 0.98)
+        aw, ah = _f(ra.get("w"), 0.02, 1), _f(ra.get("h"), 0.02, 1)
+        if None not in (ax, ay, aw, ah):
+            area = {"x": ax, "y": ay, "w": min(aw, 1 - ax), "h": min(ah, 1 - ay)}
     placed = True
     if any(v is None for v in place.values()):
-        if prev and prev.get("src") == src:
+        if prev and prev.get("src") == src and prev.get("area") == area and prev.get("for") == [cols, rows]:
             place = {k: prev[k] for k in ("x", "y", "w", "h")}
             placed = bool(prev.get("placed"))
         else:
-            place = {"x": 0, "y": 0, "w": cols, "h": rows}
+            a = area or {"x": 0, "y": 0, "w": 1, "h": 1}              # until measured, the area just covers the grid
+            place = {"x": round(-a["x"] * cols / a["w"], 3), "y": round(-a["y"] * rows / a["h"], 3),
+                     "w": round(cols / a["w"], 3), "h": round(rows / a["h"], 3)}
             placed = False
-    return {"src": src, **place, "placed": placed}
+    out = {"src": src, **place, "placed": placed, "for": [cols, rows]}
+    if area:
+        out["area"] = area
+    return out
 
 
 def _clean_combat(raw, prev=None):
@@ -1693,7 +1706,11 @@ def combat_image():
             return "no map picture", 404
         if cur.get("placed"):
             return "", 204
-        m["image"] = _clean_map_image({"src": cur["src"], **{k: data.get(k) for k in ("x", "y", "w", "h")}}, m["cols"], m["rows"], cur) or cur
+        if data.get("measured") is False:            # no printed grid found: keep the area-covers-grid fit, stop asking
+            cur["placed"] = True
+        else:
+            m["image"] = _clean_map_image({"src": cur["src"], "area": cur.get("area"), **{k: data.get(k) for k in ("x", "y", "w", "h")}},
+                                          m["cols"], m["rows"], cur) or cur
         current = dict(_current_stats)
     _persist_stats()
     _broadcast({"stats": current})

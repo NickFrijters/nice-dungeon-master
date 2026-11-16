@@ -35,17 +35,33 @@ class CombatScreenTest(unittest.TestCase):
         clean = _clean_combat()
         base = {"cols": 14, "rows": 10, "tokens": []}
         out = clean({"map": {**base, "image": "../../secret/cellar.PNG"}})
-        self.assertEqual(out["map"]["image"], {"src": "cellar.PNG", "x": 0, "y": 0, "w": 14, "h": 10, "placed": False})   # path stripped, fits the grid until measured
+        self.assertEqual(out["map"]["image"], {"src": "cellar.PNG", "x": 0, "y": 0, "w": 14, "h": 10, "placed": False, "for": [14, 10]})   # path stripped, fits the grid until measured
         self.assertNotIn("image", clean({"map": {**base, "image": "notes.txt"}})["map"])               # only picture files
         self.assertNotIn("image", clean({"map": base})["map"])
         placed = clean({"map": {**base, "image": {"src": "cellar.png", "x": -0.4, "y": "-0.4", "w": 14.8, "h": 10.8}}})
-        self.assertEqual(placed["map"]["image"], {"src": "cellar.png", "x": -0.4, "y": -0.4, "w": 14.8, "h": 10.8, "placed": True})
+        self.assertEqual(placed["map"]["image"], {"src": "cellar.png", "x": -0.4, "y": -0.4, "w": 14.8, "h": 10.8, "placed": True, "for": [14, 10]})
         # the DM pushes the board again without a placement: the placement already measured stays
         again = clean({"map": {**base, "image": "cellar.png"}}, placed)
         self.assertEqual(again["map"]["image"], placed["map"]["image"])
         # a different picture starts from the default fit
         other = clean({"map": {**base, "image": "other.png"}}, placed)
-        self.assertEqual(other["map"]["image"], {"src": "other.png", "x": 0, "y": 0, "w": 14, "h": 10, "placed": False})
+        self.assertEqual(other["map"]["image"], {"src": "other.png", "x": 0, "y": 0, "w": 14, "h": 10, "placed": False, "for": [14, 10]})
+
+    def test_area_of_a_big_map_and_stale_fits(self):
+        clean = _clean_combat()
+        base = {"cols": 10, "rows": 6, "tokens": []}
+        out = clean({"map": {**base, "image": {"src": "dungeon.webp", "area": {"x": 0.1, "y": 0.5, "w": 0.4, "h": 0.2}}}})["map"]["image"]
+        # until the page measures the printed grid, the area just covers the grid: 10 squares per 40% of the picture
+        self.assertEqual((out["x"], out["y"], out["w"], out["h"]), (-2.5, -15.0, 25.0, 30.0))
+        self.assertFalse(out["placed"])
+        self.assertEqual(out["area"], {"x": 0.1, "y": 0.5, "w": 0.4, "h": 0.2})
+        bad = clean({"map": {**base, "image": {"src": "d.png", "area": {"x": 5, "y": -1, "w": 0, "h": "x"}}}})["map"]["image"]
+        self.assertNotIn("area", bad)                                                 # nonsense area: ignored, picture covers the grid
+        measured = {**out, "x": -3.2, "placed": True}
+        same = clean({"map": {**base, "image": {"src": "dungeon.webp", "area": out["area"]}}}, {"map": {"image": measured}})["map"]["image"]
+        self.assertEqual(same["x"], -3.2)                                               # same picture, area and grid size: the measured fit stays
+        other = clean({"map": {**base, "cols": 12, "image": {"src": "dungeon.webp", "area": out["area"]}}}, {"map": {"image": measured}})["map"]["image"]
+        self.assertFalse(other["placed"])                                               # a different grid size needs a new fit
 
     def test_align_route_page_and_pushers(self):
         self.assertIn('@app.route("/combat/image", methods=["POST"])', APP)

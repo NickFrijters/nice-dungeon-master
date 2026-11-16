@@ -10,6 +10,15 @@ Versions before **1.6.0** are reconstructed retroactively from git history; the 
 
 ## [Unreleased]
 
+## [2.39.0] — 2026-11-16 — big published maps under the combat grid
+
+### Added
+- Combat view: big published maps (a whole dungeon or building on one picture) now work under the grid. The DM gives an `area` (the part of the picture the fight is in, as fractions) and a grid sized to the room; the grid starts on the printed line that fits that area.
+
+### Fixed
+- Combat view: the printed-grid measuring was tried on real adventure maps and rebuilt around what they showed. It now measures the whole picture instead of only the area (real grids are faint), does not depend on the DM counting squares exactly, picks the real square size rather than a multiple of it, and tunes the size finely so 30 squares in a row still line up. Painted maps without a printed grid are left alone (the area covers the grid) instead of getting a wrong fit.
+- Combat view: a measured fit is only reused for the same picture, area and grid size, so a different fight on the same map is measured again.
+
 ## [2.38.1] — 2026-11-16 — map pictures line up by themselves
 
 ### Changed
