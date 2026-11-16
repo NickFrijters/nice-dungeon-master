@@ -3229,6 +3229,22 @@
   #cb-map .cb-bgimg { position: absolute; max-width: none; user-select: none; -webkit-user-drag: none; pointer-events: none; }
   #cb-map.has-img .cb-grid { background-image: linear-gradient(to right, rgba(255,255,255,.22) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,.22) 1px, transparent 1px); }
   #cb-map.has-img .cb-ter { background: none !important; box-shadow: none !important; animation: none !important; border-radius: 0 !important; }
+  /* party map: the map card with a red pin, top of the right-hand column */
+  #scene-gallery:not(:has(.sg-item)) .sg-title { display: none; }
+  #scene-gallery .pm-card { pointer-events: auto; cursor: pointer; flex: 0 0 auto; border: 1px solid rgba(180,140,60,0.5); border-radius: 4px;
+    background: rgba(0,0,0,0.55); overflow: hidden; box-shadow: 0 4px 18px rgba(0,0,0,.55); }
+  #scene-gallery .pm-view { position: relative; overflow: hidden; width: 100%; margin: 0 auto; background: #1b140b; }
+  #scene-gallery .pm-view img.pm-img { position: absolute; display: block; max-width: none; user-select: none; -webkit-user-drag: none; }
+  #scene-gallery .pm-pin { position: absolute; width: 26px; height: 34px; margin: -34px 0 0 -13px; z-index: 2; pointer-events: none;
+    filter: drop-shadow(0 3px 3px rgba(0,0,0,.7)); transition: left .9s ease, top .9s ease; }
+  #scene-gallery .pm-pin.drop { animation: pmDrop .7s cubic-bezier(.3,1.5,.5,1); }
+  #scene-gallery .pm-ring { position: absolute; width: 26px; height: 10px; margin: -5px 0 0 -13px; border-radius: 50%; border: 2px solid rgba(255,80,60,.8);
+    z-index: 1; pointer-events: none; animation: pmRing 2s ease-out infinite; transition: left .9s ease, top .9s ease; }
+  @keyframes pmDrop { 0% { transform: translateY(-30px); opacity: 0; } 60% { transform: translateY(3px); opacity: 1; } 100% { transform: none; } }
+  @keyframes pmRing { 0% { transform: scale(.5); opacity: .9; } 100% { transform: scale(2.6); opacity: 0; } }
+  #scene-gallery .pm-cap { padding: 5px 9px; display: flex; justify-content: space-between; gap: 8px; align-items: baseline;
+    font: 11px 'Cinzel', serif; letter-spacing: 1.5px; text-transform: uppercase; color: rgba(235,205,120,.95); }
+  #scene-gallery .pm-cap small { font-size: 9px; letter-spacing: 1px; color: rgba(205,175,110,.55); white-space: nowrap; }
 </style>
 </head>
 <body>
@@ -5131,6 +5147,60 @@ function _galleryAdd(im) {
   g.hidden = false;
 }
 
+
+// ── Party map: a map card with a red pin where the party is (the DM pushes `place`) ──
+let _pmKey = '', _pmFull = false, _pmLast = null;
+function _renderPlace(pl) {
+  const g = document.getElementById('scene-gallery'); if (!g) return;
+  let card = g.querySelector('.pm-card');
+  if (!pl) { if (card) card.remove(); _pmKey = ''; _pmLast = null; _pmFull = false; if (!g.querySelector('.sg-item')) g.hidden = true; return; }
+  if (!card) {
+    card = document.createElement('div'); card.className = 'pm-card';
+    card.title = 'Click to see the whole map';
+    card.addEventListener('click', () => { _pmFull = !_pmFull; _renderPlace(_pmLast); });
+    g.insertBefore(card, g.querySelector('.sg-title') ? g.querySelector('.sg-title') : g.firstChild);
+  }
+  const hasView = !!pl.view, view = (_pmFull || !pl.view) ? { x: 0, y: 0, w: 1, h: 1 } : pl.view;
+  const moved = _pmLast && _pmLast.image === pl.image && (_pmLast.x !== pl.x || _pmLast.y !== pl.y);
+  const same = _pmLast && _pmLast.image === pl.image;
+  _pmLast = pl;
+  const key = pl.image + '|' + view.x + ',' + view.y + ',' + view.w + ',' + view.h;
+  let box = card.querySelector('.pm-view'), img = card.querySelector('img.pm-img'), pin = card.querySelector('.pm-pin'), ring = card.querySelector('.pm-ring');
+  if (!box || _pmKey !== key) {
+    card.textContent = '';
+    box = document.createElement('div'); box.className = 'pm-view';
+    img = document.createElement('img'); img.className = 'pm-img'; img.alt = ''; img.src = _imgSrc(pl.image);
+    pin = document.createElement('div'); pin.className = 'pm-pin';
+    pin.innerHTML = '<svg viewBox="0 0 26 34" width="26" height="34"><path d="M13 33C13 33 2 20 2 12.5A11 11 0 0 1 24 12.5C24 20 13 33 13 33Z" fill="#e23b2e" stroke="#7a130b" stroke-width="1.6"/><circle cx="13" cy="12.5" r="4.4" fill="#fff"/></svg>';
+    ring = document.createElement('div'); ring.className = 'pm-ring';
+    box.append(img, ring, pin);
+    const cap = document.createElement('div'); cap.className = 'pm-cap';
+    const l = document.createElement('span'); l.className = 'pm-label'; cap.appendChild(l);
+    const s = document.createElement('small'); s.className = 'pm-hint'; cap.appendChild(s);
+    card.append(box, cap);
+    _pmKey = key;
+    const fit = () => {                                       // the card shows `view` of the picture; size it from the picture's shape
+      const ar = (img.naturalWidth * view.w) / (img.naturalHeight * view.h || 1);
+      box.style.aspectRatio = String(ar);
+      box.style.width = 'min(100%, ' + (34 * ar) + 'vh)';          // tall maps get narrower instead of being cut off
+      img.style.width = (100 / view.w) + '%'; img.style.height = 'auto';
+      img.style.left = (-view.x / view.w * 100) + '%';
+      img.style.top = (-view.y / view.h * 100) + '%';
+    };
+    img.addEventListener('load', fit);
+    if (img.complete && img.naturalWidth) fit();
+    if (!same) pin.classList.add('drop');
+  } else if (moved) {
+    pin.classList.remove('drop');
+  }
+  const px = ((pl.x - view.x) / view.w * 100) + '%', py = ((pl.y - view.y) / view.h * 100) + '%';
+  const inside = pl.x >= view.x && pl.x <= view.x + view.w && pl.y >= view.y && pl.y <= view.y + view.h;
+  [pin, ring].forEach(e => { e.style.left = px; e.style.top = py; e.style.display = inside ? '' : 'none'; });
+  card.querySelector('.pm-label').textContent = pl.label || 'The party is here';
+  card.querySelector('.pm-hint').textContent = hasView ? (_pmFull ? 'whole map' : 'zoomed') : '';
+  g.hidden = false;
+}
+
 function renderImageBlock(im, replay) {
   _flushForBlock();
   const block = document.createElement('div');
@@ -6286,6 +6356,9 @@ function updateStats(stats) {
     });
     panel.style.display = npcs.length ? '' : 'none';
   }
+
+  // Where the party is on the map
+  if ('place' in stats) _renderPlace(stats.place);
 
   // Active quest in the top strip
   if ('quests' in stats) {

@@ -10,6 +10,11 @@ Versions before **1.6.0** are reconstructed retroactively from git history; the 
 
 ## [Unreleased]
 
+## [2.40.0] — 2026-11-16 — party map with a red pin
+
+### Added
+- Roleplay screen: a party map. The DM pins where the party is on a map picture of the area (`push_stats.py --place`), and the right-hand column shows it with a red pin and a label. The pin drops in when the party arrives on a map and slides when it moves on the same map. Big maps can be zoomed in on the party (`view`); tapping the card toggles the whole map. The pin is saved with the campaign, shared with every screen, and hidden during combat. `{}` clears it.
+
 ## [2.39.0] — 2026-11-16 — big published maps under the combat grid
 
 ### Added

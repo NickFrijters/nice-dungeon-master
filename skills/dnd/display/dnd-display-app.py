@@ -1178,7 +1178,7 @@ _stats_lock = threading.Lock()
 # input). Lives in the campaign folder as display_state.json, so it survives the
 # display being restarted, a crash, and Save & exit followed by loading again.
 STATE_NAME = "display_state.json"
-_DISPLAY_KEYS = ("npcs", "combat", "quests", "factions", "world_time", "turn_order")
+_DISPLAY_KEYS = ("npcs", "combat", "quests", "factions", "world_time", "turn_order", "place")
 _LIVE_PLAYER_KEYS = ("hp", "conditions", "spell_slots", "hit_dice", "effects",
                      "concentration", "inspiration", "milestones", "xp")
 _awaiting_restore = False     # set by /clear: do not overwrite the campaign copy until it was read
@@ -1557,6 +1557,35 @@ def menu_load():
     _MENU_FIRST = False
     _open_campaign_here(name)
     return "", 204
+
+
+def _clean_place(raw):
+    """Where the party is, for the map card in the roleplay screen: a picture from the campaign's images folder,
+    a pin on it (x, y as fractions 0-1 of the picture), an optional label, and an optional `view`: the part of the
+    picture to show (fractions left/top/width/height), so a big map can be zoomed in on the party."""
+    if not isinstance(raw, dict) or not raw:
+        return None
+    src = os.path.basename(str(raw.get("image", raw.get("src", ""))).replace("\\", "/"))
+    if not src.lower().endswith((".png", ".jpg", ".jpeg", ".webp", ".gif")):
+        return None
+
+    def _f(v, lo, hi):
+        try:
+            return round(max(lo, min(hi, float(v))), 4)
+        except (TypeError, ValueError):
+            return None
+
+    x, y = _f(raw.get("x"), 0, 1), _f(raw.get("y"), 0, 1)
+    if x is None or y is None:
+        return None
+    out = {"image": src, "x": x, "y": y, "label": str(raw.get("label", ""))[:60]}
+    v = raw.get("view")
+    if isinstance(v, dict):
+        vx, vy = _f(v.get("x"), 0, 0.95), _f(v.get("y"), 0, 0.95)
+        vw, vh = _f(v.get("w"), 0.05, 1), _f(v.get("h"), 0.05, 1)
+        if None not in (vx, vy, vw, vh):
+            out["view"] = {"x": vx, "y": vy, "w": round(min(vw, 1 - vx), 4), "h": round(min(vh, 1 - vy), 4)}
+    return out
 
 
 def _clean_map_image(raw, cols, rows, prev=None):
@@ -2602,6 +2631,10 @@ def stats():
         # combat board replaces entirely (null/{} clears): enemies with HP, plus the battle map
         if "combat" in data:
             _current_stats["combat"] = _clean_combat(data["combat"], _current_stats.get("combat"))
+
+        # where the party is on a map picture (null/{} clears): {image, x, y, label, view}
+        if "place" in data:
+            _current_stats["place"] = _clean_place(data["place"])
 
         # npcs in the current scene replace entirely ([] clears): [{name, role, disposition}]
         if "npcs" in data:

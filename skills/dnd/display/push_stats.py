@@ -103,6 +103,29 @@ else:
     _SSL_CTX = None
 
 
+def _find_campaign_image(key):
+    """Library id, alias or file name -> file in the loaded campaign's images folder (copied in from the shared library
+    when needed), or None."""
+    try:
+        with open(rt(".campaign"), encoding="utf-8") as f:
+            campaign = f.read().strip()
+        sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "scripts"))
+        import image_library
+        found = image_library.campaign_image(str(key or ""), campaign)
+    except Exception:
+        found = None
+    return found["file"] if found else None
+
+
+def _resolve_place_image(place) -> None:
+    f = _find_campaign_image(place.get("image", place.get("src")))
+    if not f:
+        print(f"push_stats.py: map image not found: {place.get('image')} (the pin is not shown)", file=sys.stderr)
+        place.clear()
+        return
+    place["image"] = f
+
+
 def _resolve_combat_image(combat) -> None:
     """map.image may name a library id, an alias or a file; swap it for the file in the campaign's images folder
     (copying it in from the shared library when needed). An image that cannot be found is dropped, with a warning."""
@@ -192,6 +215,8 @@ def main() -> None:
                         help='Party faction standings: [{"name":"Pale Court","standing":"Suspicious"},...]; [] clears')
     parser.add_argument("--combat", metavar="JSON",
                         help='Combat board: {"enemies":[{"name":"Goblin 1","hp":7,"max":7}],"map":{"cols":12,"rows":8,"title":"Cave","tokens":[{"name":"Dagna","x":2,"y":3,"side":"pc"},{"name":"Goblin 1","x":8,"y":3,"side":"enemy"}]}}; {} clears')
+    parser.add_argument("--place", metavar="JSON",
+                        help='Where the party is, as a pin on a map picture (roleplay screen): {"image":"<library id or file>","x":0.42,"y":0.63,"label":"Greenest","view":{"x":0.3,"y":0.5,"w":0.3,"h":0.25}}; x,y = the pin as fractions of the picture, view = the part to show (optional, zooms in); {} clears')
     parser.add_argument("--npcs", metavar="JSON",
                         help='NPCs in the current scene: [{"name":"Borga","role":"Innkeeper","disposition":"Friendly"},...]; [] clears')
     parser.add_argument("--quests", metavar="JSON",
@@ -338,6 +363,17 @@ def main() -> None:
             print(f"Invalid combat JSON: {e}", file=sys.stderr)
             sys.exit(1)
         _resolve_combat_image(payload["combat"])
+
+    # ── Where the party is (map card with a pin) ──────────────────────────────
+    if args.place is not None:
+        try:
+            place = json.loads(args.place)
+        except json.JSONDecodeError as e:
+            print(f"Invalid place JSON: {e}", file=sys.stderr)
+            sys.exit(1)
+        if isinstance(place, dict) and place:
+            _resolve_place_image(place)
+        payload["place"] = place
 
     # ── NPCs in the scene ──────────────────────────────────────────────────────
     if args.npcs is not None:
