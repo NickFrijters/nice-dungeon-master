@@ -10,6 +10,12 @@ Versions before **1.6.0** are reconstructed retroactively from git history; the 
 
 ## [Unreleased]
 
+## [2.36.0] — 2026-11-16 — Phone screen removed
+
+### Removed — the phone screen
+
+The phone controller view is gone from the page, the server and the docs: the Phone button, the character picker, the phone tabs and settings pop-over, and the per-character phone connection. All screens are the same; dice requests and Party Input work on every screen. About 1,400 lines of phone-only code were deleted.
+
 ## [2.35.0] — 2026-11-15 — Pages, saved turns, styled pop-ups
 
 ### Added — long narration waits for a Continue
