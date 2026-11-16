@@ -178,6 +178,8 @@ Open the web **Main Menu**. After this, the player works in the browser and you 
 
    `--replace-players` clears stale characters from previous campaigns. Build the JSON from the character file — every field above is required for the card and sheet tabs to render correctly.
 
+   **Combat on load:** the combat screen replaces the roleplay screen, so it must only be up when a fight is really on. If `state.md → ## Active Combat` is empty or `(none)`, push `--combat '{}' --turn-clear` in the load push (the display also drops a stale remembered fight by itself). If it has content, rebuild the board in the same push (`--turn-order`, `--combat`) and keep the recap to 2 or 3 sentences so the table is playing within seconds, not after a long recap.
+
    Also push `--world-time`, `--factions`, and `--quests` in the **same** `push_stats.py` call as the player JSON to avoid race conditions where the display server receives a partial update. Combine all into one invocation:
 
    ```bash
@@ -728,7 +730,7 @@ Run `scripts/dice.py <notation>`. Display output verbatim. Examples: `d20`, `2d6
    ```
 5. Save STATE_JSON to `state.md` under `## Active Combat`.
 6. Step through turns using the per-turn sequence (in SKILL.md Active DM Mode).
-7. On combat end: update HP in character sheets, clear `## Active Combat`, `push_stats.py --turn-clear`, narrate aftermath, send XP summary, run `tracker.py -c <campaign> clear` (ends encounter conditions and round-long effects; minute/hour effects, exhaustion and petrification stay).
+7. On combat end: update HP in character sheets, clear `## Active Combat`, `push_stats.py --combat '{}' --turn-clear` (the combat screen goes away, the roleplay screen returns), narrate aftermath, send XP summary, run `tracker.py -c <campaign> clear` (ends encounter conditions and round-long effects; minute/hour effects, exhaustion and petrification stay).
 
 **XP awards** go in the final display send:
 ```bash

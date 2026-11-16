@@ -10,6 +10,15 @@ Versions before **1.6.0** are reconstructed retroactively from git history; the 
 
 ## [Unreleased]
 
+## [2.41.0] — 2026-11-16 — combat replaces roleplay; short fast combat narration
+
+### Changed
+- Combat now replaces the roleplay screen completely: the story history, picture column, party map, quest strip and the roleplay panels are gone. The tabletop gets the screen, the party cards stay on the left, and only the newest lines of narration sit in a short strip under the map. Ending combat brings the roleplay screen back.
+- Combat narration is short and fast: the DM instructions now require 10 to 40 words per turn, narration sent as soon as the dice are rolled, bookkeeping batched, and no recaps or extras. On the screen the text types almost instantly during combat.
+
+### Fixed
+- Loading a campaign whose notes say there is no active combat no longer opens the combat screen from a fight the display merely remembered (a combat that was never cleared). The load instructions also say to keep the recap short when a fight is on, so play starts within seconds.
+
 ## [2.40.0] — 2026-11-16 — party map with a red pin
 
 ### Added

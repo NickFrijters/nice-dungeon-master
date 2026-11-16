@@ -41,7 +41,7 @@ class PartyMapTest(unittest.TestCase):
             self.assertIn(needle, HTML)
         self.assertIn("--place", (ROOT / "skills" / "dnd" / "SKILL-commands.md").read_text(encoding="utf-8"))
         # combat hides the whole right-hand column, pin card included
-        self.assertIn("body.combat #scene-gallery { display: none !important; }", HTML)
+        self.assertIn("body.combat #scene-gallery, body.combat #quest-strip", HTML)
 
 
 if __name__ == "__main__":

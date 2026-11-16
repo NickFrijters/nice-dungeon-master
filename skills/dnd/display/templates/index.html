@@ -3120,9 +3120,16 @@
   /* ── Combat screen: a tabletop. Wooden table, a stone battle mat, discs for tokens ── */
   #combat-view { position: fixed; left: 230px; right: 30px; top: 74px; height: 60vh; z-index: 5; display: none;
     grid-template-columns: 1fr 250px; grid-template-rows: auto 1fr auto; gap: 10px 16px; }
-  body.combat #combat-view { display: grid; }
-  body.combat #text-scroll { padding-top: calc(74px + 60vh + 14px); }
-  body.combat #scene-gallery { display: none !important; }
+  body.combat #combat-view { display: grid; top: 74px; bottom: calc(22vh + 72px); height: auto; }
+  /* Combat REPLACES the roleplay screen: the story history, picture column, quest strip and the roleplay panels
+     are gone; only the party cards stay on the left, and the latest few lines of narration sit under the tabletop. */
+  body.combat #scene-gallery, body.combat #quest-strip, body.combat #mini-tracker,
+  body.combat #sb-turn-section, body.combat #sb-npcs, body.combat #sb-factions, body.combat #sb-quests { display: none !important; }
+  body.combat #text-scroll { inset: auto 0 62px 0; height: 22vh; padding: 6px 30px 6px 230px; scroll-behavior: auto;
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 30%); mask-image: linear-gradient(to bottom, transparent 0, #000 30%); }
+  body.combat #text-scroll.sidebar-hidden { padding-left: 60px; }
+  body.combat #text-content { max-width: none; }
+  body.combat #text-content .divider, body.combat #text-content .tts-status { display: none; }
   #cb-order { grid-column: 1 / -1; display: flex; gap: 8px; align-items: stretch; overflow-x: auto; scrollbar-width: none; padding: 2px 2px 6px; }
   .cb-round { align-self: center; font-family: 'Cinzel', serif; font-size: 13px; letter-spacing: 2px; text-transform: uppercase;
     color: rgba(235,205,120,.95); padding: 0 12px 0 4px; white-space: nowrap; }
@@ -4342,6 +4349,7 @@ let _pace = null;            // {start, base, n, durMs}: time-based pacing so te
 // voice track, aim at where the text SHOULD be by now, so timer overhead can
 // never make the text finish after the voice.
 function _nextDelay() {
+  if (document.body.classList.contains('combat')) return Math.min(charDelay, 4);   // combat narration is short and must be FAST
   if (!_pace || !_turn) return charDelay;
   const done = Math.max(0, _turn.typed - _pace.base);
   const due = _pace.start + (done / _pace.n) * _pace.durMs;
@@ -6431,7 +6439,11 @@ function _updateCombat(stats) {
   if ('combat' in stats) _combatState = stats.combat || null;
   const to = ('turn_order' in stats && !stats.turn_order) ? null : _currentTurnOrder;
   const on = !!(to && (to.order || []).length);
+  const wasCombat = document.body.classList.contains('combat');
   document.body.classList.toggle('combat', on);
+  if (on !== wasCombat) {   // the story area becomes a short strip (or a full page again): keep the newest text in view
+    [60, 400].forEach(ms => setTimeout(() => { const ts = document.getElementById('text-scroll'); if (ts) ts.scrollTop = ts.scrollHeight; }, ms));
+  }
   if (!on) return;
   _renderCombat(to);
 }

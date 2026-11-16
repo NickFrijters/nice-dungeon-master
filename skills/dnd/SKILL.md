@@ -1,6 +1,6 @@
 ---
 name: dnd
-description: "v2.40.0 · Dungeon Master assistant for running persistent D&D 5e campaigns. Handles campaign creation/loading, character management, combat tracking, NPC generation, dice rolling, and session state — all persisted across sessions. Invoke with /dm:dnd followed by a subcommand, or just speak naturally once a campaign is loaded."
+description: "v2.41.0 · Dungeon Master assistant for running persistent D&D 5e campaigns. Handles campaign creation/loading, character management, combat tracking, NPC generation, dice rolling, and session state — all persisted across sessions. Invoke with /dm:dnd followed by a subcommand, or just speak naturally once a campaign is loaded."
 tools: Read, Write, Edit, Glob, Bash, AskUserQuestion
 ---
 
@@ -451,6 +451,8 @@ f. send.py [--stat-*] ← send complete narration + ALL stat changes — NEVER s
    Use --effect-start / --effect-end flags when effects begin or end this turn (syncs display)
 g. push_stats.py --turn-current  ← advance turn pointer (still separate — not a narration)
 ```
+**Combat pace (hard rule): short and FAST.** The combat screen replaces the roleplay screen with a tabletop; the story is only a two-line strip under it. So in combat every turn's narration is **10 to 40 words**: one punchy sentence, two at most. Name the action and its result (hit or miss, damage, what changes on the map), nothing else: no scene-setting, no recap of earlier turns, no rules explanation, no NPC speeches longer than a line, no Dutch summary or tutor block unless a player asks. Be quick about it: do step (f) as soon as the dice are rolled (narration and `--stat-*` in one `send.py` call, before any bookkeeping), batch bookkeeping into as few tool calls as possible, and do not read files mid-combat. Put the longer flavour in the aftermath once the fight ends. Resolve a monster's whole turn in one block; skip empty beats. When combat ends, clear the board (`push_stats.py --combat '{}' --turn-clear`) so the screen returns to roleplay.
+
 Step (f) is the most commonly missed. Every narration block must be sent.
 Step (g) uses `push_stats.py --turn-current` directly because it has no narration to bundle with.
 `tracker.py effect tick` is the headless fallback — it fires regardless of whether the display is running.

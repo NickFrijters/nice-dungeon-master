@@ -1286,6 +1286,22 @@ def _restore_staged_at_start() -> None:
 _restore_staged_at_start()
 
 
+_NO_COMBAT_RE = re.compile(r"^[\s*_()\-–—.]*(none|geen|n/?a|nvt|no active combat|not in combat)?[\s*_()\-–—.]*$", re.I)
+
+
+def _state_md_combat(name: str):
+    """What the campaign's own notes say about a fight in progress: True (an `## Active Combat` section with
+    content), False (the section is empty or says none), None (no state.md or no such section: unknown)."""
+    try:
+        text = (_find_campaign(name) / "state.md").read_text(encoding="utf-8")
+    except Exception:
+        return None
+    m = re.search(r"^##[ \t]+Active Combat[ \t]*\r?\n(.*?)(?=^##[ \t]|\Z)", text, re.M | re.S | re.I)
+    if not m:
+        return None
+    return not _NO_COMBAT_RE.match(m.group(1).strip())
+
+
 def _restore_campaign_display(name: str, data: dict) -> None:
     """A campaign was (re)loaded: bring back what only the display held.
 
@@ -1305,6 +1321,12 @@ def _restore_campaign_display(name: str, data: dict) -> None:
                 _current_stats[k] = sstats[k]
             else:
                 _current_stats.pop(k, None)
+        # A fight the display remembers but the campaign's notes say is over (a combat that was never cleared) must not
+        # open the combat screen on load.
+        if _state_md_combat(name) is False:
+            for k in ("combat", "turn_order"):
+                if k not in data:
+                    _current_stats.pop(k, None)
         try:
             files = list((_find_campaign(name) / "characters").glob("*.md"))
             newest = max((f.stat().st_mtime for f in files), default=0.0)
