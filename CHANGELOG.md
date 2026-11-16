@@ -10,6 +10,12 @@ Versions before **1.6.0** are reconstructed retroactively from git history; the 
 
 ## [Unreleased]
 
+## [2.37.0] — 2026-11-16 — Tabletop combat screen
+
+### Changed — the Combat screen is now a tabletop
+
+A wooden table with a stone battle mat, drawn terrain (walls, doors, water, rough ground, pillars, tables, fire, pits, stairs), round tokens with an HP bar, conditions and a glowing ring for whoever's turn it is (big monsters take 2 or 3 squares), and initiative cards with HP that grow for the active combatant. The walking range of the active token is shaded (walls block, water and rough ground cost double), dragging shows the distance in feet and whether it is over the speed, damage and healing float up from the token, and hovering a token shows its HP, speed and conditions. Also works in a narrow window.
+
 ## [2.36.0] — 2026-11-16 — Phone screen removed
 
 ### Removed — the phone screen

@@ -37,6 +37,19 @@ class CombatScreenTest(unittest.TestCase):
         self.assertEqual((out["map"]["cols"], out["map"]["rows"]), (26, 4))
         self.assertEqual([(t["name"], t["side"]) for t in out["map"]["tokens"]], [("Dagna", "pc"), ("Gob", "enemy")])
 
+    def test_terrain_size_speed_and_conditions_are_cleaned(self):
+        clean = _clean_combat()
+        out = clean({"map": {"cols": 10, "rows": 8, "terrain": [
+            {"kind": "wall", "x": 0, "y": 0, "w": 50, "h": 1}, {"kind": "lava", "x": 1, "y": 1}, {"kind": "water", "x": 20, "y": 1}],
+            "tokens": [{"name": "Ogre", "x": 2, "y": 2, "side": "enemy", "size": 9, "speed": 40, "conditions": ["Frightened", "Burning"]}]}})
+        self.assertEqual(out["map"]["terrain"], [{"kind": "wall", "x": 0, "y": 0, "w": 10, "h": 1}])
+        tk = out["map"]["tokens"][0]
+        self.assertEqual((tk["size"], tk["speed"], tk["conditions"]), (3, 40, ["Frightened", "Burning"]))
+
+    def test_the_board_has_range_distance_and_damage_numbers(self):
+        for needle in ("function _cbReach(", "cb-range", "cb-float", "id=\"cb-legend\"", ".cb-ter.wall"):
+            self.assertIn(needle, HTML)
+
     def test_dragging_tells_claude_and_push_stats_sends_the_board(self):
         self.assertIn("[Map]: {name} moved from {old} to", APP)
         self.assertIn('"--combat"', (D / "push_stats.py").read_text(encoding="utf-8"))

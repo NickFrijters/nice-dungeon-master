@@ -1560,38 +1560,52 @@ def menu_load():
 
 
 def _clean_combat(raw):
-    """Keep only what the combat screen draws: enemies (name/hp/max) and a map with tokens."""
+    """Keep only what the combat screen draws: enemies, and a map with terrain and tokens."""
     if not isinstance(raw, dict) or not raw:
         return None
+
+    def _n(v, lo=0, hi=999):
+        try:
+            return max(lo, min(hi, int(v)))
+        except (TypeError, ValueError):
+            return None
+
     out = {"enemies": [], "map": None}
     for e in (raw.get("enemies") or [])[:24]:
         if isinstance(e, dict) and e.get("name"):
-            def _n(v):
-                try:
-                    return max(0, int(v))
-                except (TypeError, ValueError):
-                    return None
             out["enemies"].append({"name": str(e["name"])[:40], "hp": _n(e.get("hp")), "max": _n(e.get("max")),
                                    "note": str(e.get("note", ""))[:40]})
     m = raw.get("map")
     if isinstance(m, dict):
-        try:
-            cols = min(26, max(4, int(m.get("cols", 12))))
-            rows = min(26, max(4, int(m.get("rows", 8))))
-        except (TypeError, ValueError):
-            cols, rows = 12, 8
+        cols = _n(m.get("cols", 12), 4, 26) or 12
+        rows = _n(m.get("rows", 8), 4, 26) or 8
         toks = []
         for tk in (m.get("tokens") or [])[:60]:
             if not (isinstance(tk, dict) and tk.get("name")):
                 continue
-            try:
-                x, y = int(tk.get("x", 0)), int(tk.get("y", 0))
-            except (TypeError, ValueError):
+            x, y = _n(tk.get("x", 0), -1, 99), _n(tk.get("y", 0), -1, 99)
+            if x is None or y is None or not (0 <= x < cols and 0 <= y < rows):
                 continue
-            if 0 <= x < cols and 0 <= y < rows:
-                toks.append({"name": str(tk["name"])[:40], "x": x, "y": y,
-                             "side": "enemy" if tk.get("side") == "enemy" else "pc"})
-        out["map"] = {"cols": cols, "rows": rows, "title": str(m.get("title", ""))[:60], "tokens": toks}
+            conds = [str(c)[:16] for c in (tk.get("conditions") or []) if c][:4] if isinstance(tk.get("conditions"), list) else []
+            toks.append({"name": str(tk["name"])[:40], "x": x, "y": y,
+                         "side": "enemy" if tk.get("side") == "enemy" else "pc",
+                         "size": _n(tk.get("size", 1), 1, 3) or 1,
+                         "speed": _n(tk.get("speed"), 0, 200), "conditions": conds})
+        terrain = []
+        for tr in (m.get("terrain") or [])[:300]:
+            if not isinstance(tr, dict):
+                continue
+            kind = str(tr.get("kind", "")).lower()
+            if kind not in ("wall", "water", "difficult", "door", "pillar", "fire", "pit", "table", "stairs"):
+                continue
+            x, y = _n(tr.get("x"), 0, 99), _n(tr.get("y"), 0, 99)
+            if x is None or y is None or x >= cols or y >= rows:
+                continue
+            w = _n(tr.get("w", 1), 1, 26) or 1
+            h = _n(tr.get("h", 1), 1, 26) or 1
+            terrain.append({"kind": kind, "x": x, "y": y, "w": min(w, cols - x), "h": min(h, rows - y)})
+        out["map"] = {"cols": cols, "rows": rows, "title": str(m.get("title", ""))[:60],
+                      "tokens": toks, "terrain": terrain}
     return out
 
 

@@ -3117,38 +3117,101 @@
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none; }
   #quest-strip[hidden] { display: none; }
   @media (max-width: 1100px) { #scene-gallery { display: none; } }
-  /* ── Combat screen: the battle map is dominant; the story sits underneath ── */
-  #combat-view { position: fixed; left: 230px; right: 30px; top: 74px; height: 58vh; z-index: 5; display: none;
-    grid-template-columns: 1fr 230px; grid-template-rows: auto 1fr; gap: 10px 16px; }
+  /* ── Combat screen: a tabletop. Wooden table, a stone battle mat, discs for tokens ── */
+  #combat-view { position: fixed; left: 230px; right: 30px; top: 74px; height: 60vh; z-index: 5; display: none;
+    grid-template-columns: 1fr 250px; grid-template-rows: auto 1fr auto; gap: 10px 16px; }
   body.combat #combat-view { display: grid; }
-  body.combat #text-scroll { padding-top: calc(74px + 58vh + 14px); }
+  body.combat #text-scroll { padding-top: calc(74px + 60vh + 14px); }
   body.combat #scene-gallery { display: none !important; }
-  #cb-order { grid-column: 1 / -1; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
-  .cb-round { font-family: 'Cinzel', serif; font-size: 12px; letter-spacing: 2px; text-transform: uppercase; color: rgba(200,165,80,.85); margin-right: 8px; }
-  .cb-chip { font-family: 'Cinzel', serif; font-size: 12px; padding: 4px 12px; border-radius: 14px; border: 1px solid rgba(180,140,60,.35);
-    color: rgba(215,200,165,.85); background: rgba(0,0,0,.45); }
-  .cb-chip.enemy { border-color: rgba(220,80,70,.5); color: rgba(240,170,160,.9); }
-  .cb-chip.current { background: rgba(200,160,64,.28); border-color: rgba(235,205,120,1); color: rgba(255,235,170,1); font-weight: 700; }
-  #cb-map-wrap { position: relative; min-height: 0; display: flex; align-items: center; justify-content: center; }
-  #cb-map { position: relative; height: 100%; max-width: 100%; border: 2px solid rgba(200,165,80,.5); border-radius: 4px;
-    background: rgba(24,18,10,.82); box-shadow: 0 0 40px rgba(0,0,0,.7); touch-action: none; }
-  #cb-map .cb-cell { position: absolute; border-right: 1px solid rgba(180,140,60,.14); border-bottom: 1px solid rgba(180,140,60,.14);
-    box-sizing: border-box; }
-  #cb-map .cb-axis { position: absolute; font: 10px 'Cinzel', serif; color: rgba(200,165,80,.6); text-align: center; pointer-events: none; }
+  #cb-order { grid-column: 1 / -1; display: flex; gap: 8px; align-items: stretch; overflow-x: auto; scrollbar-width: none; padding: 2px 2px 6px; }
+  .cb-round { align-self: center; font-family: 'Cinzel', serif; font-size: 13px; letter-spacing: 2px; text-transform: uppercase;
+    color: rgba(235,205,120,.95); padding: 0 12px 0 4px; white-space: nowrap; }
+  .cb-round b { display: block; font-size: 22px; letter-spacing: 0; line-height: 1; color: rgba(255,235,170,1); }
+  .cb-card { position: relative; flex: 0 0 auto; min-width: 92px; padding: 6px 12px 8px; border-radius: 8px; text-align: center;
+    border: 1px solid rgba(180,140,60,.35); background: linear-gradient(180deg, rgba(40,30,16,.92), rgba(18,13,7,.92));
+    color: rgba(215,200,165,.9); font-family: 'Cinzel', serif; font-size: 12px; transition: transform .2s, box-shadow .2s; }
+  .cb-card.enemy { border-color: rgba(220,80,70,.55); background: linear-gradient(180deg, rgba(52,22,18,.92), rgba(22,10,8,.92)); }
+  .cb-card .cb-card-name { white-space: nowrap; max-width: 130px; overflow: hidden; text-overflow: ellipsis; }
+  .cb-card .cb-card-bar { height: 4px; border-radius: 2px; background: rgba(255,255,255,.12); margin-top: 5px; overflow: hidden; }
+  .cb-card .cb-card-fill { height: 100%; background: rgba(110,190,120,.95); }
+  .cb-card.enemy .cb-card-fill { background: rgba(225,95,85,.95); }
+  .cb-card.current { transform: translateY(-3px) scale(1.07); border-color: rgba(255,225,130,1); color: rgba(255,240,190,1);
+    box-shadow: 0 0 0 1px rgba(255,225,130,.8), 0 6px 22px rgba(240,190,70,.45); }
+  .cb-card.current::after { content: '\25BE'; position: absolute; left: 50%; bottom: -13px; transform: translateX(-50%);
+    color: rgba(255,225,130,1); font-size: 14px; }
+  .cb-card.down { opacity: .4; filter: grayscale(.8); text-decoration: line-through; }
+  #cb-map-wrap { position: relative; min-height: 0; display: flex; align-items: center; justify-content: center; border-radius: 10px;
+    background:
+      radial-gradient(ellipse at 50% 40%, rgba(0,0,0,0) 40%, rgba(0,0,0,.55) 100%),
+      repeating-linear-gradient(92deg, rgba(0,0,0,.08) 0 3px, rgba(255,255,255,.012) 3px 7px),
+      linear-gradient(180deg, #3a2615, #24160b);
+    box-shadow: inset 0 0 30px rgba(0,0,0,.8), 0 4px 24px rgba(0,0,0,.6); border: 1px solid rgba(120,80,35,.6); }
+  #cb-map { position: relative; border-radius: 3px; touch-action: none;
+    background:
+      radial-gradient(ellipse at 50% 45%, rgba(255,235,190,.06), rgba(0,0,0,.35) 100%),
+      repeating-linear-gradient(45deg, rgba(255,255,255,.012) 0 2px, rgba(0,0,0,.02) 2px 4px),
+      linear-gradient(135deg, #3d372d, #2b261e);
+    box-shadow: 0 0 0 3px #1b140b, 0 0 0 4px rgba(200,165,80,.5), 0 12px 40px rgba(0,0,0,.8); }
+  #cb-map .cb-axis { position: absolute; font: 700 11px 'Cinzel', serif; color: rgba(225,195,120,.8); text-align: center; pointer-events: none; }
+  #cb-map .cb-grid { position: absolute; pointer-events: none;
+    background-image: linear-gradient(to right, rgba(0,0,0,.38) 1px, transparent 1px), linear-gradient(to bottom, rgba(0,0,0,.38) 1px, transparent 1px);
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,.5); }
+  #cb-map .cb-range { position: absolute; background: rgba(255,225,130,.24); box-shadow: inset 0 0 0 1px rgba(255,225,130,.5); pointer-events: none; }
+  #cb-map .cb-ter { position: absolute; box-sizing: border-box; pointer-events: none; }
+  .cb-ter.wall { background: repeating-linear-gradient(0deg, #2b2620 0 9px, #1c1814 9px 10px), #2b2620;
+    box-shadow: inset 0 0 0 2px #14110d, inset 0 3px 6px rgba(255,255,255,.08), 0 4px 8px rgba(0,0,0,.7); }
+  .cb-ter.water { background: repeating-linear-gradient(115deg, rgba(60,120,180,.55) 0 6px, rgba(90,150,210,.45) 6px 12px); box-shadow: inset 0 0 14px rgba(20,60,110,.8); }
+  .cb-ter.difficult { background: repeating-linear-gradient(45deg, rgba(120,90,40,.5) 0 5px, rgba(60,40,15,.25) 5px 10px); }
+  .cb-ter.door { background: linear-gradient(90deg, #6b4a24, #8a6334, #6b4a24); box-shadow: 0 0 0 2px #2a1b0b; border-radius: 2px; }
+  .cb-ter.pillar { background: radial-gradient(circle at 35% 30%, #8a8478, #46413a 70%); border-radius: 50%; box-shadow: 0 4px 8px rgba(0,0,0,.7); }
+  .cb-ter.fire { background: radial-gradient(circle, rgba(255,200,80,.95), rgba(240,100,30,.7) 55%, rgba(120,30,10,.2) 100%); animation: cbFlicker 1.1s infinite alternate; }
+  .cb-ter.pit { background: radial-gradient(circle, #000 20%, #14100c 100%); box-shadow: inset 0 0 12px #000; }
+  .cb-ter.table { background: linear-gradient(135deg, #7a5530, #5a3d20); box-shadow: 0 0 0 2px #2a1b0b, 0 4px 8px rgba(0,0,0,.6); border-radius: 3px; }
+  .cb-ter.stairs { background: repeating-linear-gradient(0deg, #6a6458 0 5px, #3a352d 5px 7px); }
+  @keyframes cbFlicker { from { opacity: .75; } to { opacity: 1; } }
   .cb-token { position: absolute; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-sizing: border-box;
-    font: 700 11px 'Cinzel', serif; color: #1a1208; cursor: grab; user-select: none; border: 2px solid rgba(255,255,255,.7);
-    background: rgba(110,190,120,.95); transition: left .15s, top .15s; }
-  .cb-token.enemy { background: rgba(225,95,85,.95); }
-  .cb-token.dragging { cursor: grabbing; transition: none; z-index: 3; opacity: .9; }
-  .cb-token.current { box-shadow: 0 0 0 3px rgba(235,205,120,.95); }
-  #cb-side { overflow-y: auto; min-height: 0; scrollbar-width: none; }
+    font: 700 12px 'Cinzel', serif; color: #1a1208; cursor: grab; user-select: none; touch-action: none; z-index: 2;
+    border: 3px solid rgba(115,200,125,1); background: radial-gradient(circle at 35% 30%, #d9f0d0, #7fbf86 70%);
+    box-shadow: 0 5px 10px rgba(0,0,0,.65), inset 0 -3px 5px rgba(0,0,0,.25); transition: left .18s, top .18s; }
+  .cb-token.enemy { border-color: rgba(230,90,80,1); background: radial-gradient(circle at 35% 30%, #f6d0c8, #d8706a 70%); }
+  .cb-token.current { box-shadow: 0 0 0 3px rgba(255,225,130,1), 0 0 18px 6px rgba(255,205,90,.7), 0 5px 10px rgba(0,0,0,.65); animation: cbPulse 1.6s ease-in-out infinite; }
+  @keyframes cbPulse { 50% { box-shadow: 0 0 0 3px rgba(255,225,130,1), 0 0 28px 10px rgba(255,205,90,.9), 0 5px 10px rgba(0,0,0,.65); } }
+  .cb-token.dragging { cursor: grabbing; transition: none; z-index: 6; transform: scale(1.12); }
+  .cb-token.down { filter: grayscale(1) brightness(.55); }
+  .cb-token.down::after { content: '\2715'; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 130%; }
+  .cb-token .cb-tk-hp { position: absolute; left: 12%; right: 12%; bottom: -7px; height: 5px; border-radius: 3px; background: rgba(0,0,0,.7); overflow: hidden; }
+  .cb-token .cb-tk-hp i { display: block; height: 100%; background: rgba(110,200,120,1); }
+  .cb-token.enemy .cb-tk-hp i { background: rgba(235,95,85,1); }
+  .cb-token .cb-cond { position: absolute; top: -8px; right: -8px; display: flex; gap: 2px; }
+  .cb-token .cb-cond span { font: 700 9px 'Cinzel', serif; background: rgba(40,20,60,.95); color: #e8d6ff; border: 1px solid rgba(190,150,255,.8);
+    border-radius: 8px; padding: 0 4px; }
+  #cb-ghost { position: absolute; z-index: 5; pointer-events: none; box-sizing: border-box; border: 2px dashed rgba(255,255,255,.9); border-radius: 4px; display: none; }
+  #cb-ghost.ok { background: rgba(110,200,120,.35); } #cb-ghost.far { background: rgba(240,180,60,.35); } #cb-ghost.bad { background: rgba(230,80,70,.4); }
+  #cb-dist { position: absolute; z-index: 7; pointer-events: none; display: none; font: 700 13px 'Cinzel', serif; padding: 3px 9px; border-radius: 10px;
+    background: rgba(15,10,5,.92); color: rgba(255,235,170,1); border: 1px solid rgba(255,225,130,.8); white-space: nowrap; transform: translate(-50%, -150%); }
+  #cb-dist.far { color: #ffd27a; border-color: #ffb040; } #cb-dist.bad { color: #ff9a90; border-color: #ff6a5f; }
+  .cb-float { position: absolute; z-index: 8; pointer-events: none; font: 700 20px 'Cinzel', serif; transform: translate(-50%, 0);
+    text-shadow: 0 2px 4px #000, 0 0 8px #000; animation: cbFloat 1.6s ease-out forwards; }
+  .cb-float.dmg { color: #ff6a5f; } .cb-float.heal { color: #7be08a; }
+  @keyframes cbFloat { 0% { opacity: 0; margin-top: 6px; } 15% { opacity: 1; } 100% { opacity: 0; margin-top: -48px; } }
+  #cb-legend { grid-column: 1; display: flex; gap: 14px; align-items: center; font: 11px 'Cinzel', serif; letter-spacing: 1px; color: rgba(205,175,110,.75); }
+  #cb-legend .cb-title { font-size: 13px; color: rgba(235,205,120,.95); letter-spacing: 3px; text-transform: uppercase; }
+  #cb-legend span { white-space: nowrap; }
+  @media (max-width: 1100px) {
+    #combat-view { grid-template-columns: 1fr 175px; left: 200px; right: 16px; }
+    #cb-legend { flex-wrap: wrap; gap: 2px 12px; } #cb-legend .cb-title { font-size: 11px; letter-spacing: 2px; }
+    .cb-hp .cb-hp-name { font-size: 12px; } .cb-card { min-width: 76px; padding: 5px 8px 7px; font-size: 11px; }
+  }
+  #cb-side { overflow-y: auto; min-height: 0; scrollbar-width: none; padding: 4px 2px; }
   #cb-side h4 { margin: 8px 0 6px; font: 11px 'Cinzel', serif; letter-spacing: 2px; text-transform: uppercase; color: rgba(200,165,80,.85); }
-  .cb-hp { margin-bottom: 7px; }
-  .cb-hp .cb-hp-name { font-size: 13px; color: rgba(235,222,190,.95); display: flex; justify-content: space-between; }
-  .cb-hp .cb-hp-bar { height: 7px; border-radius: 4px; background: rgba(255,255,255,.1); overflow: hidden; margin-top: 2px; }
-  .cb-hp .cb-hp-fill { height: 100%; background: rgba(110,190,120,.95); }
+  .cb-hp { margin-bottom: 5px; padding: 4px 9px; border-radius: 6px; background: rgba(0,0,0,.35); border: 1px solid rgba(180,140,60,.18); }
+  .cb-hp.enemy { border-color: rgba(220,80,70,.25); }
+  .cb-hp.current { border-color: rgba(255,225,130,.9); box-shadow: 0 0 10px rgba(255,205,90,.3); }
+  .cb-hp .cb-hp-name { font-size: 13px; color: rgba(240,228,198,.97); display: flex; justify-content: space-between; gap: 8px; }
+  .cb-hp .cb-hp-bar { height: 8px; border-radius: 4px; background: rgba(255,255,255,.1); overflow: hidden; margin-top: 3px; }
+  .cb-hp .cb-hp-fill { height: 100%; background: rgba(110,190,120,.95); transition: width .4s; }
   .cb-hp.enemy .cb-hp-fill { background: rgba(225,95,85,.95); }
-  .cb-hp .cb-hp-note { font-size: 11px; color: rgba(210,195,160,.6); }
+  .cb-hp .cb-hp-note { font-size: 12px; color: rgba(215,200,165,.7); margin-top: 2px; }
   /* ── Pages: long text waits for a Continue before older text scrolls away ── */
   #page-continue { position: fixed; left: calc(50% + 106px); bottom: 104px; transform: translateX(-50%); z-index: 30; display: none;
     font: 700 14px 'Cinzel', serif; letter-spacing: .16em; text-transform: uppercase; color: rgba(255,235,170,1);
@@ -3177,6 +3240,7 @@
   <div id="cb-order"></div>
   <div id="cb-map-wrap"><div id="cb-map"></div></div>
   <div id="cb-side"></div>
+  <div id="cb-legend"></div>
 </div>
 <div id="quest-strip" hidden></div>
 <div id="scene-gallery" hidden><div class="sg-title">In view</div></div>
@@ -6277,9 +6341,9 @@ function updateStats(stats) {
 let _currentTurnOrder = null;
 
 // ── Combat screen ───────────────────────────────────────────────────────────
-// Combat mode is on while a turn order is running. The map comes from push_stats --combat.
+// Combat mode is on while a turn order is running. The board comes from push_stats --combat.
 let _combatState = null;
-function _cbName(name) { return String(name || ''); }
+let _cbPrevHp = {};
 function _updateCombat(stats) {
   if ('combat' in stats) _combatState = stats.combat || null;
   const to = ('turn_order' in stats && !stats.turn_order) ? null : _currentTurnOrder;
@@ -6288,22 +6352,42 @@ function _updateCombat(stats) {
   if (!on) return;
   _renderCombat(to);
 }
+// HP of a combatant by name: party from the sheet data, enemies from the board.
+function _cbHp(name) {
+  const p = _playerData[name];
+  if (p) return { hp: p.hp && p.hp.current, max: p.hp && p.hp.max, pc: true, note: '' };
+  const e = ((_combatState && _combatState.enemies) || []).find(x => x.name === name);
+  return e ? { hp: e.hp, max: e.max, pc: false, note: e.note || '' } : { hp: null, max: null, pc: false, note: '' };
+}
+function _cbSpeedFt(tk) {
+  if (tk.speed != null) return tk.speed;
+  const p = _playerData[tk.name];
+  if (p && p.speed) return p.speed <= 18 ? Math.round(p.speed * 3.28 / 5) * 5 : p.speed;
+  return 30;
+}
 function _renderCombat(to) {
   const bar = document.getElementById('cb-order');
   bar.textContent = '';
-  const rd = document.createElement('span'); rd.className = 'cb-round'; rd.textContent = 'Round ' + (to.round ?? 1); bar.appendChild(rd);
+  const rd = document.createElement('div'); rd.className = 'cb-round'; rd.innerHTML = 'Round<b></b>'; rd.querySelector('b').textContent = to.round ?? 1; bar.appendChild(rd);
   (to.order || []).forEach(n => {
-    const c = document.createElement('span');
-    c.className = 'cb-chip' + (n in _playerData ? '' : ' enemy') + (n === to.current ? ' current' : '');
-    c.textContent = n; bar.appendChild(c);
+    const h = _cbHp(n);
+    const c = document.createElement('div');
+    c.className = 'cb-card' + (h.pc ? '' : ' enemy') + (n === to.current ? ' current' : '') + (h.hp === 0 ? ' down' : '');
+    const nm = document.createElement('div'); nm.className = 'cb-card-name'; nm.textContent = n; c.appendChild(nm);
+    if (h.max) {
+      const b = document.createElement('div'); b.className = 'cb-card-bar';
+      const f = document.createElement('div'); f.className = 'cb-card-fill'; f.style.width = Math.max(0, Math.min(100, 100 * h.hp / h.max)) + '%';
+      b.appendChild(f); c.appendChild(b);
+    }
+    bar.appendChild(c);
   });
   // Party and enemy HP
   const side = document.getElementById('cb-side'); side.textContent = '';
-  const addHp = (cls, name, hp, max, note) => {
-    const d = document.createElement('div'); d.className = 'cb-hp ' + cls;
+  const addHp = (cls, name, hp, max, note, cur) => {
+    const d = document.createElement('div'); d.className = 'cb-hp ' + cls + (cur ? ' current' : '');
     const top = document.createElement('div'); top.className = 'cb-hp-name';
     const nm = document.createElement('span'); nm.textContent = name;
-    const v = document.createElement('span'); v.textContent = (hp != null ? hp : '?') + (max != null ? '/' + max : '');
+    const v = document.createElement('span'); v.textContent = (hp != null ? hp : '?') + (max != null ? ' / ' + max : '');
     top.append(nm, v); d.appendChild(top);
     const b = document.createElement('div'); b.className = 'cb-hp-bar';
     const f = document.createElement('div'); f.className = 'cb-hp-fill';
@@ -6312,13 +6396,44 @@ function _renderCombat(to) {
     side.appendChild(d);
   };
   const h1 = document.createElement('h4'); h1.textContent = 'Party'; side.appendChild(h1);
-  Object.values(_playerData).forEach(p => addHp('pc', p.name, p.hp && p.hp.current, p.hp && p.hp.max, ''));
+  Object.values(_playerData).forEach(p => addHp('pc', p.name, p.hp && p.hp.current, p.hp && p.hp.max, '', p.name === to.current));
   const en = (_combatState && _combatState.enemies) || [];
   if (en.length) {
     const h2 = document.createElement('h4'); h2.textContent = 'Enemies'; side.appendChild(h2);
-    en.forEach(e => addHp('enemy', e.name, e.hp, e.max, e.note));
+    en.forEach(e => addHp('enemy', e.name, e.hp, e.max, e.note, e.name === to.current));
+  }
+  const m = _combatState && _combatState.map;
+  const lg = document.getElementById('cb-legend'); lg.textContent = '';
+  if (m) {
+    const t = document.createElement('span'); t.className = 'cb-title'; t.textContent = m.title || 'Battle map'; lg.appendChild(t);
+    const s = document.createElement('span'); s.textContent = '1 square = 5 ft'; lg.appendChild(s);
+    const d = document.createElement('span'); d.textContent = 'Drag a token to move it'; lg.appendChild(d);
   }
   _renderCombatMap(to);
+}
+// Movement cost map for the actor: walls block, water and difficult ground cost double. 5-ft squares, diagonals count 5 ft.
+function _cbReach(m, tk) {
+  const cost = new Map(); const key = (x, y) => x + ',' + y;
+  const block = new Set(), slow = new Set();
+  (m.terrain || []).forEach(t => {
+    for (let x = t.x; x < t.x + t.w; x++) for (let y = t.y; y < t.y + t.h; y++) {
+      if (t.kind === 'wall' || t.kind === 'pillar' || t.kind === 'table') block.add(key(x, y));
+      else if (t.kind === 'water' || t.kind === 'difficult') slow.add(key(x, y));
+    }
+  });
+  const limit = _cbSpeedFt(tk) / 5, q = [[tk.x, tk.y]]; cost.set(key(tk.x, tk.y), 0);
+  while (q.length) {
+    const [x, y] = q.shift(); const c = cost.get(key(x, y));
+    for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) {
+      if (!dx && !dy) continue;
+      const nx = x + dx, ny = y + dy;
+      if (nx < 0 || ny < 0 || nx >= m.cols || ny >= m.rows || block.has(key(nx, ny))) continue;
+      const nc = c + (slow.has(key(nx, ny)) ? 2 : 1);
+      if (nc > limit || (cost.has(key(nx, ny)) && cost.get(key(nx, ny)) <= nc)) continue;
+      cost.set(key(nx, ny), nc); q.push([nx, ny]);
+    }
+  }
+  return { cost, block, key };
 }
 function _renderCombatMap(to) {
   const map = document.getElementById('cb-map');
@@ -6327,9 +6442,12 @@ function _renderCombatMap(to) {
   map.style.display = '';
   map.textContent = '';
   const wrap = document.getElementById('cb-map-wrap');
-  const cell = Math.max(10, Math.floor(Math.min(wrap.clientWidth / (m.cols + 1), wrap.clientHeight / (m.rows + 1))));
-  const pad = Math.round(cell * 0.7);
+  const cell = Math.max(14, Math.floor(Math.min((wrap.clientWidth - 24) / (m.cols + 0.8), (wrap.clientHeight - 24) / (m.rows + 0.8))));
+  const pad = Math.round(cell * 0.8);
   map.style.width = (m.cols * cell + pad) + 'px'; map.style.height = (m.rows * cell + pad) + 'px';
+  map._geom = { cell, pad, m };
+  const grid = document.createElement('div'); grid.className = 'cb-grid';
+  grid.style.cssText = `left:${pad}px;top:${pad}px;width:${m.cols * cell}px;height:${m.rows * cell}px;background-size:${cell}px ${cell}px`; map.appendChild(grid);
   for (let x = 0; x < m.cols; x++) {
     const a = document.createElement('div'); a.className = 'cb-axis'; a.textContent = String.fromCharCode(65 + x);
     a.style.cssText = `left:${pad + x * cell}px;top:0;width:${cell}px;height:${pad}px;line-height:${pad}px`; map.appendChild(a);
@@ -6337,37 +6455,92 @@ function _renderCombatMap(to) {
   for (let y = 0; y < m.rows; y++) {
     const a = document.createElement('div'); a.className = 'cb-axis'; a.textContent = String(y + 1);
     a.style.cssText = `left:0;top:${pad + y * cell}px;width:${pad}px;height:${cell}px;line-height:${cell}px`; map.appendChild(a);
-    for (let x = 0; x < m.cols; x++) {
-      const c = document.createElement('div'); c.className = 'cb-cell';
-      c.style.cssText = `left:${pad + x * cell}px;top:${pad + y * cell}px;width:${cell}px;height:${cell}px`; map.appendChild(c);
-    }
   }
-  const size = Math.round(cell * 0.82), off = Math.round((cell - size) / 2);
+  (m.terrain || []).forEach(t => {
+    const d = document.createElement('div'); d.className = 'cb-ter ' + t.kind;
+    d.style.cssText = `left:${pad + t.x * cell}px;top:${pad + t.y * cell}px;width:${t.w * cell}px;height:${t.h * cell}px`; map.appendChild(d);
+  });
+  const actor = m.tokens.find(t => t.name === to.current);
+  if (actor) {
+    const r = _cbReach(m, actor);
+    r.cost.forEach((c, k) => {
+      const [x, y] = k.split(',').map(Number);
+      const d = document.createElement('div'); d.className = 'cb-range';
+      d.style.cssText = `left:${pad + x * cell}px;top:${pad + y * cell}px;width:${cell}px;height:${cell}px`; map.appendChild(d);
+    });
+  }
+  const ghost = document.createElement('div'); ghost.id = 'cb-ghost'; map.appendChild(ghost);
+  const dist = document.createElement('div'); dist.id = 'cb-dist'; map.appendChild(dist);
   m.tokens.forEach(tk => {
+    const sz = tk.size || 1, size = Math.round(cell * sz * 0.86), off = Math.round((cell * sz - size) / 2);
+    const h = _cbHp(tk.name);
     const t = document.createElement('div');
-    t.className = 'cb-token ' + tk.side + (tk.name === to.current ? ' current' : '');
-    t.textContent = tk.name.replace(/[^A-Za-z0-9 ]/g, '').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() +
+    t.className = 'cb-token ' + tk.side + (tk.name === to.current ? ' current' : '') + (h.hp === 0 ? ' down' : '');
+    t.textContent = tk.name.replace(/[^A-Za-z0-9 ]/g, '').split(' ').filter(Boolean).map(w => w[0]).join('').slice(0, 2).toUpperCase() +
       (/\d+$/.test(tk.name) ? tk.name.match(/\d+$/)[0] : '');
-    t.title = tk.name;
-    t.style.cssText = `width:${size}px;height:${size}px;left:${pad + tk.x * cell + off}px;top:${pad + tk.y * cell + off}px`;
-    t.addEventListener('pointerdown', ev => _tokenDrag(ev, t, tk, cell, pad, off, m));
+    t.title = tk.name + (h.max ? ' (' + h.hp + '/' + h.max + ' HP)' : '');
+    t.style.cssText = `width:${size}px;height:${size}px;left:${pad + tk.x * cell + off}px;top:${pad + tk.y * cell + off}px;font-size:${Math.max(10, Math.round(size * 0.34))}px`;
+    if (h.max) {
+      const b = document.createElement('div'); b.className = 'cb-tk-hp'; const i = document.createElement('i');
+      i.style.width = Math.max(0, Math.min(100, 100 * h.hp / h.max)) + '%'; b.appendChild(i); t.appendChild(b);
+    }
+    if ((tk.conditions || []).length) {
+      const c = document.createElement('div'); c.className = 'cb-cond';
+      tk.conditions.forEach(x => { const s = document.createElement('span'); s.textContent = x.slice(0, 3); s.title = x; c.appendChild(s); });
+      t.appendChild(c);
+    }
+    t.addEventListener('pointerdown', ev => _tokenDrag(ev, t, tk, m));
+    t.addEventListener('pointerenter', () => _cbInspect(tk, h));
+    t.addEventListener('pointerleave', () => _cbInspect(null));
     map.appendChild(t);
+    // HP changed since the last draw: a number floats up from the token, like damage on the table
+    const was = _cbPrevHp[tk.name];
+    if (was != null && h.hp != null && h.hp !== was) {
+      const f = document.createElement('div'); f.className = 'cb-float ' + (h.hp < was ? 'dmg' : 'heal');
+      f.textContent = (h.hp < was ? '-' : '+') + Math.abs(h.hp - was);
+      f.style.cssText = `left:${pad + tk.x * cell + cell * sz / 2}px;top:${pad + tk.y * cell}px`;
+      map.appendChild(f); setTimeout(() => f.remove(), 1700);
+    }
+    if (h.hp != null) _cbPrevHp[tk.name] = h.hp;
   });
 }
-function _tokenDrag(ev, el, tk, cell, pad, off, m) {
+// Hovering a token shows who it is in the line under the map.
+function _cbInspect(tk, h) {
+  const lg = document.getElementById('cb-legend'); if (!lg) return;
+  let el = lg.querySelector('.cb-inspect');
+  if (!tk) { if (el) el.remove(); return; }
+  if (!el) { el = document.createElement('span'); el.className = 'cb-inspect'; el.style.color = 'rgba(255,235,170,1)'; lg.appendChild(el); }
+  el.textContent = tk.name + (h && h.max ? ' · ' + h.hp + '/' + h.max + ' HP' : '') + ' · speed ' + _cbSpeedFt(tk) + ' ft' +
+    ((tk.conditions || []).length ? ' · ' + tk.conditions.join(', ') : '');
+}
+function _tokenDrag(ev, el, tk, m) {
   ev.preventDefault(); el.setPointerCapture(ev.pointerId); el.classList.add('dragging');
-  const map = document.getElementById('cb-map');
+  const map = document.getElementById('cb-map'), { cell, pad } = map._geom;
+  const ghost = document.getElementById('cb-ghost'), dist = document.getElementById('cb-dist');
+  const reach = _cbReach(m, tk), speed = _cbSpeedFt(tk), sz = tk.size || 1;
+  const occupied = (x, y) => m.tokens.some(o => o !== tk && x >= o.x && x < o.x + (o.size || 1) && y >= o.y && y < o.y + (o.size || 1));
+  const cellAt = e => { const r = map.getBoundingClientRect(); return [Math.floor((e.clientX - r.left - pad) / cell), Math.floor((e.clientY - r.top - pad) / cell)]; };
+  // Rough distance for squares beyond the walking range: straight-line squares (the DM decides what is really allowed).
+  const feetTo = (x, y) => { const c = reach.cost.get(reach.key(x, y)); return c != null ? c * 5 : Math.max(Math.abs(x - tk.x), Math.abs(y - tk.y)) * 5; };
   const move = e => {
     const r = map.getBoundingClientRect();
     el.style.left = (e.clientX - r.left - el.offsetWidth / 2) + 'px';
     el.style.top = (e.clientY - r.top - el.offsetHeight / 2) + 'px';
+    const [x, y] = cellAt(e);
+    if (x < 0 || y < 0 || x >= m.cols || y >= m.rows) { ghost.style.display = dist.style.display = 'none'; return; }
+    const bad = reach.block.has(reach.key(x, y)) || occupied(x, y);
+    const ft = feetTo(x, y), far = !reach.cost.has(reach.key(x, y)) || ft > speed;
+    ghost.className = bad ? 'bad' : (far ? 'far' : 'ok');
+    ghost.style.cssText = `display:block;left:${pad + x * cell}px;top:${pad + y * cell}px;width:${cell * sz}px;height:${cell * sz}px`;
+    dist.className = bad ? 'bad' : (far ? 'far' : '');
+    dist.textContent = bad ? 'blocked' : ft + ' ft' + (far ? ' (over ' + Math.max(0, ft - speed) + ')' : '');
+    dist.style.cssText = `display:block;left:${pad + x * cell + cell / 2}px;top:${pad + y * cell}px`;
   };
   const up = e => {
     el.removeEventListener('pointermove', move); el.removeEventListener('pointerup', up);
-    el.classList.remove('dragging');
-    const r = map.getBoundingClientRect();
-    const x = Math.floor((e.clientX - r.left - pad) / cell), y = Math.floor((e.clientY - r.top - pad) / cell);
-    if (x < 0 || y < 0 || x >= m.cols || y >= m.rows || (x === tk.x && y === tk.y)) { _renderCombatMap(_currentTurnOrder || {}); return; }
+    el.classList.remove('dragging'); ghost.style.display = dist.style.display = 'none';
+    const [x, y] = cellAt(e);
+    if (x < 0 || y < 0 || x >= m.cols || y >= m.rows || (x === tk.x && y === tk.y) || reach.block.has(reach.key(x, y)) || occupied(x, y)) { _renderCombatMap(_currentTurnOrder || {}); return; }
     fetch('/combat/move', { method: 'POST', headers: { 'Content-Type': 'application/json', ...(_dndToken ? { 'X-DND-Token': _dndToken } : {}) },
       body: JSON.stringify({ name: tk.name, x, y }) }).catch(() => _renderCombatMap(_currentTurnOrder || {}));
   };
