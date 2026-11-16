@@ -1313,6 +1313,7 @@ def _restore_campaign_display(name: str, data: dict) -> None:
     the files are as new as the copy)."""
     saved = _read_campaign_state(name)
     sstats = saved.get("stats") if isinstance(saved.get("stats"), dict) else {}
+    _clear_dice_pending()            # roll requests from before the load are not waited on any more
     with _stats_lock:
         for k in _DISPLAY_KEYS:
             if k in data:
@@ -1363,8 +1364,25 @@ _dice_pending: dict = {}
 _dice_pending_lock = threading.Lock()
 
 
+_DICE_PENDING_MAX_AGE = 600   # seconds: a roll nobody made in ten minutes is not being waited on any more
+
+
+def _clear_dice_pending() -> None:
+    """The scene moved on (next turn, combat over, campaign loaded): nothing is being waited on any more."""
+    with _dice_pending_lock:
+        ids = list(_dice_pending.keys())
+        _dice_pending.clear()
+    if ids:
+        for rid in ids:
+            _broadcast({"dice_request_cancelled": rid})
+        _broadcast({"dice_pending": []})
+
+
 def _dice_pending_snapshot() -> list:
     with _dice_pending_lock:
+        now = _time.time()
+        for rid in [r for r, e in _dice_pending.items() if now - float(e.get("started_at") or now) > _DICE_PENDING_MAX_AGE]:
+            _dice_pending.pop(rid, None)
         return [
             {"request_id": rid, "pending": sorted(e["chars"]), "label": e["meta"].get("label", "")}
             for rid, e in _dice_pending.items() if e["chars"]
@@ -2591,6 +2609,10 @@ def stats():
         _effect_expire_events: list[dict] = []
         if "turn_order" in data:
             new_to = data["turn_order"]
+            old_to = _current_stats.get("turn_order") or {}
+            if (not new_to) or not isinstance(new_to, dict) or new_to.get("current") != old_to.get("current") \
+                    or new_to.get("round") != old_to.get("round"):
+                _clear_dice_pending()        # a new turn: last turn's unanswered roll requests are over
             _current_stats["turn_order"] = new_to
             _broadcast({"input_gate": _effective_allowed()})
             # Decrement round-based effects for the actor whose turn just started
@@ -3211,6 +3233,10 @@ def dice_request():
     trackable = [c for c in chars if c.lower() != "any"]
     if trackable:
         with _dice_pending_lock:
+            # a new request for the same people replaces the older unanswered one (no stacked duplicates)
+            for rid in [r for r, e in _dice_pending.items() if e["chars"] == set(trackable)]:
+                _dice_pending.pop(rid, None)
+                _broadcast({"dice_request_cancelled": rid})
             _dice_pending[request_id] = {
                 "chars": set(trackable),
                 "meta": {"spec": spec, "modifier": modifier, "advantage": adv, "label": label, "dc": dc_val},

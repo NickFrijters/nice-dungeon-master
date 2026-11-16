@@ -65,6 +65,7 @@ A running adventure is either **Roleplay** or **Combat**. The screen switches au
 - PERFORMANCE: Waiting for the DM should never take more than 10 seconds (this probably needs data management improvements). That means that if we need larger pieces of text which take long to generate, cut it into pieces and continue working while the characters read or hear the first part.
 - FLAVOUR: Add ambient sounds to match with the background visuals.
 - INTERFACE: Build the character creation screen
+- ADDITION: In-adventure time of day tracking, this should also actually influence the adventure
 
 ## Status
 - **v1 (done):** `/dm:dnd menu` starts the display. The Main Menu lists your campaigns, and clicking Load hands the request to Claude, who loads it and switches the browser to the play screen. "Manage characters" and "Settings" are placeholders.

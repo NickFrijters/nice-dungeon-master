@@ -3130,6 +3130,8 @@
   body.combat #text-scroll.sidebar-hidden { padding-left: 60px; }
   body.combat #text-content { max-width: none; }
   body.combat #text-content .divider, body.combat #text-content .tts-status { display: none; }
+  /* "Waiting on…" sits beside the story strip in combat, not in the middle of the battle map */
+  body.combat #dice-pending-badge { top: auto; bottom: calc(22vh + 84px); left: auto; right: 40px; transform: none; max-width: 320px; }
   #cb-order { grid-column: 1 / -1; display: flex; gap: 8px; align-items: stretch; overflow-x: auto; scrollbar-width: none; padding: 2px 2px 6px; }
   .cb-round { align-self: center; font-family: 'Cinzel', serif; font-size: 13px; letter-spacing: 2px; text-transform: uppercase;
     color: rgba(235,205,120,.95); padding: 0 12px 0 4px; white-space: nowrap; }

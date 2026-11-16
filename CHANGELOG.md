@@ -10,6 +10,11 @@ Versions before **1.6.0** are reconstructed retroactively from git history; the 
 
 ## [Unreleased]
 
+## [2.41.1] — 2026-11-16 — roll badge cleans up
+
+### Fixed
+- The "Waiting on…" roll badge cleans up after itself. A new roll request for the same character replaces the older unanswered one (no more stacked duplicates), the next turn or the end of combat clears last turn's requests, loading a campaign clears them, and anything left unanswered for ten minutes expires. In combat the badge sits beside the story strip instead of in the middle of the battle map.
+
 ## [2.41.0] — 2026-11-16 — combat replaces roleplay; short fast combat narration
 
 ### Changed
