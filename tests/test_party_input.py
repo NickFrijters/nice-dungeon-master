@@ -63,6 +63,7 @@ class PartyInputRouteTest(unittest.TestCase):
             os.remove(self.mod.QUEUE_FILE)
         self.mod._input_gate = None
         self.mod._staged.clear()
+        self.mod._queue_status.clear()      # the 'queued' list now accumulates until the DM takes the file
         self.client.post("/stats", json={"players": [{"name": "Mira"}, {"name": "Joris"}], "replace_players": True})
 
     def _queue(self):

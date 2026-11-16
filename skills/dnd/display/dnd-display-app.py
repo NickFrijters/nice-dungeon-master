@@ -401,22 +401,35 @@ def _check_auto_trigger(force: bool = False) -> None:
         enough          = len(_staged) >= threshold or everybody_ready
         if not force and not (all_ready and enough):
             return
+        taken      = {k: dict(v) for k, v in _staged.items()}
         char_names = list(_staged.keys())
         lines      = [f'[{c}]: {e["text"]}' for c, e in _staged.items()]
-        content    = "\n".join(lines)
+        content    = "\n".join(lines) + "\n"
         _staged.clear()
 
+    # Appended, never overwritten: a second batch sent before the DM picked up the first
+    # must not erase it (the DM's wait loop deletes the file when it reads it).
     try:
-        with open(QUEUE_FILE, "w", encoding="utf-8") as f:
+        with _staged_lock, open(QUEUE_FILE, "a", encoding="utf-8") as f:
             f.write(content)
+            f.flush()
+            try:
+                os.fsync(f.fileno())
+            except OSError:
+                pass
     except Exception:
+        with _staged_lock:               # could not queue: keep the players' text, do not lose it
+            for k, v in taken.items():
+                _staged.setdefault(k, v)
         char_names = []
 
     if char_names:
         with _queue_status_lock:
-            _queue_status.clear()
-            _queue_status.extend(char_names)
-    _broadcast({"staged_inputs": {}, "queue_status": list(char_names)})
+            for c in char_names:
+                if c not in _queue_status:
+                    _queue_status.append(c)
+    _persist_staged()
+    _broadcast({"staged_inputs": _staged_snapshot(), "queue_status": list(_queue_status)})
 
 
 # ─── Input gate: only characters the DM is waiting on may enter input ───────────
@@ -1093,15 +1106,34 @@ def _load_tail() -> None:
 _load_tail()
 
 
+_atomic_lock = threading.Lock()
+
+
+def _atomic_write_json(path: str, data) -> bool:
+    """Write JSON to a temp file, then replace the real file. A crash mid-write
+    can never leave a half-written (unreadable) file behind. True on success."""
+    try:
+        with _atomic_lock:
+            tmp = f"{path}.{os.getpid()}.tmp"
+            with open(tmp, "w", encoding="utf-8") as f:
+                json.dump(data, f)
+                f.flush()
+                try:
+                    os.fsync(f.fileno())
+                except OSError:
+                    pass
+            os.replace(tmp, path)
+        return True
+    except Exception as e:
+        print(f"_atomic_write_json: {path}: {e}", file=sys.stderr)
+        return False
+
+
 def _persist_log() -> None:
     """Write the current text log to disk. Called after every chunk."""
-    try:
-        with _text_log_lock:
-            data = list(_text_log)
-        with open(LOG_FILE, "w", encoding="utf-8") as f:
-            json.dump(data, f)
-    except Exception:
-        pass
+    with _text_log_lock:
+        data = list(_text_log)
+    _atomic_write_json(LOG_FILE, data)
 
 
 def _load_log() -> None:
@@ -1119,6 +1151,15 @@ def _load_log() -> None:
                 _text_log.append(item)
     except Exception:
         pass
+    # An unreadable or missing log must not leave the screen blank after a restart:
+    # fall back to the campaign's session tail (what the browser would replay).
+    with _text_log_lock:
+        empty = not _text_log
+    if empty:
+        with _tail_lock:
+            seed = [dict(t) for t in _tail_buffer]
+        with _text_log_lock:
+            _text_log.extend(seed)
 
 
 _load_log()
@@ -1132,34 +1173,158 @@ _current_stats: dict = {}
 _stats_lock = threading.Lock()
 
 
-def _persist_stats() -> None:
+# Per-campaign copy of everything only the display holds (live party values, NPCs
+# here, combat board, quests, factions, world time, turn order, staged player
+# input). Lives in the campaign folder as display_state.json, so it survives the
+# display being restarted, a crash, and Save & exit followed by loading again.
+STATE_NAME = "display_state.json"
+_DISPLAY_KEYS = ("npcs", "combat", "quests", "factions", "world_time", "turn_order")
+_LIVE_PLAYER_KEYS = ("hp", "conditions", "spell_slots", "hit_dice", "effects",
+                     "concentration", "inspiration", "milestones", "xp")
+_awaiting_restore = False     # set by /clear: do not overwrite the campaign copy until it was read
+
+
+def _campaign_state_path() -> "str | None":
     try:
-        with _stats_lock:
-            data = dict(_current_stats)
-        with open(STATS_FILE, "w", encoding="utf-8") as f:
-            json.dump(data, f)
+        camp = open(CAMP_FILE, encoding="utf-8").read().strip()
+        if camp:
+            d = _find_campaign(camp)
+            if os.path.isdir(d):
+                return str(d / STATE_NAME)
     except Exception:
         pass
+    return None
+
+
+def _read_campaign_state(name: str) -> dict:
+    try:
+        with open(str(_find_campaign(name) / STATE_NAME), encoding="utf-8") as f:
+            data = json.load(f)
+        return data if isinstance(data, dict) else {}
+    except Exception:
+        return {}
+
+
+def _persist_stats() -> None:
+    """Save the display's own state: runtime stats.json plus the campaign copy. Atomic."""
+    with _stats_lock:
+        data = json.loads(json.dumps(_current_stats))   # deep copy, JSON-safe
+    _atomic_write_json(STATS_FILE, data)
+    path = _campaign_state_path()
+    if not path or _awaiting_restore:
+        return
+    with _staged_lock:
+        staged = {k: dict(v) for k, v in _staged.items()}
+    with _queue_status_lock:
+        qs = list(_queue_status)
+    try:
+        camp = open(CAMP_FILE, encoding="utf-8").read().strip()
+    except Exception:
+        camp = ""
+    _atomic_write_json(path, {"campaign": camp, "saved_at": _time.time(),
+                              "stats": data, "staged": staged, "queue_status": qs})
+
+
+def _persist_staged() -> None:
+    """Staged player input changed (or the queue indicator did): save it too."""
+    _persist_stats()
 
 
 def _load_stats() -> None:
     global _expected_count
+    data = None
     try:
         with open(STATS_FILE, encoding="utf-8") as f:
             data = json.load(f)
-        with _stats_lock:
-            _current_stats.update(data)
-        # Initialise expected player count from persisted stats so solo-mode
-        # detection is correct immediately after restart, without waiting for
-        # the next /stats POST.
-        loaded_players = data.get("players", [])
-        if loaded_players:
-            _expected_count = max(1, len(loaded_players))
     except Exception:
-        pass
+        data = None
+    if not isinstance(data, dict) or not data:
+        # Missing or unreadable stats.json: fall back to the active campaign's copy.
+        try:
+            camp = open(CAMP_FILE, encoding="utf-8").read().strip()
+            saved = _read_campaign_state(camp) if camp else {}
+            if isinstance(saved.get("stats"), dict):
+                data = saved["stats"]
+        except Exception:
+            data = None
+    if not isinstance(data, dict):
+        return
+    with _stats_lock:
+        _current_stats.update(data)
+    # Initialise expected player count from persisted stats so solo-mode
+    # detection is correct immediately after restart, without waiting for
+    # the next /stats POST.
+    loaded_players = data.get("players", [])
+    if loaded_players:
+        _expected_count = max(1, len(loaded_players))
 
 
 _load_stats()
+
+
+def _restore_staged_at_start() -> None:
+    """After a restart: put back the player input that was staged but not yet sent."""
+    try:
+        camp = open(CAMP_FILE, encoding="utf-8").read().strip()
+    except Exception:
+        return
+    saved = _read_campaign_state(camp) if camp else {}
+    if saved.get("campaign") not in (camp, None):
+        return
+    with _staged_lock:
+        if not _staged and isinstance(saved.get("staged"), dict):
+            for k, v in saved["staged"].items():
+                if isinstance(v, dict) and v.get("text"):
+                    _staged[str(k)] = {"text": str(v["text"]), "ready": bool(v.get("ready")),
+                                       "timestamp": float(v.get("timestamp") or _time.time())}
+    if os.path.exists(QUEUE_FILE) and isinstance(saved.get("queue_status"), list):
+        with _queue_status_lock:
+            if not _queue_status:
+                _queue_status.extend(str(x) for x in saved["queue_status"])
+
+
+_restore_staged_at_start()
+
+
+def _restore_campaign_display(name: str, data: dict) -> None:
+    """A campaign was (re)loaded: bring back what only the display held.
+
+    Display-only keys (NPCs here, combat board, quests, factions, world time, turn
+    order) that this push did not set come from the campaign copy; if the copy has
+    none, the previous campaign's value is dropped so nothing bleeds across.
+    Live party values (HP, slots, conditions, effects) come back too, but only when
+    the copy is newer than every character file (a Save writes the files, and then
+    the files are as new as the copy)."""
+    saved = _read_campaign_state(name)
+    sstats = saved.get("stats") if isinstance(saved.get("stats"), dict) else {}
+    with _stats_lock:
+        for k in _DISPLAY_KEYS:
+            if k in data:
+                continue
+            if k in sstats and sstats[k] is not None:
+                _current_stats[k] = sstats[k]
+            else:
+                _current_stats.pop(k, None)
+        try:
+            files = list((_find_campaign(name) / "characters").glob("*.md"))
+            newest = max((f.stat().st_mtime for f in files), default=0.0)
+        except Exception:
+            newest = 0.0
+        if float(saved.get("saved_at") or 0) > newest:
+            by_name = {p.get("name"): p for p in sstats.get("players", []) if isinstance(p, dict)}
+            for p in _current_stats.get("players", []):
+                old = by_name.get(p.get("name"))
+                if not old:
+                    continue
+                for k in _LIVE_PLAYER_KEYS:
+                    if k in old:
+                        p[k] = old[k]
+    with _staged_lock:
+        if not _staged and isinstance(saved.get("staged"), dict):
+            for k, v in saved["staged"].items():
+                if isinstance(v, dict) and v.get("text"):
+                    _staged[str(k)] = {"text": str(v["text"]), "ready": bool(v.get("ready")),
+                                       "timestamp": float(v.get("timestamp") or _time.time())}
 
 
 # ─── Player input queue ───────────────────────────────────────────────────────
@@ -1194,11 +1359,9 @@ def _load_input_queue() -> None:
 
 
 def _persist_input_queue() -> None:
-    try:
-        with open(INPUT_FILE, "w", encoding="utf-8") as f:
-            json.dump(_input_queue, f)
-    except Exception:
-        pass
+    with _input_lock:
+        data = list(_input_queue)
+    _atomic_write_json(INPUT_FILE, data)
 
 
 _load_input_queue()
@@ -1239,6 +1402,7 @@ def index():
         lan_token=_lan_token or "",
         display_settings=_display_settings(),
         tts_available=bool(_tts is not None and _tts.available()),
+        tts_engine=_tts_engine_label(),
     )
 
 
@@ -1463,6 +1627,14 @@ def combat_move():
     _persist_stats()
     _broadcast({"stats": current})
     return "", 204
+
+
+def _tts_engine_label() -> str:
+    """Name of the voice engine actually in use, for the line under each narration block."""
+    try:
+        return "Kokoro TTS" if _tts is not None and _tts._engine() == "kokoro" else "Pocket TTS"
+    except Exception:
+        return "Pocket TTS"
 
 
 @app.route("/menu/exit", methods=["POST"])
@@ -2154,6 +2326,8 @@ def stats():
 
     _effect_expire_events: list[dict] = []
     with _stats_lock:
+        _was_empty = not _current_stats.get("players")
+    with _stats_lock:
         if "players" in data:
             # replace_players=true wipes the list first — used on campaign load
             if data.get("replace_players"):
@@ -2351,6 +2525,7 @@ def stats():
         current = dict(_current_stats)
 
     # autorun_waiting / autorun_cycle — display-only signals, not stored in stats
+    # (a push that also carried npcs/combat/... is still saved before an early return)
     if "autorun_waiting" in data:
         if not data["autorun_waiting"]:
             # Turn resolved — clear stored cycle so reconnecting clients don't see stale pie
@@ -2360,6 +2535,7 @@ def stats():
         _broadcast({"autorun_waiting": bool(data["autorun_waiting"])})
         if not any(k in data for k in ("players", "turn_order", "world_time", "factions",
                                         "quests", "replace_players", "sheet", "autorun_cycle")):
+            _persist_stats()
             return "", 204
 
     if "autorun_cycle" in data:
@@ -2368,6 +2544,7 @@ def stats():
         _broadcast({"autorun_cycle": data["autorun_cycle"]})
         if not any(k in data for k in ("players", "turn_order", "world_time", "factions",
                                         "replace_players", "sheet", "autorun_threshold")):
+            _persist_stats()
             return "", 204
 
     if "autorun_threshold" in data:
@@ -2377,18 +2554,34 @@ def stats():
         _broadcast({"autorun_threshold": _autorun_threshold})
         if not any(k in data for k in ("players", "turn_order", "world_time", "factions",
                                         "replace_players", "sheet")):
+            _persist_stats()
             return "", 204
 
     # Write active campaign name so dm_help.py always reads the current campaign.
     # Also reload the tail buffer from the new campaign's session_tail.json so
     # display replay at /dnd load shows the correct campaign's last session.
     if "campaign" in data:
+        _new_camp = str(data["campaign"]).strip()
+        try:
+            _prev_camp = open(CAMP_FILE, encoding="utf-8").read().strip()
+        except Exception:
+            _prev_camp = ""
         try:
             with open(CAMP_FILE, "w", encoding="utf-8") as f:
-                f.write(str(data["campaign"]).strip())
+                f.write(_new_camp)
             _load_tail()
         except Exception:
             pass
+        # Reload of a campaign (switch, restart, or after /clear): restore what only the display held.
+        global _awaiting_restore
+        if _new_camp and (_new_camp != _prev_camp or _was_empty or _awaiting_restore):
+            try:
+                _restore_campaign_display(_new_camp, data)
+                with _stats_lock:
+                    current = dict(_current_stats)
+            except Exception as e:
+                print(f"_restore_campaign_display: {e}", file=sys.stderr)
+        _awaiting_restore = False
         # Resolve and stash the ruleset for this campaign so the sidebar badge
         # can render. Defaults to '2014' for legacy campaigns predating the
         # ruleset field. Wrapped in try/except so a missing paths import or
@@ -2618,7 +2811,8 @@ def clear():
     """
     if not _token_ok():
         return "Forbidden", 403
-    global _scene_buffer, _current_stats
+    global _scene_buffer, _current_stats, _awaiting_restore
+    _awaiting_restore = True      # keep the campaign's saved display state until it is read back
     with _text_log_lock:
         _text_log.clear()
     with _stats_lock:
@@ -3009,6 +3203,7 @@ def stage_input():
         }
         snap = _staged_snapshot()
 
+    _persist_staged()
     _broadcast({"staged_inputs": snap})
 
     if solo:
@@ -3046,6 +3241,7 @@ def ready_input():
         _staged[character]["ready"] = ready
         snap = _staged_snapshot()
 
+    _persist_staged()
     _broadcast({"staged_inputs": snap})
 
     if ready:
@@ -3106,6 +3302,7 @@ def party_input():
         _staged.clear()
         for character, text in entries.items():
             _staged[character] = {"text": text, "ready": True, "timestamp": now}
+    _persist_staged()
     _check_auto_trigger(force=True)
     return "", 204
 
@@ -3126,6 +3323,7 @@ def go_input():
             return "Nothing staged", 409
         for v in _staged.values():
             v["ready"] = True
+    _persist_staged()
     _check_auto_trigger(force=True)
     return "", 204
 
@@ -3150,6 +3348,7 @@ def unstage_input():
         _staged.pop(character, None)
         snap = _staged_snapshot()
 
+    _persist_staged()
     _broadcast({"staged_inputs": snap})
     return "", 204
 
@@ -3188,6 +3387,7 @@ def skip_input():
         }
         snap = _staged_snapshot()
 
+    _persist_staged()
     _broadcast({"staged_inputs": snap})
     _check_auto_trigger()
     return "", 204
@@ -3206,6 +3406,7 @@ def queue_consumed():
         return "Forbidden", 403
     with _queue_status_lock:
         _queue_status.clear()
+    _persist_staged()
     _broadcast({"queue_status": [], "dm_processing": True})
     return "", 204
 

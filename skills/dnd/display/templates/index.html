@@ -7,6 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="dnd-token" content="{{ lan_token }}">
 <meta name="tts-available" content="{{ '1' if tts_available else '0' }}">
+<meta name="tts-engine" content="{{ tts_engine }}">
 <script>
   // The display settings are chosen in the Settings menu and are the same on every
   // screen. Seed the keys the early theme/skin/text-size code below reads.
@@ -465,11 +466,12 @@
     margin-bottom: 2em;
     opacity: 0;
     animation: fadeIn 0.5s ease forwards;
-    border: 1px solid rgba(160, 200, 160, 0.22);
-    border-left: 2px solid rgba(130, 190, 130, 0.5);
-    border-radius: 2px;
-    background: rgba(20, 40, 20, 0.45);
-    padding: 0.7em 1.1em 0.75em;
+    border: 1px solid var(--pp-border);
+    border-left: 4px solid var(--pp-accent);
+    border-radius: 8px;
+    background: var(--pp-bg);
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.4);
+    padding: 0.75em 1.2em 0.8em;
   }
 
   .tutor-header {
@@ -482,23 +484,23 @@
   }
 
   .tutor-icon {
-    font-size: 10px;
-    color: rgba(130, 190, 130, 0.75);
+    font-size: 18px;
+    color: var(--pp-accent);
     flex-shrink: 0;
   }
 
   .tutor-label {
     font-family: 'Cinzel', serif;
-    font-size: 8.5px;
+    font-size: 15px;
     letter-spacing: 3px;
     text-transform: uppercase;
-    color: rgba(130, 190, 130, 0.65);
+    color: var(--pp-head);
     flex: 1;
   }
 
   .tutor-chevron {
-    font-size: 9px;
-    color: rgba(130, 190, 130, 0.45);
+    font-size: 14px;
+    color: var(--pp-dim);
     transition: transform 0.2s ease;
   }
   .tutor-block.expanded .tutor-chevron { transform: rotate(180deg); }
@@ -517,23 +519,47 @@
   }
 
   .tutor-body p {
-    font-size: 0.88em;
-    color: rgba(180, 220, 180, 0.82);
-    font-style: italic;
-    line-height: 1.7;
-    text-shadow: 0 1px 4px rgba(0,0,0,0.7);
+    font-size: 1.02em;
+    color: var(--pp-ink);
+    line-height: 1.6;
+    margin: 0 0 0.5em;
   }
+  .tutor-body p:last-child { margin-bottom: 0; }
 
-  /* Consequence / warning variant */
-  .tutor-block.tutor-warning {
-    border-color: rgba(200, 140, 60, 0.25);
-    border-left-color: rgba(200, 140, 60, 0.6);
-    background: rgba(40, 24, 8, 0.5);
-  }
+  /* Consequence / warning variant: same card, ember-coloured edge and label */
+  .tutor-block.tutor-warning { border-left-color: var(--pp-warn); }
   .tutor-block.tutor-warning .tutor-icon,
-  .tutor-block.tutor-warning .tutor-label,
-  .tutor-block.tutor-warning .tutor-chevron { color: rgba(200, 150, 70, 0.7); }
-  .tutor-block.tutor-warning .tutor-body p  { color: rgba(230, 190, 130, 0.82); }
+  .tutor-block.tutor-warning .tutor-label { color: var(--pp-warn); }
+
+  /* ── Shared look of the small pop-ups (DM Help block, tracker, toast, dialog) ──
+     Same parchment card as the character sheet. Light theme swaps the tokens. */
+  :root {
+    --pp-bg: linear-gradient(180deg, rgba(22,16,9,.98), rgba(10,7,4,.98));
+    --pp-border: rgba(200,165,80,.55); --pp-edge: rgba(180,140,60,.3); --pp-inner: rgba(8,6,4,1);
+    --pp-ink: rgba(240,228,198,.95); --pp-dim: rgba(215,200,165,.7);
+    --pp-head: rgba(220,185,95,.95); --pp-accent: rgba(220,185,100,.95); --pp-warn: rgba(228,140,98,.98);
+    --pp-btn-bg: rgba(200,160,64,.92); --pp-btn-ink: #1a1208; --pp-track: rgba(180,140,60,.2);
+    --pp-shadow: 0 0 60px rgba(0,0,0,.85);
+    --pp-font: 'Fell Straight Quotes', 'IM Fell English', Georgia, serif;
+  }
+  :root[data-theme="light"] {
+    --pp-bg: rgba(248,238,215,.98);
+    --pp-border: rgba(140,95,20,.5); --pp-edge: rgba(140,95,20,.25); --pp-inner: rgba(248,238,215,1);
+    --pp-ink: rgb(40,28,14); --pp-dim: rgba(90,65,25,.8);
+    --pp-head: rgb(70,50,18); --pp-accent: rgb(150,105,25); --pp-warn: rgb(165,70,30);
+    --pp-btn-bg: rgb(70,50,18); --pp-btn-ink: rgb(245,238,222); --pp-track: rgba(140,95,20,.2);
+    --pp-shadow: 0 0 50px rgba(140,95,20,.35);
+  }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme]) {
+      --pp-bg: rgba(248,238,215,.98);
+      --pp-border: rgba(140,95,20,.5); --pp-edge: rgba(140,95,20,.25); --pp-inner: rgba(248,238,215,1);
+      --pp-ink: rgb(40,28,14); --pp-dim: rgba(90,65,25,.8);
+      --pp-head: rgb(70,50,18); --pp-accent: rgb(150,105,25); --pp-warn: rgb(165,70,30);
+      --pp-btn-bg: rgb(70,50,18); --pp-btn-ink: rgb(245,238,222); --pp-track: rgba(140,95,20,.2);
+      --pp-shadow: 0 0 50px rgba(140,95,20,.35);
+    }
+  }
 
   /* DM processing indicator — shown between queue consumed and first narration */
   #dm-processing-indicator {
@@ -1652,13 +1678,17 @@
     border: 1px solid rgba(180, 140, 60, 0.25); color: rgba(180, 140, 60, 0.45); white-space: nowrap; }
   .tb-step.done { color: rgba(110, 190, 120, 0.95); border-color: rgba(110, 190, 120, 0.45); }
   .tb-step.cur { color: rgba(240, 210, 120, 1); border-color: rgba(220, 185, 100, 0.9); background: rgba(200, 160, 64, 0.12); }
-  #mini-tracker { position: fixed; top: 54px; left: 50%; transform: translateX(-50%); z-index: 450; min-width: 300px; max-width: 90vw;
-    background: rgba(14, 10, 6, 0.94); border: 1px solid rgba(180, 140, 60, 0.45); border-radius: 12px; padding: 10px 16px 12px;
-    box-shadow: 0 8px 36px rgba(0, 0, 0, 0.7); }
+  #mini-tracker { position: fixed; top: 54px; left: 50%; transform: translateX(-50%); z-index: 450; width: min(420px, 90vw);
+    background: var(--pp-bg); border: 2px solid var(--pp-border); border-radius: 8px; padding: 14px 22px 16px; color: var(--pp-ink);
+    box-shadow: var(--pp-shadow), inset 0 0 0 4px var(--pp-inner), inset 0 0 0 5px var(--pp-edge); }
   #mini-tracker[hidden] { display: none; }
-  #mini-tracker .tb-track { height: 4px; border-radius: 2px; background: rgba(180, 140, 60, 0.18); overflow: hidden; }
-  #mini-tracker .tb-fill { height: 100%; width: 30%; background: rgba(220, 185, 100, 0.95); border-radius: 2px; animation: tb-slide 1.3s ease-in-out infinite; }
-  #mini-tracker .tb-label { margin-top: 5px; font: 12px/1.4 ui-monospace, Consolas, monospace; color: rgba(180, 140, 60, 0.85); }
+  #mini-tracker .mt-title { font: 600 16px 'Cinzel', serif; letter-spacing: 3px; text-transform: uppercase; color: var(--pp-head); margin-bottom: 10px; }
+  #mini-tracker .tb-track { height: 5px; border-radius: 3px; background: var(--pp-track); overflow: hidden; }
+  #mini-tracker .tb-fill { height: 100%; width: 30%; background: var(--pp-accent); border-radius: 3px; animation: tb-slide 1.3s ease-in-out infinite; }
+  #mini-tracker .tb-label { margin-top: 8px; font: 16px/1.4 var(--pp-font); color: var(--pp-dim); }
+  #mini-tracker .tb-step { font: 14px/1.4 var(--pp-font); padding: 3px 11px; border-radius: 13px; color: var(--pp-dim); border-color: var(--pp-edge); }
+  #mini-tracker .tb-step.done { color: rgb(110, 175, 120); border-color: rgba(110, 175, 120, .5); background: none; }
+  #mini-tracker .tb-step.cur { color: var(--pp-head); border-color: var(--pp-accent); background: var(--pp-track); }
 
   @keyframes tb-slide { 0% { margin-left: 0; } 50% { margin-left: 70%; } 100% { margin-left: 0; } }
   @keyframes tts-slide { 0% { margin-left: 0; } 50% { margin-left: 65%; } 100% { margin-left: 0; } }
@@ -2363,25 +2393,7 @@
     text-shadow: none;
   }
 
-  /* Tutor / learning-mode hint blocks — moss-green parchment panel */
-  :root[data-theme="light"] .tutor-block {
-    background: rgba(200, 230, 200, 0.45);
-    border-color: rgba(70, 130, 70, 0.4);
-    border-left-color: rgba(40, 100, 50, 0.7);
-  }
-  :root[data-theme="light"] .tutor-icon,
-  :root[data-theme="light"] .tutor-label,
-  :root[data-theme="light"] .tutor-chevron { color: rgba(30, 90, 45, 0.85); }
-  :root[data-theme="light"] .tutor-body p { color: rgb(25, 70, 35); text-shadow: none; }
-  :root[data-theme="light"] .tutor-block.tutor-warning {
-    background: rgba(245, 220, 175, 0.55);
-    border-color: rgba(160, 100, 30, 0.4);
-    border-left-color: rgba(140, 80, 20, 0.7);
-  }
-  :root[data-theme="light"] .tutor-block.tutor-warning .tutor-icon,
-  :root[data-theme="light"] .tutor-block.tutor-warning .tutor-label,
-  :root[data-theme="light"] .tutor-block.tutor-warning .tutor-chevron { color: rgba(140, 80, 20, 0.9); }
-  :root[data-theme="light"] .tutor-block.tutor-warning .tutor-body p { color: rgb(110, 60, 15); }
+  /* Tutor / learning-mode hint blocks: colours come from the --pp-* tokens (light theme swaps them) */
 
   /* Effect-expired banner — brown-orange on cream */
   :root[data-theme="light"] .effect-expired-result {
@@ -2655,24 +2667,6 @@
       border-color: rgba(140, 95, 20, 0.8);
       color: rgb(245, 238, 222);
     }
-    :root:not([data-theme]) .tutor-block {
-      background: rgba(200, 230, 200, 0.45);
-      border-color: rgba(70, 130, 70, 0.4);
-      border-left-color: rgba(40, 100, 50, 0.7);
-    }
-    :root:not([data-theme]) .tutor-icon,
-    :root:not([data-theme]) .tutor-label,
-    :root:not([data-theme]) .tutor-chevron { color: rgba(30, 90, 45, 0.85); }
-    :root:not([data-theme]) .tutor-body p { color: rgb(25, 70, 35); text-shadow: none; }
-    :root:not([data-theme]) .tutor-block.tutor-warning {
-      background: rgba(245, 220, 175, 0.55);
-      border-color: rgba(160, 100, 30, 0.4);
-      border-left-color: rgba(140, 80, 20, 0.7);
-    }
-    :root:not([data-theme]) .tutor-block.tutor-warning .tutor-icon,
-    :root:not([data-theme]) .tutor-block.tutor-warning .tutor-label,
-    :root:not([data-theme]) .tutor-block.tutor-warning .tutor-chevron { color: rgba(140, 80, 20, 0.9); }
-    :root:not([data-theme]) .tutor-block.tutor-warning .tutor-body p { color: rgb(110, 60, 15); }
     :root:not([data-theme]) .effect-expired-result {
       color: rgb(130, 70, 20);
       border-color: rgba(160, 100, 30, 0.5);
@@ -2828,14 +2822,42 @@
   #toast{
     position:fixed; left:50%; bottom:36px;
     transform:translateX(-50%) translateY(20px);
-    z-index:200; max-width:min(440px, 86vw);
-    background:var(--e-strong, rgba(14,12,10,.98)); color:var(--e-on-strong, #ECE4D2);
-    border:1px solid var(--e-hair-strong, rgba(255,255,255,.16)); border-left:3px solid var(--e-accent, #FF7A2D);
-    border-radius:7px; box-shadow:0 14px 44px rgba(0,0,0,.5);
-    font-family:'Syne',sans-serif; font-weight:600; font-size:13px; letter-spacing:.02em;
-    padding:13px 18px; opacity:0; pointer-events:none;
+    z-index:200; width:max-content; max-width:min(560px, 90vw);
+    display:flex; align-items:flex-start; gap:12px;
+    background:var(--pp-bg); color:var(--pp-ink);
+    border:2px solid var(--pp-border); border-left:5px solid var(--pp-accent);
+    border-radius:8px; box-shadow:var(--pp-shadow);
+    font:19px/1.4 var(--pp-font);
+    padding:14px 14px 14px 20px; opacity:0; pointer-events:none;
     transition:opacity .22s ease, transform .22s ease; }
-  #toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+  #toast.show{ opacity:1; transform:translateX(-50%) translateY(0); pointer-events:auto; }
+  #toast.error{ border-left-color:var(--pp-warn); }
+  #toast .t-msg{ flex:1; padding-top:2px; }
+  .pp-close{ flex:none; width:34px; height:34px; display:inline-flex; align-items:center; justify-content:center;
+    background:none; border:1px solid transparent; border-radius:50%; cursor:pointer;
+    color:var(--pp-dim); font-size:18px; line-height:1; transition:color .15s, border-color .15s; }
+  .pp-close:hover, .pp-close:focus-visible{ color:var(--pp-head); border-color:var(--pp-border); outline:none; }
+
+  /* ══ Styled dialog (replaces the browser's confirm / alert) ══ */
+  #dnd-dialog{ position:fixed; inset:0; z-index:10000; display:flex; align-items:center; justify-content:center;
+    background:rgba(0,0,0,.78); padding:16px; }
+  #dnd-dialog[hidden]{ display:none; }
+  #dnd-dialog .dd-panel{ position:relative; width:min(520px, 94vw); padding:28px 32px 26px;
+    background:var(--pp-bg); border:2px solid var(--pp-border); border-radius:8px; color:var(--pp-ink);
+    box-shadow:var(--pp-shadow), inset 0 0 0 5px var(--pp-inner), inset 0 0 0 6px var(--pp-edge);
+    animation:sheetIn .18s ease; }
+  #dnd-dialog.error .dd-panel{ border-color:var(--pp-warn); }
+  #dnd-dialog .dd-title{ font:600 22px 'Cinzel', serif; letter-spacing:4px; text-transform:uppercase;
+    color:var(--pp-head); margin:0 40px 14px 0; }
+  #dnd-dialog.error .dd-title{ color:var(--pp-warn); }
+  #dnd-dialog .dd-msg{ font:20px/1.5 var(--pp-font); margin:0 0 24px; }
+  #dnd-dialog .pp-close{ position:absolute; top:14px; right:14px; }
+  #dnd-dialog .dd-actions{ display:flex; flex-wrap:wrap; justify-content:flex-end; gap:12px; }
+  #dnd-dialog .dd-btn{ min-height:44px; padding:0 22px; cursor:pointer; border-radius:22px;
+    font:600 14px 'Cinzel', serif; letter-spacing:2px; text-transform:uppercase;
+    background:transparent; color:var(--pp-head); border:1px solid var(--pp-border); }
+  #dnd-dialog .dd-btn:hover, #dnd-dialog .dd-btn:focus-visible{ border-color:var(--pp-accent); outline:2px solid var(--pp-edge); outline-offset:2px; }
+  #dnd-dialog .dd-btn.primary{ background:var(--pp-btn-bg); color:var(--pp-btn-ink); border-color:var(--pp-btn-bg); }
 
   /* ══ Settings: Text Size stepper + Narration slider (both skins) ══ */
   .ts-stepper{ display:inline-flex; align-items:center; gap:8px; }
@@ -3127,6 +3149,13 @@
   .cb-hp .cb-hp-fill { height: 100%; background: rgba(110,190,120,.95); }
   .cb-hp.enemy .cb-hp-fill { background: rgba(225,95,85,.95); }
   .cb-hp .cb-hp-note { font-size: 11px; color: rgba(210,195,160,.6); }
+  /* ── Pages: long text waits for a Continue before older text scrolls away ── */
+  #page-continue { position: fixed; left: calc(50% + 106px); bottom: 104px; transform: translateX(-50%); z-index: 30; display: none;
+    font: 700 14px 'Cinzel', serif; letter-spacing: .16em; text-transform: uppercase; color: rgba(255,235,170,1);
+    background: rgba(40,28,10,.94); border: 2px solid rgba(235,205,120,.9); border-radius: 22px; padding: 10px 28px; cursor: pointer;
+    box-shadow: 0 6px 30px rgba(0,0,0,.7); animation: pageNudge 1.6s ease-in-out infinite; }
+  #page-continue.show { display: block; }
+  @keyframes pageNudge { 0%,100% { transform: translateX(-50%) translateY(0); } 50% { transform: translateX(-50%) translateY(-4px); } }
 </style>
 </head>
 <body>
@@ -3332,6 +3361,7 @@
 <div id="text-scroll">
   <div id="text-content"></div>
 </div>
+<button id="page-continue" type="button">Continue &#9662;</button>
 <button id="new-content-pill" type="button" aria-label="Jump to newest narration">New ↓</button>
 
 <script>
@@ -4095,12 +4125,79 @@ function getOrCreateBlock() {
   return currentEl.querySelector('p:last-child');
 }
 
+// ── Pages ───────────────────────────────────────────────────────────────────
+// Without a voice reading it, text must not scroll out of sight unread: when the unread part of
+// the narration fills the visible area, typing waits for a Continue (any screen; every screen moves on).
+let _pageHeld = false, _pageStartY = null, _pageBlock = null, _pageCredit = 0;
+function _pageY(el) {   // bottom of an element, in the scroll area's own coordinates
+  return el.getBoundingClientRect().bottom - textScroll.getBoundingClientRect().top + textScroll.scrollTop;
+}
+// How much unread text may pile up: about 55% of the area, and never more than what is really
+// visible: from under the battle map (combat) or the top fade, down to where the newest line sits
+// when scrolled to the bottom (the turn bar and padding sit below it).
+function _pageUsable() {
+  const h = textScroll.clientHeight;
+  const cv = document.body.classList.contains('combat') ? document.getElementById('combat-view') : null;
+  const top = cv ? cv.getBoundingClientRect().bottom - textScroll.getBoundingClientRect().top + 8 : h * 0.14;
+  const tail = currentEl ? Math.max(0, textScroll.scrollHeight - _pageY(_pageLast())) : 180;
+  return Math.max(60, Math.min(h * 0.55, h - top - tail));
+}
+function _pageVoiceReading() { return !!(_turn && _turn.voice && !_turn.audioEnded); }
+function _pageLast() { return currentEl.querySelector('p:last-child') || currentEl; }
+function _pageShouldHold() {
+  if (!currentEl || _pageVoiceReading() || document.hidden) return false;
+  if (_pageBlock !== currentEl) {                       // a new narration block starts a new page
+    _pageBlock = currentEl; _pageCredit = 0;
+    _pageStartY = currentEl.getBoundingClientRect().top - textScroll.getBoundingClientRect().top + textScroll.scrollTop - 4;
+  }
+  return (_pageY(_pageLast()) - _pageStartY) > _pageUsable();
+}
+function _pageHold() {
+  if (_pageCredit > 0) { _pageCredit--; _pageStartY = _pageY(_pageLast()); return false; }
+  _pageHeld = true;
+  document.getElementById('page-continue').classList.add('show');
+  return true;
+}
+function _pageRelease() {
+  _pageHeld = false;
+  const b = document.getElementById('page-continue'); if (b) b.classList.remove('show');
+}
+function _pageResume() {
+  if (charDelay === 0) { if (charQueue.length) _pageInstantRun(); } else { setTimeout(typeNextChar, 0); }
+}
+function _pageContinue(fromRelay) {
+  if (!_pageHeld) { if (fromRelay) _pageCredit = Math.min(2, _pageCredit + 1); return; }
+  _pageRelease();
+  if (currentEl) _pageStartY = _pageY(_pageLast()) - 24;   // what is shown now has been read
+  if (!fromRelay && window._relaySend) window._relaySend({ t: 'page-continue' });
+  _pageResume();
+}
+// Instant typing speed: draw the text in slices and stop at each full page instead of dumping it all.
+function _pageInstantRun() {
+  if (_pageHeld) return;
+  while (charQueue.length) {
+    if (_pageShouldHold() && _pageHold()) { scrollToBottom(); return; }
+    instantFlush(24);
+  }
+  scrollToBottom();
+  _turnTypingDone(true);
+}
+document.getElementById('page-continue').addEventListener('click', () => _pageContinue(false));
+document.addEventListener('keydown', e => {
+  if (_pageHeld && (e.key === 'Enter' || e.key === ' ') && !/^(INPUT|TEXTAREA|SELECT)$/.test((e.target && e.target.tagName) || '')) {
+    e.preventDefault(); _pageContinue(false);
+  }
+});
+
 function typeNextChar() {
   if (charQueue.length === 0) {
     isTyping = false;
+    _pageRelease();
     _turnTypingDone();
     return;
   }
+  if (_pageHeld) return;
+  if (_pageShouldHold() && _pageHold()) return;
 
   const item = charQueue.shift();
   if (_turn && typeof item === 'string') _turn.typed++;
@@ -4314,7 +4411,7 @@ document.addEventListener('visibilitychange', () => {
 function startTyping() {
   if (isTyping) return;
   if (document.hidden) { _flushWhileHidden(); return; }
-  if (charDelay === 0) { instantFlush(); _turnTypingDone(true); return; }
+  if (charDelay === 0) { _pageInstantRun(); return; }
   isTyping = true;
   typeNextChar();
 }
@@ -4474,11 +4571,21 @@ function flushNewBlock() {
 // Called before inserting a non-DM block so the typewriter never gets
 // interrupted mid-word. Renders all queued chars immediately, then
 // stops the typewriter loop cleanly.
-function instantFlush() {
+function instantFlush(limit) {   // limit: draw only about that many items (paged flush), never stopping inside an inline element
   if (charQueue.length === 0) return;
   clearTimeout(idleTimer);
-  const pending = charQueue.splice(0);  // atomically drain
   let flushInline = null;  // local inline tracker for this flush pass
+  let take = charQueue.length;
+  if (limit) {
+    let open = false, k = 0;
+    for (; k < charQueue.length && (k < limit || open); k++) {
+      const q = charQueue[k];
+      if (q && typeof q === 'object') { if (q.open) open = true; else if (q.close) open = false; }
+    }
+    take = k;
+  }
+  const pending = charQueue.splice(0, take);
+  if (!charQueue.length) _pageRelease();   // everything is shown: nothing left to hold
   for (const item of pending) {
     if (item === '\n') {
       flushInline = null;
@@ -5056,6 +5163,7 @@ function clearDisplay(then) {
     // Abort any in-progress typewriter
     charQueue        = [];
     isTyping         = false;
+    _pageRelease();
     _currentInlineEl = null;
     if (currentCursor && currentCursor.parentNode) {
       currentCursor.parentNode.removeChild(currentCursor);
@@ -6284,7 +6392,7 @@ let _helpResetTimer = null;
 // No hint arrived in time: say so instead of quietly resetting the button.
 function _dmHelpTimeout() {
   if (!_helpPending && !_dmHelpBtn.classList.contains('locked')) return;
-  _showToast('No hint came back. Try DM Help again.', 5000);
+  _showToast('No hint came back. Try DM Help again.', 5000, 'error');
   _dmHelpReset();
 }
 
@@ -6294,7 +6402,7 @@ function _miniTrackerStart(names) {
   let el = document.getElementById('mini-tracker');
   if (!el) {
     el = document.createElement('div'); el.id = 'mini-tracker';
-    el.innerHTML = '<div class="tb-track"><div class="tb-fill"></div></div><div class="tb-label"></div><div class="tb-steps"></div>';
+    el.innerHTML = '<div class="mt-title">◈ DM Help</div><div class="tb-track"><div class="tb-fill"></div></div><div class="tb-label"></div><div class="tb-steps"></div>';
     document.body.appendChild(el);
   }
   el.hidden = false; delete el.dataset.sig;
@@ -6323,10 +6431,16 @@ function _dmHelpReset() {
 
 // Transient toast (status messages). Auto-dismisses; call again to replace.
 let _toastTimer = null;
-function _showToast(msg, ms) {
+function _showToast(msg, ms, kind) {
   const el = document.getElementById('toast');
   if (!el) return;
-  el.textContent = msg;
+  el.textContent = '';
+  const t = document.createElement('span'); t.className = 't-msg'; t.textContent = msg;
+  const x = document.createElement('button'); x.type = 'button'; x.className = 'pp-close';
+  x.setAttribute('aria-label', 'Dismiss'); x.textContent = '✕';
+  x.addEventListener('click', () => { clearTimeout(_toastTimer); el.classList.remove('show'); });
+  el.append(t, x);
+  el.classList.toggle('error', kind === 'error');
   el.classList.add('show');
   clearTimeout(_toastTimer);
   _toastTimer = setTimeout(() => el.classList.remove('show'), ms || 3200);
@@ -6362,11 +6476,11 @@ _dmHelpBtn.addEventListener('click', async () => {
       clearTimeout(_helpResetTimer);
       _helpResetTimer = setTimeout(_dmHelpTimeout, 110000);
     } else {
-      _showToast('DM Help isn’t available right now');
+      _showToast('DM Help isn’t available right now', 4000, 'error');
       _dmHelpReset();
     }
   } catch (_) {
-    _showToast('Couldn’t reach the server for DM Help');
+    _showToast('Couldn’t reach the server for DM Help', 4000, 'error');
     _dmHelpReset();
   }
 });
@@ -6526,7 +6640,7 @@ function _ttsSetStatus(blockEl, state, text, pct) {
   _ttsClearTick(el);
   el.dataset.state = state;
   el.className = 'tts-status st-' + state;
-  el.querySelector('.tts-st-voice').textContent = 'Pocket TTS';
+  el.querySelector('.tts-st-voice').textContent = (document.querySelector('meta[name="tts-engine"]') || {}).content || 'Pocket TTS';
   el.querySelector('.tts-st-text').textContent = text;
   el.querySelector('.tts-st-fill').style.width = (pct == null ? '' : Math.round(pct * 100) + '%');
 }
@@ -8178,14 +8292,59 @@ function _initDicePad() {
   window._relayHandlers.push(function(m){
     if (m && m.t === 'go-menu') location.href = '/menu';
   });
+  // A styled in-page dialog instead of the browser's confirm()/alert().
+  // _dndDialog({title, message, error, actions:[{label, value, primary}]}) → Promise of the chosen value
+  // (null when closed with the ✕, Esc or a click outside).
+  window._dndDialog = function(o){
+    return new Promise(function(resolve){
+      var prev = document.activeElement;
+      var ov = document.createElement('div'); ov.id = 'dnd-dialog'; if (o.error) ov.className = 'error';
+      ov.setAttribute('role', 'alertdialog'); ov.setAttribute('aria-modal', 'true'); ov.setAttribute('aria-labelledby', 'dd-title');
+      var p = document.createElement('div'); p.className = 'dd-panel';
+      var x = document.createElement('button'); x.type = 'button'; x.className = 'pp-close'; x.setAttribute('aria-label', 'Close'); x.textContent = '✕';
+      var h = document.createElement('h2'); h.className = 'dd-title'; h.id = 'dd-title'; h.textContent = o.title;
+      var m = document.createElement('p'); m.className = 'dd-msg'; m.textContent = o.message;
+      var a = document.createElement('div'); a.className = 'dd-actions';
+      var first = null;
+      (o.actions || []).forEach(function(act){
+        var b = document.createElement('button'); b.type = 'button'; b.className = 'dd-btn' + (act.primary ? ' primary' : '');
+        b.textContent = act.label; b.addEventListener('click', function(){ done(act.value); });
+        if (act.primary || !first) first = b;
+        a.appendChild(b);
+      });
+      p.append(x, h, m, a); ov.appendChild(p); document.body.appendChild(ov);
+      function done(v){ document.removeEventListener('keydown', key, true); ov.remove();
+        if (prev && prev.focus) try { prev.focus(); } catch(_) {} resolve(v); }
+      function key(e){
+        if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); done(null); }
+        else if (e.key === 'Tab') {
+          var f = ov.querySelectorAll('button'); if (!f.length) return;
+          var i = Array.prototype.indexOf.call(f, document.activeElement);
+          e.preventDefault(); f[(i + (e.shiftKey ? f.length - 1 : 1)) % f.length].focus();
+        }
+      }
+      document.addEventListener('keydown', key, true);
+      x.addEventListener('click', function(){ done(null); });
+      ov.addEventListener('mousedown', function(e){ if (e.target === ov) done(null); });
+      if (first) first.focus();
+    });
+  };
   var exitBtn = document.getElementById('exit-btn');
-  if (exitBtn) exitBtn.addEventListener('click', function(){
-    if (!confirm('Save the session and go back to the Main Menu?')) return;
+  function doExit(){
     exitBtn.disabled = true; exitBtn.textContent = 'Saving…';
     fetch('/menu/exit', { method:'POST', headers: (typeof _authHeaders === 'function' ? _authHeaders() : {}) })
       .then(function(r){ if (!r.ok) throw new Error(r.status); location.href = '/menu'; })
       .catch(function(){ exitBtn.disabled = false; exitBtn.textContent = 'Save & exit';
-        try { _showToast('Could not save and exit. Try again.', 5000); } catch(_) {} });
+        window._dndDialog({ title:'Could not save and exit', error:true,
+          message:'The display could not reach the server, so nothing was saved and your session is still open. Try again in a moment.',
+          actions:[{ label:'Close', value:'close' }, { label:'Try again', value:'retry', primary:true }] })
+          .then(function(v){ if (v === 'retry') doExit(); }); });
+  }
+  if (exitBtn) exitBtn.addEventListener('click', function(){
+    window._dndDialog({ title:'Save & exit',
+      message:'Save the session and go back to the Main Menu?',
+      actions:[{ label:'Stay', value:'stay' }, { label:'Save & exit', value:'go', primary:true }] })
+      .then(function(v){ if (v === 'go') doExit(); });
   });
 })();
 </script>
@@ -8293,6 +8452,7 @@ function _initDicePad() {
     if(!m || m.t!=='sheet') return;
     if (m.open && m.name) openSheet(m.name); else closeSheet();
   });
+  window._relayHandlers.push(function(m){ if(m && m.t==='page-continue' && typeof _pageContinue==='function') _pageContinue(true); });
   window._relayHandlers.push(function(m){ if(m && m.t==='sheet-tab' && typeof _smSetTab==='function') _smSetTab(m.tab, true); });
 })();
 </script>
