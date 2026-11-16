@@ -10,6 +10,13 @@ Versions before **1.6.0** are reconstructed retroactively from git history; the 
 
 ## [Unreleased]
 
+## [2.37.1] — 2026-11-16 — combat view playtest fixes
+
+### Fixed
+- Combat view: the battle mat now refits the table whenever the window changes size. It used to stay tiny after first load, or spill over the table edge after shrinking.
+- Combat view: with many combatants the side lists tighten until everyone fits, so nobody is hidden below the fold.
+- Combat view: big monsters (2x2, 3x3) land centred under the pointer when dragged, and need every square they would cover to be free of walls and other tokens.
+
 ## [2.37.0] — 2026-11-16 — Tabletop combat screen
 
 ### Changed — the Combat screen is now a tabletop

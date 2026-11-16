@@ -3140,13 +3140,13 @@
   .cb-card.current::after { content: '\25BE'; position: absolute; left: 50%; bottom: -13px; transform: translateX(-50%);
     color: rgba(255,225,130,1); font-size: 14px; }
   .cb-card.down { opacity: .4; filter: grayscale(.8); text-decoration: line-through; }
-  #cb-map-wrap { position: relative; min-height: 0; display: flex; align-items: center; justify-content: center; border-radius: 10px;
+  #cb-map-wrap { position: relative; min-height: 0; min-width: 0; overflow: hidden; border-radius: 10px;
     background:
       radial-gradient(ellipse at 50% 40%, rgba(0,0,0,0) 40%, rgba(0,0,0,.55) 100%),
       repeating-linear-gradient(92deg, rgba(0,0,0,.08) 0 3px, rgba(255,255,255,.012) 3px 7px),
       linear-gradient(180deg, #3a2615, #24160b);
     box-shadow: inset 0 0 30px rgba(0,0,0,.8), 0 4px 24px rgba(0,0,0,.6); border: 1px solid rgba(120,80,35,.6); }
-  #cb-map { position: relative; border-radius: 3px; touch-action: none;
+  #cb-map { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); border-radius: 3px; touch-action: none;
     background:
       radial-gradient(ellipse at 50% 45%, rgba(255,235,190,.06), rgba(0,0,0,.35) 100%),
       repeating-linear-gradient(45deg, rgba(255,255,255,.012) 0 2px, rgba(0,0,0,.02) 2px 4px),
@@ -3203,6 +3203,11 @@
     .cb-hp .cb-hp-name { font-size: 12px; } .cb-card { min-width: 76px; padding: 5px 8px 7px; font-size: 11px; }
   }
   #cb-side { overflow-y: auto; min-height: 0; scrollbar-width: none; padding: 4px 2px; }
+  #cb-side.tight .cb-hp { margin-bottom: 3px; padding: 2px 8px; }
+  #cb-side.tight h4 { margin: 4px 0 3px; }
+  #cb-side.tight .cb-hp-note { display: none; }
+  #cb-side.tighter .cb-hp .cb-hp-name { font-size: 11px; }
+  #cb-side.tighter .cb-hp { padding: 1px 8px; margin-bottom: 2px; }
   #cb-side h4 { margin: 8px 0 6px; font: 11px 'Cinzel', serif; letter-spacing: 2px; text-transform: uppercase; color: rgba(200,165,80,.85); }
   .cb-hp { margin-bottom: 5px; padding: 4px 9px; border-radius: 6px; background: rgba(0,0,0,.35); border: 1px solid rgba(180,140,60,.18); }
   .cb-hp.enemy { border-color: rgba(220,80,70,.25); }
@@ -6402,6 +6407,10 @@ function _renderCombat(to) {
     const h2 = document.createElement('h4'); h2.textContent = 'Enemies'; side.appendChild(h2);
     en.forEach(e => addHp('enemy', e.name, e.hp, e.max, e.note, e.name === to.current));
   }
+  // Many combatants: tighten the cards until everyone fits without scrolling.
+  side.classList.remove('tight', 'tighter');
+  if (side.scrollHeight > side.clientHeight + 2) side.classList.add('tight');
+  if (side.scrollHeight > side.clientHeight + 2) side.classList.add('tighter');
   const m = _combatState && _combatState.map;
   const lg = document.getElementById('cb-legend'); lg.textContent = '';
   if (m) {
@@ -6435,6 +6444,19 @@ function _cbReach(m, tk) {
   }
   return { cost, block, key };
 }
+// The mat refits whenever the table area changes size (window resize, first layout, side column wrapping).
+(function () {
+  const wrap = document.getElementById('cb-map-wrap');
+  if (!wrap || !window.ResizeObserver) return;
+  let last = '', timer = null;
+  new ResizeObserver(() => {
+    const k = wrap.clientWidth + 'x' + wrap.clientHeight;
+    if (k === last || !wrap.clientWidth) return;
+    last = k; clearTimeout(timer);
+    timer = setTimeout(() => { if (_combatState && _combatState.map && !_cbDragging) _renderCombatMap(_currentTurnOrder || {}); }, 80);
+  }).observe(wrap);
+})();
+let _cbDragging = false;
 function _renderCombatMap(to) {
   const map = document.getElementById('cb-map');
   const m = _combatState && _combatState.map;
@@ -6514,12 +6536,16 @@ function _cbInspect(tk, h) {
     ((tk.conditions || []).length ? ' · ' + tk.conditions.join(', ') : '');
 }
 function _tokenDrag(ev, el, tk, m) {
-  ev.preventDefault(); el.setPointerCapture(ev.pointerId); el.classList.add('dragging');
+  ev.preventDefault(); el.setPointerCapture(ev.pointerId); el.classList.add('dragging'); _cbDragging = true;
   const map = document.getElementById('cb-map'), { cell, pad } = map._geom;
   const ghost = document.getElementById('cb-ghost'), dist = document.getElementById('cb-dist');
   const reach = _cbReach(m, tk), speed = _cbSpeedFt(tk), sz = tk.size || 1;
-  const occupied = (x, y) => m.tokens.some(o => o !== tk && x >= o.x && x < o.x + (o.size || 1) && y >= o.y && y < o.y + (o.size || 1));
-  const cellAt = e => { const r = map.getBoundingClientRect(); return [Math.floor((e.clientX - r.left - pad) / cell), Math.floor((e.clientY - r.top - pad) / cell)]; };
+  // A big token needs every square it would cover to be free.
+  const cover = (x, y, f) => { for (let i = 0; i < sz; i++) for (let j = 0; j < sz; j++) if (f(x + i, y + j)) return true; return false; };
+  const occ1 = (x, y) => m.tokens.some(o => o !== tk && x >= o.x && x < o.x + (o.size || 1) && y >= o.y && y < o.y + (o.size || 1));
+  const occupied = (x, y) => cover(x, y, occ1);
+  const walled = (x, y) => cover(x, y, (a, b) => reach.block.has(reach.key(a, b)));
+  const cellAt = e => { const r = map.getBoundingClientRect(); return [Math.round((e.clientX - r.left - pad) / cell - sz / 2), Math.round((e.clientY - r.top - pad) / cell - sz / 2)]; };  // top-left square, so big tokens land centred under the pointer
   // Rough distance for squares beyond the walking range: straight-line squares (the DM decides what is really allowed).
   const feetTo = (x, y) => { const c = reach.cost.get(reach.key(x, y)); return c != null ? c * 5 : Math.max(Math.abs(x - tk.x), Math.abs(y - tk.y)) * 5; };
   const move = e => {
@@ -6527,8 +6553,8 @@ function _tokenDrag(ev, el, tk, m) {
     el.style.left = (e.clientX - r.left - el.offsetWidth / 2) + 'px';
     el.style.top = (e.clientY - r.top - el.offsetHeight / 2) + 'px';
     const [x, y] = cellAt(e);
-    if (x < 0 || y < 0 || x >= m.cols || y >= m.rows) { ghost.style.display = dist.style.display = 'none'; return; }
-    const bad = reach.block.has(reach.key(x, y)) || occupied(x, y);
+    if (x < 0 || y < 0 || x + sz > m.cols || y + sz > m.rows) { ghost.style.display = dist.style.display = 'none'; return; }
+    const bad = walled(x, y) || occupied(x, y);
     const ft = feetTo(x, y), far = !reach.cost.has(reach.key(x, y)) || ft > speed;
     ghost.className = bad ? 'bad' : (far ? 'far' : 'ok');
     ghost.style.cssText = `display:block;left:${pad + x * cell}px;top:${pad + y * cell}px;width:${cell * sz}px;height:${cell * sz}px`;
@@ -6538,9 +6564,9 @@ function _tokenDrag(ev, el, tk, m) {
   };
   const up = e => {
     el.removeEventListener('pointermove', move); el.removeEventListener('pointerup', up);
-    el.classList.remove('dragging'); ghost.style.display = dist.style.display = 'none';
+    el.classList.remove('dragging'); ghost.style.display = dist.style.display = 'none'; _cbDragging = false;
     const [x, y] = cellAt(e);
-    if (x < 0 || y < 0 || x >= m.cols || y >= m.rows || (x === tk.x && y === tk.y) || reach.block.has(reach.key(x, y)) || occupied(x, y)) { _renderCombatMap(_currentTurnOrder || {}); return; }
+    if (x < 0 || y < 0 || x + sz > m.cols || y + sz > m.rows || (x === tk.x && y === tk.y) || walled(x, y) || occupied(x, y)) { _renderCombatMap(_currentTurnOrder || {}); return; }
     fetch('/combat/move', { method: 'POST', headers: { 'Content-Type': 'application/json', ...(_dndToken ? { 'X-DND-Token': _dndToken } : {}) },
       body: JSON.stringify({ name: tk.name, x, y }) }).catch(() => _renderCombatMap(_currentTurnOrder || {}));
   };

@@ -26,6 +26,11 @@ class CombatScreenTest(unittest.TestCase):
             self.assertIn(needle, HTML)
         self.assertIn("document.body.classList.toggle('combat', on)", HTML)
 
+    def test_mat_refits_and_big_tokens_check_their_whole_footprint(self):
+        # playtest fixes: the mat refit on window resize, crowded side lists tighten, big tokens need all squares free
+        for needle in ("new ResizeObserver(() => {", "_cbDragging", "side.classList.add('tight')", "const cover = (x, y, f)", "const walled = (x, y)"):
+            self.assertIn(needle, HTML)
+
     def test_server_cleans_the_board(self):
         clean = _clean_combat()
         self.assertIsNone(clean({}))
