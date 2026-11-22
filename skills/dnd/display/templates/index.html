@@ -3246,6 +3246,12 @@
   #cb-map[data-biome="sewer"] { background:
       repeating-linear-gradient(0deg, rgba(0,0,0,.35) 0 2px, transparent 2px 24px), repeating-linear-gradient(90deg, rgba(0,0,0,.3) 0 2px, transparent 2px 48px),
       radial-gradient(ellipse at 50% 50%, rgba(70,110,60,.25), transparent 70%), linear-gradient(135deg, #3e4239, #2a2d26); }
+  /* walls look like what they are made of in that setting */
+  #cb-map[data-biome="cave"] .cb-ter.wall { background: radial-gradient(circle at 30% 30%, #5a5047 0 18%, transparent 20%), radial-gradient(circle at 75% 65%, #3a332c 0 22%, transparent 24%),
+      linear-gradient(135deg, #4a4139, #2a241f); background-size: 26px 26px, 34px 34px, 100% 100%; box-shadow: inset 0 0 10px rgba(0,0,0,.8); }
+  #cb-map[data-biome="tavern"] .cb-ter.wall, #cb-map[data-biome="ship"] .cb-ter.wall { background: repeating-linear-gradient(90deg, #4e3420 0 12px, #3a2616 12px 14px); box-shadow: inset 0 0 6px rgba(0,0,0,.8); }
+  #cb-map[data-biome="town"] .cb-ter.wall { background: linear-gradient(45deg, #7a3e2c 25%, #8a4a34 25% 50%, #7a3e2c 50% 75%, #8a4a34 75%); background-size: 14px 14px;
+      box-shadow: inset 0 0 0 2px #3e2014, 0 4px 8px rgba(0,0,0,.6); }
   /* ── What stands on the ground ── */
   .cb-ter.tree { background: radial-gradient(circle at 40% 35%, #6f9a3e 0 22%, #3f6420 45%, #26401a 66%, rgba(0,0,0,0) 70%); filter: drop-shadow(2px 4px 3px rgba(0,0,0,.6)); }
   .cb-ter.boulder { background: radial-gradient(ellipse at 38% 32%, #a8a397 0 15%, #7a756b 45%, #4f4b44 68%, rgba(0,0,0,0) 72%); filter: drop-shadow(2px 4px 3px rgba(0,0,0,.6)); }

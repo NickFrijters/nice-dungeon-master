@@ -86,7 +86,8 @@ class CombatScreenTest(unittest.TestCase):
         out = clean({"map": {"cols": 10, "rows": 8, "terrain": [
             {"kind": "wall", "x": 0, "y": 0, "w": 50, "h": 1}, {"kind": "lava", "x": 1, "y": 1}, {"kind": "water", "x": 20, "y": 1}],
             "tokens": [{"name": "Ogre", "x": 2, "y": 2, "side": "enemy", "size": 9, "speed": 40, "conditions": ["Frightened", "Burning"]}]}})
-        self.assertEqual(out["map"]["terrain"], [{"kind": "wall", "x": 0, "y": 0, "w": 10, "h": 1}])
+        self.assertEqual(out["map"]["terrain"][0], {"kind": "wall", "x": 0, "y": 0, "w": 10, "h": 1})   # the DM's piece first
+        self.assertTrue(out["map"].get("furnished"))                                                       # a nearly bare map gets furnished
         tk = out["map"]["tokens"][0]
         self.assertEqual((tk["size"], tk["speed"], tk["conditions"]), (3, 40, ["Frightened", "Burning"]))
 

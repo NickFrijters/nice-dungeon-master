@@ -1710,11 +1710,11 @@ _BIOME_FROM_TERRAIN = (   # no biome and nothing in the title: what stands on th
 )
 
 
-def _map_biome(m, terrain=()) -> str:
+def _map_biome(m, terrain=(), extra: str = "") -> str:
     b = str(m.get("biome", "")).lower().strip()
     if b in _BIOMES:
         return b
-    title = str(m.get("title", "")).lower()
+    title = (str(m.get("title", "")) + " " + str(extra or "")).lower()     # the map title, else where the party's pin says they are
     words = set(re.findall(r"[a-z]+", title))
     for biome, keys in _BIOME_WORDS:
         if words & set(keys) or any(" " in k and k in title for k in keys):
@@ -1726,6 +1726,98 @@ def _map_biome(m, terrain=()) -> str:
         if n > score:
             best, score = biome, n
     return best or "dungeon"
+
+
+def _furnish(biome: str, title: str, cols: int, rows: int, toks) -> list:
+    """A drawn map the DM left (almost) bare still has to look like the place: lay out terrain that fits the setting.
+    The layout depends only on the setting, title and size, so it stays the same push after push; pieces that would
+    cover a token are left out, and blocking pieces that would cut someone off are removed again."""
+    import random
+    rnd = random.Random(f"{biome}|{title}|{cols}x{rows}")
+    out = []
+
+    def add(kind, x, y, w=1, h=1):
+        if 0 <= x < cols and 0 <= y < rows:
+            out.append({"kind": kind, "x": x, "y": y, "w": max(1, min(w, cols - x)), "h": max(1, min(h, rows - y))})
+
+    def scatter(kind, share, w=1, h=1):
+        for _ in range(max(1, int(cols * rows * share))):
+            add(kind, rnd.randrange(cols), rnd.randrange(rows), w, h)
+
+    def border(kind="wall", door=True):
+        add(kind, 0, 0, cols, 1); add(kind, 0, rows - 1, cols, 1); add(kind, 0, 0, 1, rows); add(kind, cols - 1, 0, 1, rows)
+        if door:
+            add("door", cols // 2 - 1, rows - 1, 2, 1)
+
+    mid = rows // 2
+    if biome == "forest":
+        scatter("tree", .09); scatter("bush", .05); scatter("brush", .02, 2, 1); add("log", rnd.randrange(cols - 2), rnd.randrange(rows), 2, 1); scatter("boulder", .01)
+    elif biome == "grassland":
+        scatter("bush", .04); scatter("boulder", .015); scatter("tree", .02); scatter("brush", .02, 2, 1)
+    elif biome == "road":
+        add("road", 0, mid - 1, cols, 2); scatter("tree", .05); scatter("bush", .04); add("wagon", cols // 2, mid - 1, 2, 1) if rnd.random() < .5 else None
+    elif biome == "swamp":
+        scatter("deepwater", .012, 3, 2); scatter("mud", .02, 2, 1); scatter("brush", .03); scatter("water", .02, 2, 1); add("log", rnd.randrange(cols - 2), rnd.randrange(rows), 2, 1)
+    elif biome == "snow":
+        scatter("snowdrift", .02, 2, 2); scatter("boulder", .025); scatter("ice", .01, 3, 2); scatter("tree", .02)
+    elif biome == "desert":
+        scatter("sand", .03, 3, 2); scatter("boulder", .04); scatter("brush", .02); scatter("cliff", .005, 3, 1)
+    elif biome == "beach":
+        add("water", 0, rows - 2, cols, 1); add("deepwater", 0, rows - 1, cols, 1); scatter("boulder", .02); scatter("log", .01, 2, 1)
+    elif biome == "cave":
+        border("wall", door=False); scatter("boulder", .04); scatter("rubble", .03, 2, 1); scatter("water", .008, 2, 2)
+    elif biome == "tavern":
+        border(); add("fire", cols - 2, 1); add("shelf", 1, 1, min(4, cols - 3), 1)
+        for i in range(max(1, (cols - 4) // 4)):
+            add("table", 2 + i * 4, 3, 2, 1); add("table", 2 + i * 4, rows - 4, 2, 1)
+        add("barrel", cols - 2, rows - 2); add("barrel", cols - 3, rows - 2); add("rug", cols // 2 - 1, mid, 3, 1)
+    elif biome == "town":
+        add("wall", 0, 0, cols // 3, 2); add("wall", cols - cols // 3, 0, cols // 3, 2); add("wall", 0, rows - 2, cols // 4, 2)
+        scatter("crate", .02); scatter("barrel", .02); add("wagon", cols // 2, mid, 2, 1)
+    elif biome == "ship":
+        add("wall", 0, 0, cols, 1); add("wall", 0, rows - 1, cols, 1); add("pillar", cols // 2, mid); scatter("crate", .025); scatter("barrel", .02); add("stairs", 2, mid, 1, 2)
+    elif biome == "temple":
+        border(); add("altar", cols // 2 - 1, 1, 2, 1); add("statue", 1, 1); add("statue", cols - 2, 1)
+        for x in range(3, cols - 3, 3):
+            add("pillar", x, 2); add("pillar", x, rows - 3)
+        add("rug", cols // 2 - 1, 2, 2, rows - 4)
+    elif biome == "sewer":
+        add("wall", 0, 0, cols, 1); add("wall", 0, rows - 1, cols, 1); add("water", 0, mid, cols, 1); add("bridge", cols // 2, mid, 2, 1); scatter("rubble", .03)
+    else:   # dungeon
+        border(); scatter("pillar", .015); scatter("rubble", .03, 2, 1); add("stairs", 1, 1)
+
+    occupied = {(t["x"] + i, t["y"] + j) for t in toks for i in range(t.get("size") or 1) for j in range(t.get("size") or 1)}
+    out = [t for t in out if t["kind"] in _TERRAIN_CLEAR or t["w"] == cols or t["h"] == rows      # outer walls stay (tokens step aside)
+           or not any((x, y) in occupied for x in range(t["x"], t["x"] + t["w"]) for y in range(t["y"], t["y"] + t["h"]))]
+
+    def reachable(terrain):
+        blocked = set()
+        for t in terrain:
+            if t["kind"] in _TERRAIN_BLOCK:
+                blocked |= {(x, y) for x in range(t["x"], t["x"] + t["w"]) for y in range(t["y"], t["y"] + t["h"])}
+        for t in terrain:
+            if t["kind"] in ("bridge", "door", "road"):
+                blocked -= {(x, y) for x in range(t["x"], t["x"] + t["w"]) for y in range(t["y"], t["y"] + t["h"])}
+        starts = [(t["x"], t["y"]) for t in toks]
+        if len(starts) < 2:
+            return True
+        seen, q = {starts[0]}, [starts[0]]
+        while q:
+            cx, cy = q.pop()
+            for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                n = (cx + dx, cy + dy)
+                if n not in seen and 0 <= n[0] < cols and 0 <= n[1] < rows and n not in blocked:
+                    seen.add(n); q.append(n)
+        return all(s in seen for s in starts)
+
+    while not reachable(out):                                   # nobody may be walled in: drop blocking pieces until all can meet
+        idx = [i for i, t in enumerate(out) if t["kind"] in _TERRAIN_BLOCK and not (biome in ("tavern", "temple", "dungeon", "cave") and (t["w"] == cols or t["h"] == rows))]
+        if not idx:
+            idx = [i for i, t in enumerate(out) if t["kind"] in _TERRAIN_BLOCK]
+        if not idx:
+            break
+        out.pop(rnd.choice(idx))
+    return out
 
 
 def _place_tokens_sensibly(toks, terrain, cols, rows) -> None:
@@ -1765,7 +1857,7 @@ def _place_tokens_sensibly(toks, terrain, cols, rows) -> None:
                 taken.add((tk["x"] + i, tk["y"] + j))
 
 
-def _clean_combat(raw, prev=None):
+def _clean_combat(raw, prev=None, place_label: str = ""):
     """Keep only what the combat screen draws: enemies, and a map with terrain and tokens."""
     if not isinstance(raw, dict) or not raw:
         return None
@@ -1822,9 +1914,17 @@ def _clean_combat(raw, prev=None):
                 pl = old["plan"]
                 if 0 <= pl.get("x", -1) < cols and 0 <= pl.get("y", -1) < rows:
                     t["plan"] = dict(pl)
+        title = str(m.get("title", ""))[:60]
+        biome = _map_biome(m, terrain, place_label)
+        furnished = False
+        if len(terrain) < 3 and not m.get("image"):            # a bare drawn map would not look like any place: furnish it
+            terrain = terrain + _furnish(biome, title or place_label, cols, rows, toks)
+            furnished = True
         _place_tokens_sensibly(toks, terrain, cols, rows)
-        out["map"] = {"cols": cols, "rows": rows, "title": str(m.get("title", ""))[:60],
-                      "biome": _map_biome(m, terrain), "tokens": toks, "terrain": terrain}
+        out["map"] = {"cols": cols, "rows": rows, "title": title,
+                      "biome": biome, "tokens": toks, "terrain": terrain}
+        if furnished:
+            out["map"]["furnished"] = True
         img = _clean_map_image(m.get("image"), cols, rows, ((prev or {}).get("map") or {}).get("image"))
         if img:
             out["map"]["image"] = img
@@ -2835,7 +2935,8 @@ def stats():
 
         # combat board replaces entirely (null/{} clears): enemies with HP, plus the battle map
         if "combat" in data:
-            _current_stats["combat"] = _clean_combat(data["combat"], _current_stats.get("combat"))
+            _current_stats["combat"] = _clean_combat(data["combat"], _current_stats.get("combat"),
+                                                     ((_current_stats.get("place") or {}).get("label") or ""))
 
         # where the party is on a map picture (null/{} clears): {image, x, y, label, view}
         if "place" in data:

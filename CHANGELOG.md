@@ -10,6 +10,15 @@ Versions before **1.6.0** are reconstructed retroactively from git history; the 
 
 ## [Unreleased]
 
+## [2.44.0] — 2026-11-22 — battle maps always look like a place
+
+### Added
+- A battle map the DM leaves (almost) bare is furnished to fit its setting, so it always looks like a place: trees, bushes and a log in a forest, rock walls, boulders and rubble in a cave, walls, tables, barrels and a hearth in a tavern, buildings, crates and a wagon in a town, a channel with a bridge in a sewer, and so on for all 14 settings. The layout stays the same from push to push, never covers a token, and never walls anyone in (checked on 1500 random maps).
+- The setting can also come from where the party's map pin says they are, when the map title says nothing.
+
+### Changed
+- Walls look like what they are made of: rough rock in a cave, timber in a tavern or on a ship, tiled roofs in a town.
+
 ## [2.43.0] — 2026-11-22 — battle map looks like the place
 
 ### Added

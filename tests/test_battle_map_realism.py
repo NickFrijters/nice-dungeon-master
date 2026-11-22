@@ -92,6 +92,46 @@ class BattleMapRealismTest(unittest.TestCase):
         self.assertGreater(grid_at, terrain_at)
         self.assertIn("#cb-map .cb-grid { position: absolute; pointer-events: none; z-index: 1;", HTML)
 
+    def test_a_bare_map_is_furnished_to_fit_its_setting_for_every_setting(self):
+        toks = [{"name": "Dagna", "x": 1, "y": 3}, {"name": "Joris", "x": 2, "y": 4},
+                {"name": "Foe 1", "x": 9, "y": 3, "side": "enemy"}, {"name": "Foe 2", "x": 10, "y": 5, "side": "enemy", "size": 2}]
+        for biome in NS["_BIOMES"]:
+            m = board("A place", [], toks, biome=biome)
+            self.assertTrue(m.get("furnished"), biome)
+            self.assertGreaterEqual(len(m["terrain"]), 4, biome)
+            blocked = set()
+            for t in m["terrain"]:
+                if t["kind"] in NS["_TERRAIN_BLOCK"]:
+                    blocked |= {(x, y) for x in range(t["x"], t["x"] + t["w"]) for y in range(t["y"], t["y"] + t["h"])}
+            for t in m["terrain"]:
+                if t["kind"] in ("bridge", "door", "road"):
+                    blocked -= {(x, y) for x in range(t["x"], t["x"] + t["w"]) for y in range(t["y"], t["y"] + t["h"])}
+            cells = [(t["x"] + i, t["y"] + j) for t in m["tokens"] for i in range(t["size"]) for j in range(t["size"])]
+            self.assertFalse(set(cells) & blocked, biome)                                    # nobody inside an obstacle
+            start = (m["tokens"][0]["x"], m["tokens"][0]["y"])
+            seen, q = {start}, [start]
+            while q:
+                cx, cy = q.pop()
+                for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                    n = (cx + dx, cy + dy)
+                    if n not in seen and 0 <= n[0] < 12 and 0 <= n[1] < 8 and n not in blocked:
+                        seen.add(n); q.append(n)
+            for t in m["tokens"]:
+                self.assertIn((t["x"], t["y"]), seen, (biome, t["name"]))                    # everybody can reach everybody
+            again = board("A place", [], toks, biome=biome)
+            self.assertEqual(again["terrain"], m["terrain"], biome)                           # same layout push after push
+
+    def test_a_map_the_dm_furnished_is_left_alone_and_pictures_are_not_furnished(self):
+        m = board("Cellar", [T("wall", 0, 0, 12, 1), T("pillar", 4, 4), T("rubble", 6, 6)])
+        self.assertEqual(len(m["terrain"]), 3)
+        self.assertNotIn("furnished", m)
+        pic = clean({"map": {"cols": 12, "rows": 8, "title": "x", "image": "cellar.png", "tokens": []}})["map"]
+        self.assertEqual(pic["terrain"], [])
+
+    def test_where_the_party_is_decides_the_setting_when_the_map_says_nothing(self):
+        m = clean({"map": {"cols": 12, "rows": 8, "title": "", "tokens": []}}, None, "Misty Forest - the old road")["map"]
+        self.assertEqual(m["biome"], "forest")
+
     def test_dm_rules(self):
         self.assertIn("Battle map = the place (hard rule)", COMMANDS)
         for word in ("`map.biome`", "**blocking**", "**difficult**", "Never put a token inside blocking terrain"):
