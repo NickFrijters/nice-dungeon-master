@@ -1381,6 +1381,21 @@ def _clear_dice_pending() -> None:
         _broadcast({"dice_pending": []})
 
 
+def _close_answered_rolls(grace: float = 5.0) -> None:
+    """The DM narrated on: a roll it asked for more than a few seconds ago has been dealt with (rolled on screen,
+    typed in, or rolled by the DM), so its "Waiting on" notice must go. A request sent together with this
+    narration (within `grace` seconds) stays open."""
+    now = _time.time()
+    with _dice_pending_lock:
+        done = [rid for rid, e in _dice_pending.items() if now - float(e.get("started_at") or now) > grace]
+        for rid in done:
+            _dice_pending.pop(rid, None)
+    if done:
+        for rid in done:
+            _broadcast({"dice_request_cancelled": rid})
+        _broadcast({"dice_pending": _dice_pending_snapshot()})
+
+
 def _dice_pending_snapshot() -> list:
     with _dice_pending_lock:
         now = _time.time()
@@ -2983,6 +2998,8 @@ def chunk():
 
     _turn_clock_hit(data)
     _dm_answered()
+    if not any(data.get(k) for k in ("player", "npc", "dice", "dutch", "tutor", "action", "image")):
+        _close_answered_rolls()
 
     is_action      = bool(data.get("action"))
     is_player      = bool(data.get("player"))

@@ -88,6 +88,22 @@ class DicePendingCleanupTest(unittest.TestCase):
                 e["started_at"] -= self.mod._DICE_PENDING_MAX_AGE + 5
         self.assertEqual(self.pending(), [])
 
+    def test_narration_after_the_roll_closes_it_but_not_a_request_sent_with_it(self):
+        self.ask("Milo", "Persuasion")
+        self.client.post("/chunk", json={"text": "Make a Persuasion check, Milo."})   # sent with the request
+        self.assertEqual(len(self.pending()), 1)
+        with self.mod._dice_pending_lock:
+            for e in self.mod._dice_pending.values():
+                e["started_at"] -= 30                                                   # the DM went on later
+        self.client.post("/chunk", json={"text": "The kobold lowers its spear, unsure.", "player": None})
+        self.assertEqual(self.pending(), [])
+        self.ask("Milo", "Stealth")
+        with self.mod._dice_pending_lock:
+            for e in self.mod._dice_pending.values():
+                e["started_at"] -= 30
+        self.client.post("/chunk", json={"text": "d20+5 = 17", "dice": True})          # a dice line is not the DM moving on
+        self.assertEqual(len(self.pending()), 1)
+
     def test_badge_moves_out_of_the_map_in_combat(self):
         html = (DISPLAY / "templates" / "index.html").read_text(encoding="utf-8")
         self.assertIn("body.combat #dice-pending-badge", html)

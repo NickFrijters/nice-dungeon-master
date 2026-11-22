@@ -10,6 +10,11 @@ Versions before **1.6.0** are reconstructed retroactively from git history; the 
 
 ## [Unreleased]
 
+## [2.53.5] — 2026-11-22 — roll notice closes when the DM moves on
+
+### Fixed
+- A "Waiting on <character>" roll notice no longer stays on screen after the DM has moved on. When the DM narrates more than a few seconds after asking for a roll, that roll has been dealt with (rolled on screen, typed in, or rolled by the DM), so its notice closes. A request sent together with the narration stays open.
+
 ## [2.53.4] — 2026-11-22 — dice panel works again
 
 ### Fixed
