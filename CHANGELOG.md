@@ -10,6 +10,12 @@ Versions before **1.6.0** are reconstructed retroactively from git history; the 
 
 ## [Unreleased]
 
+## [2.46.0] — 2026-11-22 — hover info and cover from the map
+
+### Added
+- Hovering a square of the battle map says what is there and what it does: "Tree: blocks movement; gives three-quarters cover (+5 AC)", "Mud: difficult terrain", "Fire: it burns...", "Open ground", or who stands there with HP and conditions. A bridge square only talks about the bridge, not the river under it.
+- Cover works mechanically: what lies between attacker and target (terrain, or a creature in between) gives half (+2 AC), three-quarters (+5 AC) or total cover. While picking a target the hover shows the cover from the attacker (from their planned square if they move first), and the attack text sent to the DM includes it, e.g. "Attacks Goblin 1 with Longsword, Goblin 1 has three-quarters cover: +5 AC." The DM instructions say to apply it, and to give monsters the same benefits from the map.
+
 ## [2.45.0] — 2026-11-22 — monster moves follow the map
 
 ### Changed

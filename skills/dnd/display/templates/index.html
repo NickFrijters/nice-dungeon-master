@@ -3132,6 +3132,11 @@
   body.combat #text-content .divider, body.combat #text-content .tts-status { display: none; }
   /* "Waiting on…" sits beside the story strip in combat, not in the middle of the battle map */
   body.combat #dice-pending-badge { top: auto; bottom: calc(22vh + 84px); left: auto; right: 40px; transform: none; max-width: 320px; }
+  /* what a square is and does, on hover */
+  #cb-tip { position: absolute; z-index: 12; display: none; pointer-events: none; max-width: 220px; padding: 6px 9px; border-radius: 8px;
+    background: rgba(18,12,5,.95); border: 1px solid rgba(235,205,120,.7); box-shadow: 0 6px 18px rgba(0,0,0,.7);
+    font: 12px/1.35 'EB Garamond', Georgia, serif; color: rgba(240,228,198,.97); }
+  #cb-tip b { display: block; font: 700 11px 'Cinzel', serif; letter-spacing: 1px; color: rgba(255,225,130,1); margin-bottom: 2px; }
   /* planned moves: the token stays (faded), a see-through copy waits at the new spot, an arrow joins them until GO */
   #cb-map .cb-token.planned { opacity: .45; }
   #cb-map .cb-token.plan-ghost { opacity: .85; border-style: dashed; z-index: 3; box-shadow: 0 0 0 2px rgba(255,215,110,.85), 0 0 14px rgba(255,205,90,.6); }
@@ -6622,6 +6627,97 @@ const _CB_BLOCK = new Set(['wall', 'pillar', 'table', 'tree', 'boulder', 'crate'
   'altar', 'bed', 'shelf', 'wagon', 'tent']);
 const _CB_SLOW = new Set(['water', 'difficult', 'rubble', 'bush', 'mud', 'ice', 'sand', 'snowdrift', 'log', 'deepwater', 'brush']);
 const _CB_OVER = new Set(['bridge', 'door', 'road']);
+// What each kind of terrain means at the table (5e): shown when hovering a square, and used for cover on attacks.
+// cover: 1 = half (+2 AC and Dex saves), 2 = three-quarters (+5), 3 = total (cannot be targeted through it).
+const _CB_INFO = {
+  wall: ['Wall', 3, 'blocks movement and sight'], cliff: ['Cliff', 3, 'blocks movement; a climb or a fall'],
+  pillar: ['Pillar', 2, 'blocks movement'], tree: ['Tree', 2, 'blocks movement'], boulder: ['Boulder', 2, 'blocks movement'],
+  statue: ['Statue', 2, 'blocks movement'], shelf: ['Shelf', 2, 'blocks movement'], wagon: ['Wagon', 2, 'blocks movement'],
+  tent: ['Tent', 3, 'blocks movement and sight'], table: ['Table', 1, 'blocks movement; can be climbed or tipped over'],
+  crate: ['Crates', 1, 'blocks movement'], barrel: ['Barrels', 1, 'blocks movement'], altar: ['Altar', 1, 'blocks movement'],
+  bed: ['Bed', 1, 'blocks movement'], pit: ['Pit', 0, 'cannot be walked across: a fall'],
+  water: ['Shallow water', 0, 'difficult terrain'], deepwater: ['Deep water', 0, 'difficult terrain: swimming'],
+  difficult: ['Rough ground', 0, 'difficult terrain'], rubble: ['Rubble', 0, 'difficult terrain'], mud: ['Mud', 0, 'difficult terrain'],
+  ice: ['Ice', 0, 'difficult terrain: slippery'], sand: ['Deep sand', 0, 'difficult terrain'], snowdrift: ['Snowdrift', 0, 'difficult terrain'],
+  log: ['Fallen log', 1, 'difficult terrain'], bush: ['Bushes', 0, 'difficult terrain; lightly obscured'],
+  brush: ['Undergrowth', 0, 'difficult terrain; lightly obscured'],
+  door: ['Door', 0, 'open ground; a closed door blocks sight'], stairs: ['Stairs', 0, 'open ground'],
+  fire: ['Fire', 0, 'open ground, but it burns: fire damage when you enter or start your turn there'],
+  bridge: ['Bridge', 0, 'open ground over what is below'], road: ['Road', 0, 'open ground'], rug: ['Rug', 0, 'open ground'],
+};
+const _CB_COVER_NAME = ['', 'half cover (+2 AC)', 'three-quarters cover (+5 AC)', 'total cover'];
+function _cbKindsAt(m, x, y) {
+  return (m.terrain || []).filter(t => x >= t.x && x < t.x + t.w && y >= t.y && y < t.y + t.h).map(t => t.kind);
+}
+function _cbTokenAt(m, x, y) {
+  return (m.tokens || []).find(t => x >= t.x && x < t.x + (t.size || 1) && y >= t.y && y < t.y + (t.size || 1));
+}
+// How much cover the target has from the attacker: the best cover of anything the line between them crosses
+// (terrain, or a creature in between: half cover). Squares of the attacker and the target themselves do not count.
+function _cbCover(m, from, to) {
+  if (!from || !to) return 0;
+  const fs = from.size || 1, ts = to.size || 1;
+  const ax = from.x + fs / 2, ay = from.y + fs / 2, bx = to.x + ts / 2, by = to.y + ts / 2;
+  const steps = Math.max(2, Math.ceil(Math.hypot(bx - ax, by - ay) * 4));
+  const mine = (x, y, t, s) => x >= t.x && x < t.x + s && y >= t.y && y < t.y + s;
+  let best = 0; const seen = new Set();
+  for (let i = 1; i < steps; i++) {
+    const x = Math.floor(ax + (bx - ax) * i / steps), y = Math.floor(ay + (by - ay) * i / steps), k = x + ',' + y;
+    if (seen.has(k) || mine(x, y, from, fs) || mine(x, y, to, ts)) continue;
+    seen.add(k);
+    const kinds = _cbKindsAt(m, x, y);
+    if (kinds.some(q => _CB_OVER.has(q)) && !kinds.includes('wall')) { /* a bridge or door square: no cover from it */ }
+    kinds.forEach(q => { const inf = _CB_INFO[q]; if (inf && inf[1] > best) best = inf[1]; });
+    const c = _cbTokenAt(m, x, y);
+    if (c && c !== from && c !== to && best < 1) best = 1;
+  }
+  return best;
+}
+// The text for one square: what is there and what it does.
+function _cbCellText(m, x, y) {
+  const kinds = _cbKindsAt(m, x, y), over = kinds.filter(q => _CB_OVER.has(q));
+  const lines = [];
+  kinds.forEach(q => {
+    const inf = _CB_INFO[q]; if (!inf) return;
+    if (over.length && !_CB_OVER.has(q) && (_CB_BLOCK.has(q) || _CB_SLOW.has(q))) return;   // under a bridge or door: not in play
+    lines.push(inf[0] + ': ' + inf[2] + (inf[1] ? '; gives ' + _CB_COVER_NAME[inf[1]] : ''));
+  });
+  const tk = _cbTokenAt(m, x, y);
+  if (tk) { const h = _cbHp(tk.name); lines.unshift(tk.name + (h.max ? ' (' + h.hp + '/' + h.max + ' HP)' : '') + ((tk.conditions || []).length ? ', ' + tk.conditions.join(', ') : '')); }
+  if (!lines.length) lines.push('Open ground');
+  return { title: _cbCell(x, y), lines };
+}
+function _cbHover(ev) {
+  const map = document.getElementById('cb-map'), m = _combatState && _combatState.map;
+  let tip = document.getElementById('cb-tip');
+  if (!map || !m || !map._geom || _cbDragging) { if (tip) tip.style.display = 'none'; return; }
+  const { cell, pad } = map._geom, r = map.getBoundingClientRect(), sc = r.width / map.offsetWidth || 1;
+  const x = Math.floor(((ev.clientX - r.left) / sc - pad) / cell), y = Math.floor(((ev.clientY - r.top) / sc - pad) / cell);
+  if (x < 0 || y < 0 || x >= m.cols || y >= m.rows) { if (tip) tip.style.display = 'none'; return; }
+  if (!tip) { tip = document.createElement('div'); tip.id = 'cb-tip'; }
+  if (tip.parentNode !== map) map.appendChild(tip);
+  const info = _cbCellText(m, x, y);
+  // while picking a target, show the cover the target would have from the attacker
+  let extra = '';
+  if (_cbArmed) {
+    const att = (m.tokens || []).find(t => t.name === _cbArmed.actor), tg = _cbTokenAt(m, x, y);
+    if (att && tg && tg !== att) {
+      const from = att.plan ? { ...att, x: att.plan.x, y: att.plan.y } : att, cov = _cbCover(m, from, tg);
+      extra = cov ? 'From ' + att.name + ': ' + _CB_COVER_NAME[cov] : 'From ' + att.name + ': no cover';
+    }
+  }
+  tip.textContent = '';
+  const h = document.createElement('b'); h.textContent = info.title; tip.appendChild(h);
+  info.lines.concat(extra ? [extra] : []).forEach(l => { const d = document.createElement('div'); d.textContent = l; tip.appendChild(d); });
+  tip.style.display = 'block';
+  const left = pad + (x + 1) * cell + 6, top = pad + y * cell;
+  tip.style.left = Math.min(left, map.offsetWidth - 230) + 'px'; tip.style.top = top + 'px';
+}
+document.addEventListener('pointermove', e => {
+  const map = document.getElementById('cb-map');
+  if (map && document.body.classList.contains('combat') && map.contains(e.target)) _cbHover(e);
+  else { const tip = document.getElementById('cb-tip'); if (tip) tip.style.display = 'none'; }
+});
 // Movement cost map for the actor: blocking terrain cannot be entered, difficult ground costs double. 5-ft squares, diagonals count 5 ft.
 function _cbReach(m, tk) {
   const cost = new Map(); const key = (x, y) => x + ',' + y;
@@ -6997,11 +7093,19 @@ function _cbArmTarget(target) {
   _cbDisarm();
   const enemy = !!target && (((_combatState && _combatState.enemies) || []).some(e => e.name === target) ||
     ((_combatState && _combatState.map && _combatState.map.tokens) || []).some(t => t.name === target && t.side === 'enemy'));
+  // Cover from the map counts: from where the attacker will stand (a planned move first) to the target.
+  let cov = 0;
+  const m = _combatState && _combatState.map;
+  if (m && target && target !== a.actor) {
+    const att = (m.tokens || []).find(t => t.name === a.actor), tg = (m.tokens || []).find(t => t.name === target);
+    if (att && tg) cov = _cbCover(m, att.plan ? { ...att, x: att.plan.x, y: att.plan.y } : att, tg);
+  }
+  const covText = cov ? ', ' + target + ' has ' + _CB_COVER_NAME[cov].replace(/[()]/g, '').replace(' +', ': +') : '';
   let text;
-  if (a.kind === 'attack') text = target ? 'Attacks ' + target + ' with ' + a.name + '.' : 'Attacks with ' + a.name + '.';
+  if (a.kind === 'attack') text = target ? 'Attacks ' + target + ' with ' + a.name + covText + '.' : 'Attacks with ' + a.name + '.';
   else if (!target) text = 'Casts ' + a.name + '.';
   else if (target === a.actor) text = 'Casts ' + a.name + ' on themselves.';
-  else text = 'Casts ' + a.name + (enemy ? ' at ' : ' on ') + target + '.';
+  else text = 'Casts ' + a.name + (enemy ? ' at ' : ' on ') + target + covText + '.';
   _cbAddAct(a.actor, text);
 }
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && _cbArmed) _cbDisarm(); });
