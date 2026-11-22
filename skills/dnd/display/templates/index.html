@@ -3365,6 +3365,10 @@
   #scene-gallery .pm-cap { padding: 5px 9px; display: flex; justify-content: space-between; gap: 8px; align-items: baseline;
     font: 11px 'Cinzel', serif; letter-spacing: 1.5px; text-transform: uppercase; color: rgba(235,205,120,.95); }
   #scene-gallery .pm-cap small { font-size: 9px; letter-spacing: 1px; color: rgba(205,175,110,.55); white-space: nowrap; }
+  #dm-latency { position: fixed; right: 18px; bottom: 58px; z-index: 30; display: none; pointer-events: none; padding: 2px 10px; border-radius: 10px;
+    font: 11px 'Cinzel', serif; letter-spacing: 1px; background: rgba(15,10,5,.85); border: 1px solid rgba(180,140,60,.35); color: rgba(215,200,165,.85); }
+  #dm-latency.show { display: block; }
+  #dm-latency.ok { color: rgba(140,215,140,.95); } #dm-latency.slow { color: rgba(235,190,90,.95); } #dm-latency.bad { color: rgba(235,110,95,.95); }
 </style>
 </head>
 <body>
@@ -3453,6 +3457,8 @@
 
 <!-- DM-side waiting badge for active dice-requests (driven by SSE dice_pending) -->
 <div id="dice-pending-badge"></div>
+<!-- how long the DM took to answer the last GO (target: 5 seconds) -->
+<div id="dm-latency" title="Time from GO to the DM's answer on the last turn"></div>
 
 <!-- Player input panel — submit actions from the display companion -->
 <div id="input-panel" class="collapsed">
@@ -8559,6 +8565,7 @@ function connect() {
     if (payload.dice_request_cancelled && typeof window._onDiceRequestCancelled === 'function') {
       window._onDiceRequestCancelled(payload.dice_request_cancelled);
     }
+    if (payload.dm_latency) _showDmLatency(payload.dm_latency);
     if (payload.dice_pending !== undefined) {
       _updateDicePendingBadge(payload.dice_pending);
     }
@@ -8803,6 +8810,12 @@ function _escHtml(s) {
 // ── DM-side "Waiting on Piper, Mira…" badge for unresolved dice-requests ──
 // Driven by the server's dice_pending SSE event (snapshot of all active
 // requests). Hidden when the snapshot is empty.
+// How long the DM took to answer the last GO: green within the 5-second target, amber up to 10, red beyond.
+function _showDmLatency(r) {
+  const el = document.getElementById('dm-latency'); if (!el || typeof r.reply !== 'number') return;
+  el.textContent = 'DM answered in ' + r.reply.toFixed(1) + ' s';
+  el.className = 'show ' + (r.reply <= 5 ? 'ok' : (r.reply <= 10 ? 'slow' : 'bad'));
+}
 function _updateDicePendingBadge(snapshot) {
   const badge = document.getElementById('dice-pending-badge');
   if (!badge) return;

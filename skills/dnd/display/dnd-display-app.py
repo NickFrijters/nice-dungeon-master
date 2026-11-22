@@ -424,6 +424,7 @@ def _check_auto_trigger(force: bool = False) -> None:
         char_names = []
 
     if char_names:
+        _turn_clock_start()                  # the players' turn is now waiting for the DM: start the clock
         with _queue_status_lock:
             for c in char_names:
                 if c not in _queue_status:
@@ -2602,6 +2603,41 @@ def health():
     }, 200
 
 
+# ── How fast the DM answers ──────────────────────────────────────────────────
+# From the moment the players' GO reaches the DM's queue to the first block the DM sends back, and to its narration.
+# Every turn is written to latency.jsonl in the runtime folder (scripts/latency.py reports on it) and shown on screen.
+_turn_clock = {"t0": None, "first": None}
+_turn_clock_lock = threading.Lock()
+LATENCY_FILE = rt("latency.jsonl")
+
+
+def _turn_clock_start() -> None:
+    with _turn_clock_lock:
+        _turn_clock["t0"], _turn_clock["first"] = _time.time(), None
+
+
+def _turn_clock_hit(data: dict) -> None:
+    now = _time.time()
+    plain = not any(data.get(k) for k in ("action", "player", "npc", "dutch", "dice", "tutor", "inspiration_award",
+                                           "milestone_award", "milestone_spend", "xp_award", "image"))
+    with _turn_clock_lock:
+        t0 = _turn_clock["t0"]
+        if t0 is None:
+            return
+        if _turn_clock["first"] is None:
+            _turn_clock["first"] = round(now - t0, 2)
+        if not plain:
+            return
+        rec = {"ts": round(now, 1), "first": _turn_clock["first"], "reply": round(now - t0, 2)}
+        _turn_clock["t0"] = None
+    try:
+        with open(LATENCY_FILE, "a", encoding="utf-8") as f:
+            f.write(json.dumps(rec) + "\n")
+    except OSError:
+        pass
+    _broadcast({"dm_latency": rec})
+
+
 @app.route("/chunk", methods=["POST"])
 def chunk():
     if not _token_ok():
@@ -2610,6 +2646,8 @@ def chunk():
     raw = data.get("text", "")
     if not raw and not data.get("image"):
         return "", 204
+
+    _turn_clock_hit(data)
 
     is_action      = bool(data.get("action"))
     is_player      = bool(data.get("player"))
@@ -4074,7 +4112,7 @@ if __name__ == "__main__":
     if _audio:
         _audio.set_broadcast(_broadcast)
 
-    host = "0.0.0.0" if _LAN_MODE else "localhost"
+    host = "0.0.0.0" if _LAN_MODE else "127.0.0.1"   # clients connect to 127.0.0.1 ("localhost" costs ~2 s on Windows)
     # TLS — only enabled when --tls is explicitly passed; HTTP is the default.
     # Certs are runtime state (persist across plugin updates) → rt(); .scheme is a
     # launch-time marker read by simple shell commands → stays in the code dir.

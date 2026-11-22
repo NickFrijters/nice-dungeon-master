@@ -153,6 +153,21 @@ python3 ${CLAUDE_SKILL_DIR}/scripts/character.py xp --level 1 --gained 150
 
 ---
 
+## Fast Turn — `display/turn.py` and `scripts/latency.py`
+
+One ordinary turn in one call and one process (about 0.4 s instead of one script per step). Order on screen: player line, dice lines, narration with its stat flags, NPC lines; then the micro-save, the turn pointer and, with `--wait`, the autorun wait (its output is the next players' input).
+
+```bash
+python3 ${CLAUDE_SKILL_DIR}/display/turn.py -c <campaign> \
+  --player "Name: what they do" --dice "Name — Attack: d20+5 = 17 → hit" \
+  --narrate "One or two sentences." --stat-hp "Name:9:12" --effect-start "Name:Bless:10r:conc" \
+  --npc "Escobert: Hurry!" --event "what happened" --flag "Label: text" --turn-current "Next Name" [--turn-round 3] [--wait]
+```
+
+`--narrate -` reads the narration from stdin. Repeat `--player`, `--dice`, `--npc`, `--event`, `--flag` as needed. Any `send.py --stat-*` / `--effect-*` flag goes with the narration.
+
+`python3 ${CLAUDE_SKILL_DIR}/scripts/latency.py` shows how fast the DM answered recently (from GO to the first block and to the narration), the median, and the share within the 5-second target. The display writes one line per turn to `latency.jsonl` in the runtime folder.
+
 ## Stats Display Script — `display/push_stats.py`
 Pushes character and combat stats to the sidebar. Players merged by name; partial updates work.
 

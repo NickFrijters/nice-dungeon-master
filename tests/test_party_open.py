@@ -225,7 +225,7 @@ class ListeningTest(unittest.TestCase):
     def test_the_wait_loop_keeps_beating(self):
         src = (DISPLAY / "autorun_wait.py").read_text(encoding="utf-8")
         self.assertIn(".dm-heartbeat", src)
-        self.assertIn("if _i % 10 == 0:", src)       # about every three seconds while it waits
+        self.assertIn("if _i % 30 == 0:", src)       # about every three seconds while it waits (30 polls of 0.1 s)
 
 
 if __name__ == "__main__":

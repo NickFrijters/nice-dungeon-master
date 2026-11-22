@@ -37,7 +37,7 @@ echo $! > "$DISPLAY_DIR/app.pid"
 
 for i in $(seq 1 30); do
   sleep 0.5
-  if curl -s -m 2 http://localhost:5001/ping >/dev/null 2>&1; then
+  if curl -s -m 2 http://127.0.0.1:5001/ping >/dev/null 2>&1; then
     IP=$("$PY" -c "import socket;s=socket.socket(socket.AF_INET,socket.SOCK_DGRAM);s.connect(('8.8.8.8',80));print(s.getsockname()[0])" 2>/dev/null)
     echo "Display from this working copy is up: http://localhost:5001   (TV: http://${IP}:5001)"
     exit 0

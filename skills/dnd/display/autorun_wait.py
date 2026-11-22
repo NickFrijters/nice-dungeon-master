@@ -62,13 +62,35 @@ try:
 except Exception:
     pass
 
-subprocess.run([sys.executable, PUSH, "--autorun-waiting", "true", "--autorun-cycle", str(interval)],
-               capture_output=True)
+def _post(path, payload):
+    """Tell the display directly (one quick HTTP call, no extra Python process: that cost ~0.2-2 s per call)."""
+    try:
+        scheme_file = os.path.join(DISPLAY_DIR, ".scheme")
+        scheme = open(scheme_file, encoding="utf-8").read().strip() if os.path.exists(scheme_file) else "http"
+        token = ""
+        try:
+            token = open(os.path.join(RT, ".token"), encoding="utf-8").read().strip()
+        except OSError:
+            pass
+        ctx = None
+        if scheme == "https":
+            ctx = ssl.create_default_context()
+            ctx.check_hostname = False
+            ctx.verify_mode = ssl.CERT_NONE
+        req = urllib.request.Request(f"{scheme}://127.0.0.1:{os.environ.get('DND_DISPLAY_PORT', '5001')}{path}",
+                                     data=json.dumps(payload).encode() if payload is not None else b"", method="POST",
+                                     headers={"X-DND-Token": token, "Content-Type": "application/json"})
+        urllib.request.urlopen(req, timeout=2, context=ctx)
+    except Exception:
+        pass
+
+
+_post("/stats", {"autorun_waiting": True, "autorun_cycle": {"interval": interval, "ts": time.time()}})
 
 # Poll loop — exit when queue appears, session changes, or 9 minutes pass
 content = ""
-for _i in range(1800):  # 0.3s * 1800 = 9 min
-    if _i % 10 == 0:
+for _i in range(5400):  # 0.1s * 5400 = 9 min: a player's GO is picked up within a tenth of a second
+    if _i % 30 == 0:
         _beat()
     if os.path.exists(QFILE):
         try:
@@ -79,14 +101,19 @@ for _i in range(1800):  # 0.3s * 1800 = 9 min
             content = open(_taken, encoding="utf-8").read()
             os.unlink(_taken)
         except Exception:
+            # The display is still writing it (on Windows an open file cannot be renamed): try again in a moment
+            # instead of giving the DM an empty turn.
             content = ""
-        break
+            time.sleep(0.02)
+            continue
+        if content.strip():
+            break
     try:
         if open(SESSION_FILE, encoding="utf-8").read().strip() != my_session:
             break
     except Exception:
         break
-    time.sleep(0.3)
+    time.sleep(0.1)
 
 # Clean up our session file if it's still ours
 try:
@@ -95,25 +122,9 @@ try:
 except Exception:
     pass
 
-subprocess.run([sys.executable, PUSH, "--autorun-waiting", "false"], capture_output=True)
-
-# Clear the display queue indicator on success
+_post("/stats", {"autorun_waiting": False})
 if content:
-    try:
-        scheme_file = os.path.join(DISPLAY_DIR, ".scheme")
-        scheme = open(scheme_file, encoding="utf-8").read().strip() if os.path.exists(scheme_file) else "http"
-        token = open(os.path.join(RT, ".token"), encoding="utf-8").read().strip()
-        ctx = None
-        if scheme == "https":
-            ctx = ssl.create_default_context()
-            ctx.check_hostname = False
-            ctx.verify_mode = ssl.CERT_NONE
-        req = urllib.request.Request(f"{scheme}://localhost:{os.environ.get('DND_DISPLAY_PORT', '5001')}/queue/consumed",
-                                     data=b"", method="POST",
-                                     headers={"X-DND-Token": token})
-        urllib.request.urlopen(req, timeout=1, context=ctx)
-    except Exception:
-        pass
+    _post("/queue/consumed", None)          # clear the display's queue indicator
 
 if content.strip():
     try:

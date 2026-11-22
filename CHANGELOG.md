@@ -10,6 +10,17 @@ Versions before **1.6.0** are reconstructed retroactively from git history; the 
 
 ## [Unreleased]
 
+## [2.48.0] — 2026-11-22 — faster DM turns
+
+### Fixed
+- The DM's scripts now reach the display at 127.0.0.1 instead of "localhost". On Windows "localhost" first tries IPv6 and waited about 2 seconds per request: a narration with stat changes took 4.4 s to send and moving the turn pointer 2.2 s. Now 0.27 s and 0.21 s. A combat turn lost about 9 seconds to this.
+- The autorun hand-off no longer gives the DM an empty turn when it catches the queue while the display is still writing it (Windows cannot rename an open file); it tries again. It also checks every 0.1 s instead of 0.3 s and tells the display directly instead of starting an extra Python process, so a GO reaches the DM in about 0.2 to 0.4 s.
+
+### Added
+- `turn.py`: one ordinary DM turn in one call and one process: the player's line, dice lines, narration with its stat changes, NPC lines, the micro-save, the turn pointer and optionally the wait for the next input. About 0.4 s for all of it.
+- The display times every turn, from the players' GO to the DM's first block and to its narration, shows it in the corner ("DM answered in 4.2 s", green within 5 s), and writes it to `latency.jsonl`; `scripts/latency.py` reports the median and the share within the 5-second target.
+- DM instructions: a fast-turn rule aiming for 5 seconds: at most two tool calls per turn (dice, then `turn.py`), no file reads in a normal turn, outcome decided and written straight away.
+
 ## [2.47.0] — 2026-11-22 — swarms, webs and grates
 
 ### Added
