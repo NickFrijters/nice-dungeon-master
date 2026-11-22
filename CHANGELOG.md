@@ -10,6 +10,12 @@ Versions before **1.6.0** are reconstructed retroactively from git history; the 
 
 ## [Unreleased]
 
+## [2.53.3] — 2026-11-22 — menu follows the DM into the story
+
+### Fixed
+- Main Menu could stay on screen after the DM had loaded the campaign. The story page sent every visit back to the menu until a Load went through the menu itself, so when the DM opened the campaign another way (a re-sent load, or a load typed in the DM's window) the browser kept bouncing back. Once the DM has opened the active campaign and its story is on screen, the story page now stays, Continue goes straight to it, and the menu shows "The Dungeon Master has opened <campaign>. The story is waiting." with a Go to the story button.
+- The campaign list is redrawn only when it changed. Rebuilding every button every 2.5 seconds could swallow a click that landed just as the old button was replaced.
+
 ## [2.53.2] — 2026-11-22 — menu progress at the top
 
 ### Changed

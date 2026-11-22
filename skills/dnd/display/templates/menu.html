@@ -64,6 +64,9 @@
     Claude is running. Start it with <code>/dm:dnd</code> (or the desktop shortcut).
   </div>
 
+  <div id="story-ready" class="notice" hidden><strong>The Dungeon Master has opened <span id="sr-name"></span>.</strong>
+    The story is waiting. <button type="button" onclick="location.href='/'" style="margin-left:10px">Go to the story</button></div>
+
   <div id="saving" class="notice" hidden><strong>Saving your session…</strong> One moment; you can pick a campaign when this goes away.</div>
 
   <h2>Campaigns</h2>
@@ -152,7 +155,7 @@ function render(data) {
     const btn = document.createElement('button');
     btn.textContent = c.active ? 'Continue' : 'Load';
     btn.disabled = waitingFor !== null;
-    btn.onclick = () => load(c.name, btn);
+    btn.onclick = () => (c.active && window.lastStoryReady) ? (location.href = '/') : load(c.name, btn);   // Continue: straight in
     const del = document.createElement('button');
     del.className = 'danger'; del.textContent = 'Delete'; del.title = 'Delete this campaign';
     del.disabled = waitingFor !== null;
@@ -358,7 +361,14 @@ async function refresh() {
   try {
     const data = await (await fetch('/menu/campaigns')).json();
     window.lastCampaigns = data.campaigns;
-    if (!confirming) render(data);        // do not redraw away an open "Delete?" question
+    window.lastStoryReady = !!data.story_ready;
+    // Redraw the list only when it changed: rebuilding the buttons every few seconds swallowed clicks that landed
+    // just as the old button was replaced.
+    const key = JSON.stringify([data.campaigns, waitingFor, !!data.story_ready]);
+    if (!confirming && key !== window._listKey) { window._listKey = key; render(data); }
+    const sr = document.getElementById('story-ready');
+    sr.hidden = !(data.story_ready && !waitingFor && !pending);
+    if (data.story_ready) document.getElementById('sr-name').textContent = '"' + String(data.active).replace(/-/g, ' ') + '"';
     if (pending) {
       const fresh = data.campaigns.filter(c => !pending.before.has(c.name));
       const hit = fresh.find(c => c.name === pending.expected) || fresh[0];

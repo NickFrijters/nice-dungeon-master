@@ -1437,7 +1437,7 @@ def _display_settings() -> dict:
 
 @app.route("/")
 def index():
-    if _MENU_FIRST:
+    if _MENU_FIRST and not _story_ready():      # the story is up (the DM opened a campaign some other way): show it
         return redirect("/menu")
     # Pass LAN token to template so the browser can authenticate /help-request
     return render_template(
@@ -1565,6 +1565,14 @@ def _open_campaign_here(name: str) -> None:
         pass
 
 
+def _story_ready() -> bool:
+    """The DM has opened the active campaign and put its story on screen (the newest story block belongs to it)."""
+    active = _active_campaign_name()
+    with _text_log_lock:
+        last = _text_log[-1] if _text_log else None
+    return bool(active and last and last.get("_camp") == active)
+
+
 @app.route("/menu")
 def menu():
     return render_template("menu.html", lan_token=_lan_token or "")
@@ -1572,9 +1580,12 @@ def menu():
 
 @app.route("/menu/campaigns")
 def menu_campaigns():
-    return jsonify({"active": _active_campaign_name(),
+    active = _active_campaign_name()
+    story_ready = _story_ready()
+    return jsonify({"active": active,
                     "dm_listening": _dm_listening(),
                     "saving": _saving(),
+                    "story_ready": story_ready,
                     "campaigns": _list_campaigns()})
 
 
