@@ -10,6 +10,11 @@ Versions before **1.6.0** are reconstructed retroactively from git history; the 
 
 ## [Unreleased]
 
+## [2.53.2] — 2026-11-22 — menu progress at the top
+
+### Changed
+- Main Menu: the progress line and pills (opening a campaign, creating one, saving) are at the top of the page, right under the title, instead of at the very bottom where they were easy to miss.
+
 ## [2.53.1] — 2026-11-22 — opening no longer erased on load
 
 ### Fixed

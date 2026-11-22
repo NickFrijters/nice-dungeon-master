@@ -24,7 +24,9 @@
   button.quiet { background:transparent; color:var(--text); border:1px solid var(--line); }
   button.quiet:hover:not(:disabled) { border-color:var(--gold); color:var(--gold); }
   .soon { opacity:.55; }
-  #status { margin-top:24px; color:var(--gold); min-height:1.5em; }
+  #status { color:var(--gold); }
+  #progress { margin:-20px 0 22px; }
+  #progress:has(#status:empty):has(#steps:empty) { display:none; }
   .empty { color:var(--dim); font-style:italic; }
   .steps { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
   .step { font:12px ui-monospace, Consolas, monospace; padding:2px 10px; border-radius:11px; border:1px solid var(--line); color:var(--dim); }
@@ -54,6 +56,8 @@
 <main>
   <h1>Nice Dungeon Master</h1>
   <p class="sub">Choose how tonight begins.</p>
+  <!-- what is happening right now (loading, creating, saving): at the top, where it is seen -->
+  <div id="progress"><div id="status" role="status"></div><div id="steps" class="steps" aria-live="polite"></div></div>
 
   <div id="no-dm" class="notice" hidden>
     <strong>No Dungeon Master is connected.</strong> You can open a campaign and look around, but nobody will answer until
@@ -117,8 +121,6 @@
     <div class="meta">Save and stop the display and the voice</div></div>
     <button id="quit" class="quiet" onclick="quitAll()">Quit</button></div>
 
-  <div id="status" role="status"></div>
-  <div id="steps" class="steps" aria-live="polite"></div>
 </main>
 <script>
 const TOKEN = {{ lan_token|tojson }};
