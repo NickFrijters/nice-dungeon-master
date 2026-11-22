@@ -214,7 +214,7 @@ def main() -> None:
     parser.add_argument("--factions", metavar="JSON",
                         help='Party faction standings: [{"name":"Pale Court","standing":"Suspicious"},...]; [] clears')
     parser.add_argument("--combat", metavar="JSON",
-                        help='Combat board: {"enemies":[{"name":"Goblin 1","hp":7,"max":7}],"map":{"cols":12,"rows":8,"title":"Cave","tokens":[{"name":"Dagna","x":2,"y":3,"side":"pc"},{"name":"Goblin 1","x":8,"y":3,"side":"enemy"}]}}; {} clears')
+                        help='Combat board: {"enemies":[{"name":"Goblin 1","hp":7,"max":7}],"map":{"cols":12,"rows":8,"title":"Cave","biome":"cave","terrain":[{"kind":"boulder","x":5,"y":2}],"tokens":[{"name":"Dagna","x":2,"y":3,"side":"pc"},{"name":"Goblin 1","x":8,"y":3,"side":"enemy"}]}}; {} clears')
     parser.add_argument("--place", metavar="JSON",
                         help='Where the party is, as a pin on a map picture (roleplay screen): {"image":"<library id or file>","x":0.42,"y":0.63,"label":"Greenest","view":{"x":0.3,"y":0.5,"w":0.3,"h":0.25}}; x,y = the pin as fractions of the picture, view = the part to show (optional, zooms in); {} clears')
     parser.add_argument("--npcs", metavar="JSON",

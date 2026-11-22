@@ -15,7 +15,7 @@ def _clean_combat():
     # Pull the pure helper out of the app source without starting the app.
     a = APP.index("def _clean_map_image(")
     b = APP.index("def _cell_label")
-    ns = {"os": os}
+    ns = {"os": os, "re": __import__("re")}
     exec(APP[a:b], ns)
     return ns["_clean_combat"]
 

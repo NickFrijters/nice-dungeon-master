@@ -1674,6 +1674,97 @@ def _clean_map_image(raw, cols, rows, prev=None):
     return out
 
 
+# ── Battle map vocabulary ────────────────────────────────────────────────────
+# What the ground looks like (the floor of the whole mat) and what stands on it. Every terrain kind has a look on
+# the page AND a movement rule, so what the table sees is what the rules do: blocking things cannot be entered,
+# difficult ground costs double, a bridge / door / road over anything else is plain ground.
+_BIOMES = ("dungeon", "cave", "forest", "grassland", "road", "swamp", "snow", "desert", "tavern", "town",
+           "ship", "temple", "sewer", "beach")
+_BIOME_WORDS = (   # when the DM gives no biome, the map title decides (first match wins)
+    ("sewer", ("sewer", "drain", "cistern")),
+    ("ship", ("ship", "deck", "boat", "galley", "barge")),
+    ("temple", ("temple", "shrine", "church", "chapel", "cathedral", "sanctum", "monastery")),
+    ("tavern", ("tavern", "inn", "taproom", "tankard", "alehouse", "pub", "brewery", "cottage", "barracks", "lodge", "manor", "house", "hall", "shop", "library", "kitchen",
+                "bedroom", "study", "roadhouse", "mansion", "castle room")),
+    ("swamp", ("swamp", "marsh", "bog", "fen", "mire", "lizardfolk")),
+    ("snow", ("snow", "ice", "icy", "tundra", "glacier", "frozen", "winter")),
+    ("desert", ("desert", "dune", "wastes", "badlands")),
+    ("beach", ("beach", "shore", "coast", "cove")),
+    ("cave", ("cave", "cavern", "tunnel", "mine", "grotto", "hatchery", "underdark", "lair", "burrow")),
+    ("forest", ("forest", "wood", "woods", "grove", "glade", "jungle", "thicket")),
+    ("town", ("town", "street", "square", "market", "village", "city", "alley", "dock", "docks", "plaza", "greenest")),
+    ("road", ("road", "path", "trail", "pass", "crossroads", "highway", "ambush")),
+    ("grassland", ("field", "meadow", "plain", "plains", "hill", "hills", "farm", "camp", "pasture", "outskirts")),
+    ("dungeon", ("dungeon", "crypt", "tomb", "cellar", "vault", "prison", "keep", "catacomb", "ruin", "ruins", "barrow")),
+)
+_TERRAIN_BLOCK = {"wall", "pillar", "table", "tree", "boulder", "crate", "barrel", "statue", "cliff", "pit",
+                  "altar", "bed", "shelf", "wagon", "tent"}
+_TERRAIN_SLOW = {"water", "difficult", "rubble", "bush", "mud", "ice", "sand", "snowdrift", "log", "deepwater", "brush"}
+_TERRAIN_CLEAR = {"door", "stairs", "fire", "bridge", "road", "rug"}      # plain ground; bridge/door/road also cancel what is under them
+_TERRAIN_KINDS = _TERRAIN_BLOCK | _TERRAIN_SLOW | _TERRAIN_CLEAR
+
+
+_BIOME_FROM_TERRAIN = (   # no biome and nothing in the title: what stands on the map tells
+    ("forest", {"tree", "bush", "brush", "log"}), ("snow", {"snowdrift", "ice"}), ("swamp", {"mud", "deepwater"}),
+    ("tavern", {"table", "bed", "shelf", "barrel", "rug"}), ("desert", {"sand"}), ("road", {"road", "wagon", "tent"}),
+)
+
+
+def _map_biome(m, terrain=()) -> str:
+    b = str(m.get("biome", "")).lower().strip()
+    if b in _BIOMES:
+        return b
+    title = str(m.get("title", "")).lower()
+    words = set(re.findall(r"[a-z]+", title))
+    for biome, keys in _BIOME_WORDS:
+        if words & set(keys) or any(" " in k and k in title for k in keys):
+            return biome
+    kinds = [t["kind"] for t in terrain]
+    best, score = None, 0
+    for biome, ks in _BIOME_FROM_TERRAIN:
+        n = sum(1 for k in kinds if k in ks)
+        if n > score:
+            best, score = biome, n
+    return best or "dungeon"
+
+
+def _place_tokens_sensibly(toks, terrain, cols, rows) -> None:
+    """Nobody stands inside a wall, tree or boulder, or on top of somebody else: such a token moves to the nearest free
+    square (walking distance), so what the map shows is always possible."""
+    cell_kinds = {}
+    for t in terrain:
+        for x in range(t["x"], t["x"] + t["w"]):
+            for y in range(t["y"], t["y"] + t["h"]):
+                cell_kinds.setdefault((x, y), set()).add(t["kind"])
+    blocked = {c for c, ks in cell_kinds.items() if (ks & _TERRAIN_BLOCK) and not (ks & {"bridge", "door", "road"})}
+    taken = set()
+
+    def fits(x, y, sz):
+        cells = [(x + i, y + j) for i in range(sz) for j in range(sz)]
+        return all(0 <= a < cols and 0 <= b < rows and (a, b) not in blocked and (a, b) not in taken for a, b in cells)
+
+    for tk in toks:
+        sz = tk.get("size") or 1
+        if not fits(tk["x"], tk["y"], sz):
+            seen, q, spot = {(tk["x"], tk["y"])}, [(tk["x"], tk["y"])], None
+            while q and spot is None:
+                cx, cy = q.pop(0)
+                for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (-1, -1), (1, -1), (-1, 1)):
+                    nx, ny = cx + dx, cy + dy
+                    if (nx, ny) in seen or not (0 <= nx < cols and 0 <= ny < rows):
+                        continue
+                    seen.add((nx, ny))
+                    if fits(nx, ny, sz):
+                        spot = (nx, ny)
+                        break
+                    q.append((nx, ny))
+            if spot:
+                tk["x"], tk["y"] = spot
+        for i in range(sz):
+            for j in range(sz):
+                taken.add((tk["x"] + i, tk["y"] + j))
+
+
 def _clean_combat(raw, prev=None):
     """Keep only what the combat screen draws: enemies, and a map with terrain and tokens."""
     if not isinstance(raw, dict) or not raw:
@@ -1710,8 +1801,12 @@ def _clean_combat(raw, prev=None):
         for tr in (m.get("terrain") or [])[:300]:
             if not isinstance(tr, dict):
                 continue
-            kind = str(tr.get("kind", "")).lower()
-            if kind not in ("wall", "water", "difficult", "door", "pillar", "fire", "pit", "table", "stairs"):
+            kind = str(tr.get("kind", "")).lower().replace(" ", "").replace("_", "")
+            kind = {"rock": "boulder", "rocks": "boulder", "trees": "tree", "bushes": "bush", "undergrowth": "brush",
+                    "barrels": "barrel", "crates": "crate", "column": "pillar", "chasm": "pit", "river": "water",
+                    "lake": "deepwater", "shallowwater": "water", "carpet": "rug", "bookshelf": "shelf",
+                    "bookcase": "shelf", "snow": "snowdrift"}.get(kind, kind)
+            if kind not in _TERRAIN_KINDS:
                 continue
             x, y = _n(tr.get("x"), 0, 99), _n(tr.get("y"), 0, 99)
             if x is None or y is None or x >= cols or y >= rows:
@@ -1727,8 +1822,9 @@ def _clean_combat(raw, prev=None):
                 pl = old["plan"]
                 if 0 <= pl.get("x", -1) < cols and 0 <= pl.get("y", -1) < rows:
                     t["plan"] = dict(pl)
+        _place_tokens_sensibly(toks, terrain, cols, rows)
         out["map"] = {"cols": cols, "rows": rows, "title": str(m.get("title", ""))[:60],
-                      "tokens": toks, "terrain": terrain}
+                      "biome": _map_biome(m, terrain), "tokens": toks, "terrain": terrain}
         img = _clean_map_image(m.get("image"), cols, rows, ((prev or {}).get("map") or {}).get("image"))
         if img:
             out["map"]["image"] = img
@@ -1791,6 +1887,10 @@ def combat_plan():
                 return "bad position", 400
             if not (0 <= x < m["cols"] and 0 <= y < m["rows"]):
                 return "off the map", 400
+            probe = [{**t, "x": t["x"], "y": t["y"]} for t in m.get("tokens", []) if t is not tok] + [{**tok, "x": x, "y": y}]
+            _place_tokens_sensibly(probe, m.get("terrain", []), m["cols"], m["rows"])
+            if (probe[-1]["x"], probe[-1]["y"]) != (x, y):
+                return "that square is blocked", 409           # a wall, tree, boulder... or somebody already stands there
             if (x, y) == (tok["x"], tok["y"]):
                 tok.pop("plan", None)
             else:

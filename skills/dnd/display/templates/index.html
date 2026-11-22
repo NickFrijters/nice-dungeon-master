@@ -3190,9 +3190,13 @@
       repeating-linear-gradient(45deg, rgba(255,255,255,.012) 0 2px, rgba(0,0,0,.02) 2px 4px),
       linear-gradient(135deg, #3d372d, #2b261e);
     box-shadow: 0 0 0 3px #1b140b, 0 0 0 4px rgba(200,165,80,.5), 0 12px 40px rgba(0,0,0,.8); }
-  #cb-map .cb-axis { position: absolute; font: 700 11px 'Cinzel', serif; color: rgba(225,195,120,.8); text-align: center; pointer-events: none; }
-  #cb-map .cb-grid { position: absolute; pointer-events: none;
-    background-image: linear-gradient(to right, rgba(0,0,0,.38) 1px, transparent 1px), linear-gradient(to bottom, rgba(0,0,0,.38) 1px, transparent 1px);
+  #cb-map .cb-axis { position: absolute; font: 700 11px 'Cinzel', serif; color: rgba(235,205,130,.95); text-align: center; pointer-events: none; text-shadow: 0 0 3px #000, 0 0 2px #000, 0 1px 1px #000; }
+  /* The grid lies OVER the floor and the terrain, always faintly visible: a dark line with a light edge, so it reads
+     on snow as well as in a dark cave, on trees, water and walls alike. */
+  #cb-map .cb-grid { position: absolute; pointer-events: none; z-index: 1;
+    background-image:
+      linear-gradient(to right, rgba(0,0,0,.34) 1px, rgba(255,255,255,.13) 1px, rgba(255,255,255,.13) 2px, transparent 2px),
+      linear-gradient(to bottom, rgba(0,0,0,.34) 1px, rgba(255,255,255,.13) 1px, rgba(255,255,255,.13) 2px, transparent 2px);
     box-shadow: inset 0 0 0 1px rgba(0,0,0,.5); }
   #cb-map .cb-range { position: absolute; background: rgba(255,225,130,.24); box-shadow: inset 0 0 0 1px rgba(255,225,130,.5); pointer-events: none; }
   #cb-map .cb-ter { position: absolute; box-sizing: border-box; pointer-events: none; }
@@ -3206,6 +3210,69 @@
   .cb-ter.pit { background: radial-gradient(circle, #000 20%, #14100c 100%); box-shadow: inset 0 0 12px #000; }
   .cb-ter.table { background: linear-gradient(135deg, #7a5530, #5a3d20); box-shadow: 0 0 0 2px #2a1b0b, 0 4px 8px rgba(0,0,0,.6); border-radius: 3px; }
   .cb-ter.stairs { background: repeating-linear-gradient(0deg, #6a6458 0 5px, #3a352d 5px 7px); }
+  /* ── The ground of the setting (data-biome, chosen by the DM or from the map title) ── */
+  #cb-map[data-biome="cave"] { background:
+      radial-gradient(circle at 20% 30%, rgba(255,255,255,.04) 0 8%, transparent 9%), radial-gradient(circle at 70% 65%, rgba(0,0,0,.25) 0 12%, transparent 13%),
+      radial-gradient(ellipse at 50% 45%, rgba(0,0,0,0), rgba(0,0,0,.5) 100%), linear-gradient(135deg, #3a3129, #241e18); background-size: 90px 90px, 130px 130px, 100% 100%, 100% 100%; }
+  #cb-map[data-biome="forest"] { background:
+      radial-gradient(circle at 30% 40%, rgba(120,170,70,.35) 0 6%, transparent 7%), radial-gradient(circle at 75% 70%, rgba(40,70,20,.45) 0 9%, transparent 10%),
+      radial-gradient(circle at 55% 15%, rgba(140,110,60,.3) 0 5%, transparent 6%), linear-gradient(135deg, #4e6b2f, #33491d); background-size: 46px 46px, 70px 70px, 58px 58px, 100% 100%; }
+  #cb-map[data-biome="grassland"] { background:
+      radial-gradient(circle at 25% 35%, rgba(170,200,90,.35) 0 5%, transparent 6%), radial-gradient(circle at 70% 75%, rgba(70,100,30,.35) 0 7%, transparent 8%),
+      linear-gradient(135deg, #6f8c3c, #55722b); background-size: 38px 38px, 64px 64px, 100% 100%; }
+  #cb-map[data-biome="road"] { background:
+      radial-gradient(circle at 30% 30%, rgba(80,60,35,.35) 0 4%, transparent 5%), radial-gradient(circle at 70% 70%, rgba(190,160,110,.25) 0 5%, transparent 6%),
+      linear-gradient(135deg, #8a7250, #6b5639); background-size: 34px 34px, 52px 52px, 100% 100%; }
+  #cb-map[data-biome="swamp"] { background:
+      radial-gradient(ellipse at 30% 40%, rgba(40,70,60,.6) 0 14%, transparent 15%), radial-gradient(circle at 75% 70%, rgba(90,110,40,.35) 0 8%, transparent 9%),
+      linear-gradient(135deg, #46502c, #2c331c); background-size: 110px 90px, 60px 60px, 100% 100%; }
+  #cb-map[data-biome="snow"] { background:
+      radial-gradient(circle at 30% 30%, rgba(255,255,255,.7) 0 5%, transparent 6%), radial-gradient(circle at 70% 70%, rgba(170,195,220,.35) 0 9%, transparent 10%),
+      linear-gradient(135deg, #e3eaf0, #c3cfdb); background-size: 44px 44px, 80px 80px, 100% 100%; }
+  #cb-map[data-biome="desert"], #cb-map[data-biome="beach"] { background:
+      repeating-linear-gradient(170deg, rgba(160,120,60,.18) 0 3px, transparent 3px 18px), radial-gradient(circle at 60% 40%, rgba(255,240,200,.25) 0 6%, transparent 7%),
+      linear-gradient(135deg, #d8b878, #bf9b5a); background-size: 100% 100%, 50px 50px, 100% 100%; }
+  #cb-map[data-biome="beach"] { background:
+      radial-gradient(circle at 60% 40%, rgba(255,250,225,.35) 0 6%, transparent 7%), linear-gradient(135deg, #e4cf9a, #cdb47c); background-size: 40px 40px, 100% 100%; }
+  #cb-map[data-biome="tavern"], #cb-map[data-biome="ship"] { background:
+      repeating-linear-gradient(0deg, rgba(0,0,0,.35) 0 1px, transparent 1px 20px), repeating-linear-gradient(90deg, rgba(0,0,0,.18) 0 1px, transparent 1px 97px),
+      repeating-linear-gradient(0deg, rgba(255,220,160,.05) 0 7px, rgba(0,0,0,.05) 7px 13px), linear-gradient(135deg, #7a5532, #5c3e22); }
+  #cb-map[data-biome="ship"] { background-color: #5a4126; }
+  #cb-map[data-biome="town"] { background:
+      radial-gradient(circle at 50% 50%, #8d8676 0 38%, #6e675a 40%, #4c473e 47%, transparent 49%), linear-gradient(135deg, #5c564b, #47423a); background-size: 22px 22px, 100% 100%; }
+  #cb-map[data-biome="temple"] { background:
+      linear-gradient(45deg, rgba(0,0,0,.08) 25%, transparent 25% 75%, rgba(0,0,0,.08) 75%), linear-gradient(45deg, rgba(0,0,0,.08) 25%, transparent 25% 75%, rgba(0,0,0,.08) 75%),
+      linear-gradient(135deg, #cfc6b4, #a99f8b); background-size: 40px 40px, 40px 40px, 100% 100%; background-position: 0 0, 20px 20px, 0 0; }
+  #cb-map[data-biome="sewer"] { background:
+      repeating-linear-gradient(0deg, rgba(0,0,0,.35) 0 2px, transparent 2px 24px), repeating-linear-gradient(90deg, rgba(0,0,0,.3) 0 2px, transparent 2px 48px),
+      radial-gradient(ellipse at 50% 50%, rgba(70,110,60,.25), transparent 70%), linear-gradient(135deg, #3e4239, #2a2d26); }
+  /* ── What stands on the ground ── */
+  .cb-ter.tree { background: radial-gradient(circle at 40% 35%, #6f9a3e 0 22%, #3f6420 45%, #26401a 66%, rgba(0,0,0,0) 70%); filter: drop-shadow(2px 4px 3px rgba(0,0,0,.6)); }
+  .cb-ter.boulder { background: radial-gradient(ellipse at 38% 32%, #a8a397 0 15%, #7a756b 45%, #4f4b44 68%, rgba(0,0,0,0) 72%); filter: drop-shadow(2px 4px 3px rgba(0,0,0,.6)); }
+  .cb-ter.bush, .cb-ter.brush { background: radial-gradient(circle at 30% 35%, rgba(90,140,50,.85) 0 18%, transparent 20%), radial-gradient(circle at 68% 60%, rgba(70,115,40,.85) 0 22%, transparent 24%),
+      radial-gradient(circle at 40% 75%, rgba(60,100,35,.8) 0 16%, transparent 18%), rgba(60,90,30,.25); }
+  .cb-ter.rubble { background: radial-gradient(circle at 25% 30%, #8a8478 0 8%, transparent 9%), radial-gradient(circle at 65% 40%, #6d685f 0 10%, transparent 11%),
+      radial-gradient(circle at 45% 72%, #7b766c 0 9%, transparent 10%), radial-gradient(circle at 80% 80%, #5c5850 0 7%, transparent 8%), rgba(90,85,75,.35); }
+  .cb-ter.mud { background: radial-gradient(ellipse at 40% 40%, rgba(110,80,45,.9), rgba(70,48,25,.9) 70%); box-shadow: inset 0 0 10px rgba(30,20,10,.8); }
+  .cb-ter.ice { background: linear-gradient(135deg, rgba(220,240,255,.85), rgba(160,200,235,.75)); box-shadow: inset 0 0 8px rgba(255,255,255,.8); }
+  .cb-ter.sand { background: repeating-linear-gradient(165deg, rgba(150,110,55,.35) 0 2px, transparent 2px 9px), rgba(225,195,135,.7); }
+  .cb-ter.snowdrift { background: radial-gradient(ellipse at 45% 40%, #ffffff 0 30%, #dfe8f1 60%, #c4d2e0 100%); }
+  .cb-ter.log { background: linear-gradient(0deg, transparent 25%, #6b4a28 25% 32%, #8b6338 32% 68%, #5b3d20 68% 75%, transparent 75%); }
+  .cb-ter.deepwater { background: repeating-linear-gradient(115deg, rgba(25,60,110,.85) 0 7px, rgba(40,85,140,.8) 7px 14px); box-shadow: inset 0 0 16px rgba(5,20,50,.9); }
+  .cb-ter.crate { background: linear-gradient(45deg, transparent 46%, #4a3018 46% 54%, transparent 54%), linear-gradient(-45deg, transparent 46%, #4a3018 46% 54%, transparent 54%),
+      linear-gradient(135deg, #9a7040, #74522c); box-shadow: inset 0 0 0 3px #4a3018, 0 3px 6px rgba(0,0,0,.6); }
+  .cb-ter.barrel { background: radial-gradient(circle, #7a5430 0 30%, #3e2810 32% 36%, #8a6038 38% 62%, #3e2810 64% 68%, transparent 70%); filter: drop-shadow(1px 3px 2px rgba(0,0,0,.6)); }
+  .cb-ter.statue { background: radial-gradient(circle at 40% 35%, #d4d0c6 0 20%, #9c978c 45%, #6a665e 62%, transparent 66%); filter: drop-shadow(2px 4px 3px rgba(0,0,0,.6)); }
+  .cb-ter.cliff { background: repeating-linear-gradient(100deg, #4a4239 0 6px, #2e2822 6px 11px, #5a5146 11px 14px); box-shadow: inset 0 -6px 10px rgba(0,0,0,.7); }
+  .cb-ter.altar { background: linear-gradient(135deg, #b9b2a3, #8a8274); box-shadow: inset 0 0 0 3px #5e584d, 0 4px 8px rgba(0,0,0,.6); border-radius: 2px; }
+  .cb-ter.bed { background: linear-gradient(0deg, #8a6a4a 0 70%, #e8e0cc 70% 100%); box-shadow: inset 0 0 0 3px #4a3420, 0 3px 6px rgba(0,0,0,.5); border-radius: 2px; }
+  .cb-ter.shelf { background: repeating-linear-gradient(90deg, #6b4a28 0 3px, #8a5a30 3px 7px, #4a6a8a 7px 9px, #8a3a2a 9px 11px); box-shadow: inset 0 0 0 3px #3e2810; }
+  .cb-ter.wagon { background: linear-gradient(135deg, #8a6538, #64462a); box-shadow: inset 0 0 0 3px #3e2810, 0 4px 8px rgba(0,0,0,.6); border-radius: 4px; }
+  .cb-ter.tent { background: linear-gradient(45deg, #b8a27a 50%, #9a855e 50%); box-shadow: inset 0 0 0 2px #5e4e30, 0 4px 8px rgba(0,0,0,.5); }
+  .cb-ter.bridge { background: repeating-linear-gradient(90deg, #8a6238 0 9px, #5a3e20 9px 11px); box-shadow: inset 0 3px 0 #3e2810, inset 0 -3px 0 #3e2810; z-index: 0; }
+  .cb-ter.road { background: radial-gradient(circle at 40% 40%, rgba(120,95,60,.3) 0 10%, transparent 11%), rgba(150,120,80,.55); }
+  .cb-ter.rug { background: repeating-linear-gradient(45deg, rgba(150,40,35,.85) 0 6px, rgba(120,30,30,.85) 6px 12px); box-shadow: inset 0 0 0 3px rgba(210,170,80,.8); }
+  .cb-ter.water { z-index: 0; }
   @keyframes cbFlicker { from { opacity: .75; } to { opacity: 1; } }
   .cb-token { position: absolute; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-sizing: border-box;
     font: 700 12px 'Cinzel', serif; color: #1a1208; cursor: grab; user-select: none; touch-action: none; z-index: 2;
@@ -3265,7 +3332,7 @@
   /* published map picture under the grid */
   #cb-map .cb-imgclip { position: absolute; overflow: hidden; pointer-events: none; }
   #cb-map .cb-bgimg { position: absolute; max-width: none; user-select: none; -webkit-user-drag: none; pointer-events: none; }
-  #cb-map.has-img .cb-grid { background-image: linear-gradient(to right, rgba(255,255,255,.22) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,.22) 1px, transparent 1px); }
+  #cb-map.has-img .cb-grid { opacity: .85; }
   #cb-map.has-img .cb-ter { background: none !important; box-shadow: none !important; animation: none !important; border-radius: 0 !important; }
   /* party map: the map card with a red pin, top of the right-hand column */
   #scene-gallery:not(:has(.sg-item)) .sg-title { display: none; }
@@ -6544,16 +6611,23 @@ function _renderCombat(to) {
   }
   _renderCombatMap(to);
 }
-// Movement cost map for the actor: walls block, water and difficult ground cost double. 5-ft squares, diagonals count 5 ft.
+// The same movement rules as the server (_TERRAIN_BLOCK / _TERRAIN_SLOW): what blocks or slows on the map LOOKS like it.
+const _CB_BLOCK = new Set(['wall', 'pillar', 'table', 'tree', 'boulder', 'crate', 'barrel', 'statue', 'cliff', 'pit',
+  'altar', 'bed', 'shelf', 'wagon', 'tent']);
+const _CB_SLOW = new Set(['water', 'difficult', 'rubble', 'bush', 'mud', 'ice', 'sand', 'snowdrift', 'log', 'deepwater', 'brush']);
+const _CB_OVER = new Set(['bridge', 'door', 'road']);
+// Movement cost map for the actor: blocking terrain cannot be entered, difficult ground costs double. 5-ft squares, diagonals count 5 ft.
 function _cbReach(m, tk) {
   const cost = new Map(); const key = (x, y) => x + ',' + y;
-  const block = new Set(), slow = new Set();
+  const block = new Set(), slow = new Set(), clear = new Set();
   (m.terrain || []).forEach(t => {
     for (let x = t.x; x < t.x + t.w; x++) for (let y = t.y; y < t.y + t.h; y++) {
-      if (t.kind === 'wall' || t.kind === 'pillar' || t.kind === 'table') block.add(key(x, y));
-      else if (t.kind === 'water' || t.kind === 'difficult') slow.add(key(x, y));
+      if (_CB_BLOCK.has(t.kind)) block.add(key(x, y));
+      else if (_CB_SLOW.has(t.kind)) slow.add(key(x, y));
+      else if (_CB_OVER.has(t.kind)) clear.add(key(x, y));
     }
   });
+  clear.forEach(k => { block.delete(k); slow.delete(k); });    // a bridge, door or road makes plain ground of what is under it
   const limit = _cbSpeedFt(tk) / 5, q = [[tk.x, tk.y]]; cost.set(key(tk.x, tk.y), 0);
   while (q.length) {
     const [x, y] = q.shift(); const c = cost.get(key(x, y));
@@ -6712,6 +6786,7 @@ function _renderCombatMap(to) {
   map.style.width = (m.cols * cell + pad) + 'px'; map.style.height = (m.rows * cell + pad) + 'px';
   map._geom = { cell, pad, m };
   map.classList.toggle('has-img', !!m.image);
+  map.dataset.biome = m.biome || 'dungeon';          // the ground of the setting: grass, planks, cobbles, snow...
   if (m.image) {
     const clip = document.createElement('div'); clip.className = 'cb-imgclip';
     clip.style.cssText = `left:${pad}px;top:${pad}px;width:${m.cols * cell}px;height:${m.rows * cell}px`;
@@ -6720,7 +6795,7 @@ function _renderCombatMap(to) {
     clip.appendChild(bg); map.appendChild(clip); _cbImgApply(m); _cbAutoFit(m);
   }
   const grid = document.createElement('div'); grid.className = 'cb-grid';
-  grid.style.cssText = `left:${pad}px;top:${pad}px;width:${m.cols * cell}px;height:${m.rows * cell}px;background-size:${cell}px ${cell}px`; map.appendChild(grid);
+  grid.style.cssText = `left:${pad}px;top:${pad}px;width:${m.cols * cell}px;height:${m.rows * cell}px;background-size:${cell}px ${cell}px`;   // added after the terrain: the grid stays visible over everything
   for (let x = 0; x < m.cols; x++) {
     const a = document.createElement('div'); a.className = 'cb-axis'; a.textContent = String.fromCharCode(65 + x);
     a.style.cssText = `left:${pad + x * cell}px;top:0;width:${cell}px;height:${pad}px;line-height:${pad}px`; map.appendChild(a);
@@ -6729,10 +6804,12 @@ function _renderCombatMap(to) {
     const a = document.createElement('div'); a.className = 'cb-axis'; a.textContent = String(y + 1);
     a.style.cssText = `left:0;top:${pad + y * cell}px;width:${pad}px;height:${cell}px;line-height:${cell}px`; map.appendChild(a);
   }
-  (m.terrain || []).forEach(t => {
+  const _layer = k => (k === 'bridge' || k === 'road' || k === 'rug' || k === 'door') ? 1 : 0;   // bridges lie over the river
+  (m.terrain || []).slice().sort((p, q) => _layer(p.kind) - _layer(q.kind)).forEach(t => {
     const d = document.createElement('div'); d.className = 'cb-ter ' + t.kind;
     d.style.cssText = `left:${pad + t.x * cell}px;top:${pad + t.y * cell}px;width:${t.w * cell}px;height:${t.h * cell}px`; map.appendChild(d);
   });
+  map.appendChild(grid);
   const actor = m.tokens.find(t => t.name === to.current);
   if (actor) {
     const r = _cbReach(m, actor);

@@ -10,6 +10,17 @@ Versions before **1.6.0** are reconstructed retroactively from git history; the 
 
 ## [Unreleased]
 
+## [2.43.0] — 2026-11-22 — battle map looks like the place
+
+### Added
+- Battle map looks like the place: a setting (`map.biome`) gives the whole mat its ground: stone dungeon, cave, forest grass, grassland, dirt road, swamp, snow, desert, beach, tavern planks, town cobbles, ship deck, temple tiles or sewer. Without one it is guessed from the map title and then from what stands on the map.
+- Many more terrain kinds, each with its own look and a movement rule that matches it: blocking (wall, pillar, table, tree, boulder, crate, barrel, statue, cliff, pit, altar, bed, shelf, wagon, tent), difficult (water, deep water, rubble, bush, brush, mud, ice, sand, snowdrift, log) and plain ground (door, stairs, fire, road, rug, bridge; a bridge, door or road over water or a wall makes that square plain). Common names (rock, trees, undergrowth, river, column...) are understood.
+
+### Changed
+- Monsters and heroes can never stand inside an obstacle or on another token: such a token is moved to the nearest free square, and a planned move onto one is refused. Walking range and drag distances use the same rules as the pictures.
+- The grid is drawn over the ground and all terrain, as a faint dark line with a light edge, so the squares stay visible on snow, in a dark cave and on published maps. The square labels have a dark outline so they read on light ground.
+- DM instructions: the battle map must be built from where the party is (a published map when there is one, otherwise the right setting and 6 to 20 terrain pieces from the narration), monsters placed where they could really stand and moved around obstacles, and narration and map must agree.
+
 ## [2.42.0] — 2026-11-22 — build your combat turn on the table
 
 ### Added

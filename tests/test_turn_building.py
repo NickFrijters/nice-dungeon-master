@@ -88,6 +88,13 @@ class TurnBuildingTest(unittest.TestCase):
         self.assertEqual(self.plan(name="Dagna", x=40, y=1).status_code, 400)
         self.assertEqual(self.plan(name="Nobody", x=2, y=1).status_code, 404)
 
+    def test_a_plan_onto_an_obstacle_or_a_creature_is_refused(self):
+        walled = {**BOARD, "map": {**BOARD["map"], "terrain": [{"kind": "tree", "x": 3, "y": 1}]}}
+        self.client.post("/stats", json={"combat": walled})
+        self.assertEqual(self.plan(name="Dagna", x=3, y=1, ft=10).status_code, 409)     # a tree
+        self.assertEqual(self.plan(name="Dagna", x=7, y=2, ft=30).status_code, 409)     # the goblin's square
+        self.assertNotIn("plan", self.token("Dagna"))
+
     def test_a_dm_push_keeps_the_plan_unless_the_token_moved(self):
         self.plan(name="Dagna", x=4, y=1, ft=15)
         self.client.post("/stats", json={"combat": BOARD})                                       # e.g. an HP update
