@@ -1363,6 +1363,8 @@ _input_lock = threading.Lock()
 # send.py --wait polls GET /dice-request/<id> to know when the DM can move on.
 _dice_pending: dict = {}
 _dice_pending_lock = threading.Lock()
+# What each player rolled for a request, so the DM gets the number in the same call that waited for it.
+_dice_results: dict = {}          # request_id -> {character: {"total", "natural", "text", "at"}}
 
 
 _DICE_PENDING_MAX_AGE = 600   # seconds: a roll nobody made in ten minutes is not being waited on any more
@@ -3536,6 +3538,11 @@ def player_dice():
                 if matched is not None:
                     entry["chars"].discard(matched)
                     pending_changed = True
+                    now = _time.time()
+                    for old in [r for r, v in _dice_results.items() if all(now - x["at"] > 600 for x in v.values())]:
+                        _dice_results.pop(old, None)
+                    _dice_results.setdefault(req_id, {})[matched] = {
+                        "total": total, "natural": kept[0] if len(kept) == 1 else None, "text": text, "at": now}
                     if not entry["chars"]:
                         _dice_pending.pop(req_id, None)
     if pending_changed:
@@ -3648,13 +3655,16 @@ def dice_request_status(request_id):
         return "Forbidden", 403
     with _dice_pending_lock:
         entry = _dice_pending.get(request_id)
+        results = {k: {"total": v["total"], "natural": v["natural"], "text": v["text"]}
+                   for k, v in (_dice_results.get(request_id) or {}).items()}
         if entry is None or not entry["chars"]:
-            return jsonify({"complete": True, "pending": []}), 200
+            return jsonify({"complete": True, "pending": [], "results": results}), 200
         return jsonify({
             "complete": False,
             "pending": sorted(entry["chars"]),
             "label": entry["meta"].get("label", ""),
             "started_at": entry["started_at"],
+            "results": results,
         }), 200
 
 

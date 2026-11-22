@@ -548,6 +548,10 @@ def main() -> None:
                         continue
                     if st.get("complete"):
                         print(f"send.py: all rolls received.", file=sys.stderr)
+                        # the numbers themselves, so the DM can resolve straight away
+                        for _who, _r in (st.get("results") or {}).items():
+                            _nat = f" (natural {_r.get('natural')})" if _r.get("natural") is not None else ""
+                            print(f"ROLL {_who}: {_r.get('total')}{_nat}", flush=True)
                         break
                     remaining = st.get("pending") or []
                     if remaining != last_pending:

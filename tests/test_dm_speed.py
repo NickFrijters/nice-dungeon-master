@@ -90,6 +90,21 @@ class TurnClockTest(unittest.TestCase):
         import latency
         self.assertIn("within 5 s: 1/1", latency.report(latency.load(self.mod.LATENCY_FILE)))
 
+    def test_the_dm_gets_the_players_number_with_the_request(self):
+        c = self.client
+        c.post("/stats", json={"replace_players": True, "players": [{"name": "Dagna", "hp": {"current": 5, "max": 5}}],
+                               "turn_order": None})
+        rid = c.post("/dice-request", json={"characters": ["Dagna"], "spec": "1d20", "modifier": 5, "label": "Attack"}).get_json()["request_id"]
+        self.assertEqual(c.get(f"/dice-request/{rid}").get_json()["results"], {})
+        r = c.post("/player-input/dice", json={"character": "Dagna", "spec": "1d20", "modifier": 5, "request_id": rid},
+                   headers={"X-DND-Device": "t"})
+        self.assertLess(r.status_code, 300, r.data)
+        st = c.get(f"/dice-request/{rid}").get_json()
+        self.assertTrue(st["complete"])
+        res = st["results"]["Dagna"]
+        self.assertEqual(res["total"], res["natural"] + 5)
+        self.assertIn('print(f"ROLL {_who}: ', read(D / "send.py"))
+
     def test_page_shows_the_answer_time(self):
         html = read(D / "templates" / "index.html")
         self.assertIn("if (payload.dm_latency) _showDmLatency(payload.dm_latency);", html)
@@ -119,8 +134,34 @@ class TurnScriptTest(unittest.TestCase):
         self.assertEqual(saved, [["-c", "camp", "--event", "Dagna hit the orc"]])
         self.assertEqual(pushed, [["--turn-current", "Orc"]])
 
+    def _resolve(self, rolls, **kw):
+        sys.path.insert(0, str(D)); sys.path.insert(0, str(S))
+        import turn
+        import dice
+        args = turn.argparse.Namespace(roll=kw.get("roll", "d20+5"), vs=kw.get("vs", 12), damage=kw.get("damage", "1d6+2"),
+                                       label="Goblin — Scimitar vs Dagna (AC 12)", hit="Hit for {dmg}.", miss="Missed.",
+                                       ask=None, hp_on_hit=kw.get("hp"))
+        seq = iter(rolls)
+        with mock.patch.object(dice, "roll_dice", lambda n, d: [next(seq) for _ in range(n)]):
+            return turn._resolve(args)
+
+    def test_rolling_inside_the_turn(self):
+        line, text, extra, summary = self._resolve([10, 4], hp="Dagna:11:11")        # 10+5 = 15 vs 12: hit, 4+2 = 6
+        self.assertEqual((text, extra), ("Hit for 6.", ["--stat-hp", "Dagna:5:11"]))
+        self.assertIn("= 15 → hit, 6 damage", line)
+        self.assertIn("hit damage=6", summary)
+        line, text, extra, summary = self._resolve([3])                               # 8 vs 12: miss, no damage roll
+        self.assertEqual((text, extra), ("Missed.", []))
+        _, text, _, summary = self._resolve([20, 5, 6])                               # natural 20: damage dice doubled
+        self.assertEqual(text, "Hit for 13.")
+        self.assertIn("critical hit", summary)
+        _, text, _, _ = self._resolve([1], vs=2)                                       # natural 1 misses even if it would beat the AC
+        self.assertEqual(text, "Missed.")
+
     def test_dm_rules(self):
         skill = read(ROOT / "skills" / "dnd" / "SKILL.md")
+        self.assertIn("an ordinary turn is ONE tool call", skill)
+        self.assertIn("--ask", skill)
         self.assertIn("Fast turn (hard rule): aim for 5 seconds", skill)
         self.assertIn("${CLAUDE_SKILL_DIR}/display/turn.py", skill)
         self.assertNotIn("plugins/cache", skill)

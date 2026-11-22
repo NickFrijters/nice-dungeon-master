@@ -10,6 +10,12 @@ Versions before **1.6.0** are reconstructed retroactively from git history; the 
 
 ## [Unreleased]
 
+## [2.49.0] — 2026-11-22 — one-call DM turns
+
+### Added
+- `turn.py` rolls and resolves in the same call: the DM writes the hit and the miss narration, the script rolls (or, under roll_mode players, asks the player and waits for their roll on the display), decides, rolls damage on a hit (natural 20 doubles the dice, natural 1 misses), sends the dice line and the right narration, and can lower a PC's HP on a hit. An ordinary turn is now one DM tool call instead of two or more; measured end to end in a long session: 10.5 s with two calls, 6.7 s with one.
+- A player's roll for a DM request now comes back to the DM with the number (in the request status and as `ROLL Name: 17 (natural 12)` from `send.py --wait`), so no extra step is needed to find it.
+
 ## [2.48.0] — 2026-11-22 — faster DM turns
 
 ### Fixed

@@ -1,6 +1,6 @@
 ---
 name: dnd
-description: "v2.48.0 · Dungeon Master assistant for running persistent D&D 5e campaigns. Handles campaign creation/loading, character management, combat tracking, NPC generation, dice rolling, and session state — all persisted across sessions. Invoke with /dm:dnd followed by a subcommand, or just speak naturally once a campaign is loaded."
+description: "v2.49.0 · Dungeon Master assistant for running persistent D&D 5e campaigns. Handles campaign creation/loading, character management, combat tracking, NPC generation, dice rolling, and session state — all persisted across sessions. Invoke with /dm:dnd followed by a subcommand, or just speak naturally once a campaign is loaded."
 tools: Read, Write, Edit, Glob, Bash, AskUserQuestion
 ---
 
@@ -408,17 +408,20 @@ DNDEND
 | `--effect-start` | `"NAME:SPELL:DURATION"` | Start timed effect — DURATION: `10r` / `60m` / `8h` / `indef`; append `:conc` if concentration |
 | `--effect-end` | `"NAME:SPELL"` | End effect (broken concentration, dispelled, player drops it) |
 
-**Fast turn (hard rule): aim for 5 seconds from the players' GO to your narration on screen.** The display times every turn and shows it ("DM answered in 4.2 s"; `python3 ${CLAUDE_SKILL_DIR}/scripts/latency.py` reports the median and the share within 5 s). Every extra tool call and every file read costs seconds, so a normal turn is **at most two tool calls**:
-1. *Only if dice are needed:* one Bash call that rolls everything at once (`dice.py` / `combat.py`, several rolls in one call). Run `consequences.py scene` in this same call only when the party enters a new place or meets a named NPC.
-2. One Bash call to `turn.py`, which does the whole rest of the turn in one process: the player's line, the dice lines, the narration with all its `--stat-*` / `--effect-*` flags, NPC lines, the micro-save (`--event`, `--flag`), the turn pointer (`--turn-current`), and with `--wait` (autorun) the wait for the next input, whose output is the next turn's player action:
+**Fast turn (hard rule): aim for 5 seconds from the players' GO to your narration on screen.** The display times every turn and shows it ("DM answered in 4.2 s"; `python3 ${CLAUDE_SKILL_DIR}/scripts/latency.py` reports the median and the share within 5 s). Each tool call is a full model round trip of several seconds, so **an ordinary turn is ONE tool call**: `turn.py`, which rolls, resolves and sends everything in one process. Write the outcome for both a hit and a miss; the script rolls, picks the right one and fills in `{dmg}`:
 ```bash
 python3 ${CLAUDE_SKILL_DIR}/display/turn.py -c <campaign> \
-  --player "Dagna Gloedbaard: Dagna hurls a Fire Bolt at the second swarm." \
-  --dice "Dagna Gloedbaard — Fire Bolt vs Rattenzwerm 2 (AC 10): d20+5 = 17 → hit, 9 fire" \
-  --narrate "The bolt bursts among the rats; a dozen flee burning into the webs." --stat-hp "Dagna Gloedbaard:11:11" \
-  --event "Dagna burned swarm 2 (9 fire)" --turn-current "Rattenzwerm 2" --wait
+  --player "Dagna Gloedbaard: Dagna hurls a Fire Bolt at the swarm." \
+  --roll "d20+5" --vs 10 --damage "1d10" --label "Dagna Gloedbaard — Fire Bolt vs Rattenzwerm 1 (AC 10)" \
+  --hit "Fire splashes across the swarm for {dmg}; burning rats shriek into the webs." \
+  --miss "The bolt scorches the wall as the swarm surges aside." \
+  --event "Dagna cast Fire Bolt at swarm 1" --turn-current "Rattenzwerm 2" --wait
 ```
-A turn without dice is one call. Do not run `check_input.py` when the input came from the wait (it is already in the output). Do **not** read files in a normal turn: work from what is in context, and read only when a rule requires it (a named NPC's first scene, a new chapter, a fact you must verify). Decide the outcome and write it straight away: keep narration within the Flavour limit (combat: 10 to 40 words), and leave bigger bookkeeping (consequence ledger, relationships, sheets) to scene boundaries, folded into one of these two calls. The longer `send.py` patterns below still work and are needed for images, XP and inspiration blocks; for ordinary turns, `turn.py` is faster.
+It prints `ROLL total=17 natural=12 hit damage=5` for your bookkeeping, and with `--wait` the next players' input follows in the same output.
+- **Who rolls:** under `roll_mode: players`, add `--ask "<PC name>"`: the player rolls on the display and the same call waits for the number. NPC and monster rolls are rolled by the script. For a monster hitting a PC add `--hp-on-hit "<PC>:<current HP>:<max HP>"` and the sheet card drops by the damage. Natural 20 doubles the damage dice; natural 1 misses.
+- **No roll needed:** `--narrate "..."` instead of `--roll`/`--hit`/`--miss`. Plain dice lines you rolled yourself go in `--dice`.
+- **Several rolls in one turn** (two monsters, an area spell): roll them in one `dice.py` call first, then one `turn.py` with `--narrate`: two calls at most.
+- Do not run `check_input.py` when the input came from the wait. Do **not** read files in a normal turn: work from what is in context, and read only when a rule requires it (a named NPC's first scene, a new chapter, a fact you must verify). Decide the outcome and write it straight away, keep narration within the Flavour limit (combat: 10 to 40 words), and leave bigger bookkeeping (consequence ledger, relationships, sheets) to scene boundaries. The longer `send.py` patterns below are still needed for images, XP and inspiration blocks; for ordinary turns, `turn.py` is faster.
 
 **Batching rule — ONE Bash tool call per response, multiple typed sends inside it:**
 
