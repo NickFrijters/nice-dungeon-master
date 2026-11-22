@@ -10,6 +10,15 @@ Versions before **1.6.0** are reconstructed retroactively from git history; the 
 
 ## [Unreleased]
 
+## [2.52.0] — 2026-11-22 — interface text size; story pauses and follows properly
+
+### Added
+- Settings: Interface text size, separate from the story's Text size. It makes the character list on the left, Party Input and the combat side lists bigger or smaller (80% to 180%), the same on every screen, and the story moves aside as the list grows.
+
+### Fixed
+- The story no longer pauses after a line and a half in a short window. The pause counted the room kept free for Party Input and the progress bar as used up, leaving a "page" of about 60 pixels; it now pauses only when unread text would really scroll out of sight at the top. While paused, the progress line says "press Continue or Enter to read on".
+- The story keeps following the typing: its own smooth scrolling used to count as the reader scrolling up, so the text went on typing below the visible area. Only a wheel, touch or key press counts as the reader now, and the follow is instant so the last lines no longer end up behind Party Input.
+
 ## [2.51.1] — 2026-11-22 — no lost loads, no blank screens
 
 ### Fixed

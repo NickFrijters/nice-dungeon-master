@@ -1431,7 +1431,7 @@ def _display_settings() -> dict:
         import settings as _settings
         return _settings.display_settings()
     except Exception:
-        return {"theme": "dark", "skin": "vellum", "text_size": 0.75, "type_speed": "normal",
+        return {"theme": "dark", "skin": "vellum", "text_size": 0.75, "ui_size": 1.0, "type_speed": "normal",
                 "roll_on_screen": False, "sound_effects": True, "narration_audio": False}
 
 
@@ -2681,7 +2681,10 @@ def settings_data():
                                 "narrator_voice": list(_settings.NARRATOR_VOICES),
                                 "text_size": {"min": _settings.TEXT_SIZE_MIN,
                                               "max": _settings.TEXT_SIZE_MAX,
-                                              "step": _settings.TEXT_SIZE_STEP}},
+                                              "step": _settings.TEXT_SIZE_STEP},
+                                "ui_size": {"min": _settings.UI_SIZE_MIN,
+                                            "max": _settings.UI_SIZE_MAX,
+                                            "step": _settings.UI_SIZE_STEP}},
                     "campaigns": camps})
 
 

@@ -73,6 +73,8 @@
       if (ts && ts >= 0.5 && ts <= 3) {
         document.documentElement.style.setProperty('--text-scale', String(ts));
       }
+      var us = parseFloat(window.localStorage.getItem('dnd-ui-scale'));
+      if (us && us >= 0.8 && us <= 1.8) document.documentElement.style.setProperty('--ui-scale', String(us));
     } catch (_) { /* private mode / disabled storage — silently fall back to dark */ }
   })();
 </script>
@@ -202,7 +204,7 @@
     position: fixed; inset: 0;
     overflow-y: auto;
     overflow-x: hidden;
-    padding: 72px max(340px, 18vw) 80px 230px;  /* left: sidebar+gap; right: clears the settings column */
+    padding: 72px max(340px, 18vw) 80px calc(20px + 210px * var(--ui-scale, 1));  /* left: sidebar (grows with the interface text size) + gap */
     z-index: 4;
     scroll-behavior: smooth;
     transition: padding 0.4s ease;
@@ -3118,14 +3120,14 @@
   #quest-strip[hidden] { display: none; }
   @media (max-width: 1100px) { #scene-gallery { display: none; } }
   /* ── Combat screen: a tabletop. Wooden table, a stone battle mat, discs for tokens ── */
-  #combat-view { position: fixed; left: 230px; right: 30px; top: 74px; height: 60vh; z-index: 5; display: none;
+  #combat-view { position: fixed; left: calc(20px + 210px * var(--ui-scale, 1)); right: 30px; top: 74px; height: 60vh; z-index: 5; display: none;
     grid-template-columns: 1fr 250px; grid-template-rows: auto 1fr auto; gap: 10px 16px; }
   body.combat #combat-view { display: grid; top: 74px; bottom: calc(22vh + 72px); height: auto; }
   /* Combat REPLACES the roleplay screen: the story history, picture column, quest strip and the roleplay panels
      are gone; only the party cards stay on the left, and the latest few lines of narration sit under the tabletop. */
   body.combat #scene-gallery, body.combat #quest-strip, body.combat #mini-tracker,
   body.combat #sb-turn-section, body.combat #sb-npcs, body.combat #sb-factions, body.combat #sb-quests { display: none !important; }
-  body.combat #text-scroll { inset: auto 0 62px 0; height: 22vh; padding: 6px 30px 6px 230px; scroll-behavior: auto;
+  body.combat #text-scroll { inset: auto 0 62px 0; height: 22vh; padding: 6px 30px 6px calc(20px + 210px * var(--ui-scale, 1)); scroll-behavior: auto;
     -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 30%); mask-image: linear-gradient(to bottom, transparent 0, #000 30%); }
   body.combat #text-scroll.sidebar-hidden { padding-left: 60px; }
   body.combat #text-content { max-width: none; }
@@ -3374,6 +3376,8 @@
   #text-content:empty + #story-empty { display: block; }
   #story-empty .se-title { font: 600 15px 'Cinzel', serif; letter-spacing: 3px; text-transform: uppercase; color: rgba(235,205,120,.9); margin-bottom: 8px; }
   body.combat #story-empty { display: none !important; }
+  /* Interface text size (Settings): the character list, Party Input and the combat side lists scale as a whole */
+  #sidebar, #input-panel, #cb-side { zoom: var(--ui-scale, 1); }
 </style>
 </head>
 <body>
@@ -4318,11 +4322,16 @@ let userScrolledUp = false;
 const _newPill = document.getElementById('new-content-pill');
 function _showNewPill() { if (_newPill) _newPill.classList.add('visible'); }
 function _hideNewPill() { if (_newPill) _newPill.classList.remove('visible'); }
+// Only the READER scrolling up stops the auto-follow. The story area scrolls smoothly, and while its own smooth scroll
+// is still on the way down the position looks "not at the bottom"; that used to count as the reader scrolling up, so
+// the text kept typing below the visible area. A wheel, touch or key press shortly before is what marks the reader.
+let _readerScrollAt = 0;
+['wheel', 'touchmove'].forEach(ev => textScroll.addEventListener(ev, () => { _readerScrollAt = Date.now(); }, {passive: true}));
+document.addEventListener('keydown', e => { if (/^(PageUp|PageDown|ArrowUp|ArrowDown|Home|End)$/.test(e.key)) _readerScrollAt = Date.now(); });
 textScroll.addEventListener('scroll', () => {
   const distFromBottom = textScroll.scrollHeight - textScroll.scrollTop - textScroll.clientHeight;
-  userScrolledUp = distFromBottom > 80;
-  // Back near the bottom — the reader has caught up, so retire the pill.
-  if (!userScrolledUp) _hideNewPill();
+  if (distFromBottom <= 80) { userScrolledUp = false; _hideNewPill(); }      // back near the bottom: caught up
+  else if (Date.now() - _readerScrollAt < 1200) userScrolledUp = true;      // the reader went back to read
 });
 if (_newPill) {
   _newPill.addEventListener('click', () => {
@@ -4373,7 +4382,14 @@ function _pageShouldHold() {
     _pageBlock = currentEl; _pageCredit = 0;
     _pageStartY = currentEl.getBoundingClientRect().top - textScroll.getBoundingClientRect().top + textScroll.scrollTop - 4;
   }
-  return (_pageY(_pageLast()) - _pageStartY) > _pageUsable();
+  // Hold only when going on would push unread text (from the start of this page) out of sight at the top. Measuring
+  // the space below the text instead (Party Input's reserved room, the progress tracker) paused short windows after
+  // a line and a half while everything was still in view.
+  const h = textScroll.clientHeight;
+  const cv = document.body.classList.contains('combat') ? document.getElementById('combat-view') : null;
+  const topGap = cv ? Math.max(0, cv.getBoundingClientRect().bottom - textScroll.getBoundingClientRect().top) : h * 0.10;
+  const visibleTop = Math.max(0, textScroll.scrollHeight - h) + topGap;   // what stays in view once it scrolls to the end
+  return _pageStartY < visibleTop - 4;
 }
 function _pageHold() {
   if (_pageCredit > 0) { _pageCredit--; _pageStartY = _pageY(_pageLast()); return false; }
@@ -4595,7 +4611,7 @@ function _turnTick() {
   fill.style.width = Math.round(frac * 100) + '%';
   label.textContent = lead + (t.voice && !t.audioEnded
     ? 'narrating ' + _ttsFmt(cur) + ' / ' + _ttsFmt(t.audioDur)
-    : (t.typingDone ? 'finishing...' : 'writing...'));
+    : (t.typingDone ? 'finishing...' : (_pageHeld ? 'press Continue or Enter to read on' : 'writing...')));
   if (t.typingDone && _heldItems.length === 0 && (!t.voice || t.audioEnded)) _turnFinish();
 }
 
@@ -5539,7 +5555,9 @@ function handleIncomingText(text) {
 
 function scrollToBottom() {
   if (!userScrolledUp) {
-    textScroll.scrollTop = textScroll.scrollHeight;
+    // Instant, not smooth: a smooth scroll re-aimed at every typed letter falls behind and left the last lines under
+    // Party Input. Following the text line by line needs no animation.
+    textScroll.scrollTo({ top: textScroll.scrollHeight, behavior: 'instant' });
     _hideNewPill();
   } else {
     // New narration landed below the fold — surface the "New ↓" pill so the
@@ -7756,6 +7774,7 @@ function _applyDisplaySettings(s) {
   _applyTheme(d.theme || 'dark');
   _applySkin(d.skin || 'vellum');
   document.documentElement.style.setProperty('--text-scale', String(d.text_size || 0.75));
+  document.documentElement.style.setProperty('--ui-scale', String(d.ui_size || 1));   // the interface text size
   const ms = _TYPE_SPEED_MS[d.type_speed];
   if (ms !== undefined) {
     // While a paced reveal is running, the user's own speed is parked in _userCharDelay.
@@ -7766,6 +7785,7 @@ function _applyDisplaySettings(s) {
     localStorage.setItem('dnd-theme', d.theme);
     localStorage.setItem('dnd-skin', d.skin);
     localStorage.setItem('dnd-text-scale-tv3', String(d.text_size));
+    localStorage.setItem('dnd-ui-scale', String(d.ui_size || 1));
   } catch (_) {}
 }
 _applyDisplaySettings(window._DISPLAY);

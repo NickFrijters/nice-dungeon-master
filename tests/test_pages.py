@@ -71,10 +71,11 @@ class HoldTest(unittest.TestCase):
         r = _run("""
 const out = {};
 lastP.y = 300; out.short = _pageShouldHold();
-lastP.y = 100 + 800 * 0.55 + 20; out.full = _pageShouldHold();
+lastP.y = 560; out.fits = _pageShouldHold();          // more than half the screen, but all still in view: no pause
+lastP.y = 700; out.full = _pageShouldHold();          // going on would push the start out of sight at the top
 console.log(JSON.stringify(out));
 """)
-        self.assertEqual(r, {"short": False, "full": True})
+        self.assertEqual(r, {"short": False, "fits": False, "full": True})
 
     def test_a_voice_reading_the_text_never_holds(self):
         r = _run("""
@@ -103,7 +104,7 @@ console.log(JSON.stringify(out));
 const out = {};
 lastP.y = 700; _pageShouldHold(); _pageHold(); _pageContinue(false);
 lastP.y = 700 + 200; out.small = _pageShouldHold();
-lastP.y = 700 + 800 * 0.55 + 10; out.page = _pageShouldHold();
+lastP.y = 1300; out.page = _pageShouldHold();         // a whole new screen of text after the Continue
 console.log(JSON.stringify(out));
 """)
         self.assertEqual(r, {"small": False, "page": True})

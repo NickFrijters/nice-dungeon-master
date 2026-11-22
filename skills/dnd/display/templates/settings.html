@@ -93,6 +93,15 @@
     </div>
   </div>
   <div class="row">
+    <div class="label">Interface text size</div>
+    <div class="hint">How big the character list on the left, Party Input and the combat lists are. The story has its own size above.</div>
+    <div class="stepper" id="ui-size">
+      <button type="button" class="step" data-dir="-1" aria-label="Smaller interface text">A−</button>
+      <span class="val" id="ui-size-val"></span>
+      <button type="button" class="step" data-dir="1" aria-label="Bigger interface text">A+</button>
+    </div>
+  </div>
+  <div class="row">
     <div class="label">Typing speed</div>
     <div class="hint">How fast the story text appears.</div>
     <div class="seg" data-key="type_speed"></div>
@@ -190,21 +199,24 @@ function segment(el, options, current, onPick) {
   }
 }
 
-function renderTextSize() {
-  const o = data.options.text_size;
-  const val = document.getElementById('text-size-val');
-  val.textContent = Math.round(data.settings.text_size * 100) + '%';
-  for (const b of document.querySelectorAll('#text-size .step')) {
+// A size stepper (story text, interface text): A- / A+ in steps, saved at once for every screen.
+function renderStepper(key, boxId) {
+  const o = data.options[key];
+  if (!o) return;
+  const val = document.getElementById(boxId + '-val');
+  val.textContent = Math.round(data.settings[key] * 100) + '%';
+  for (const b of document.querySelectorAll('#' + boxId + ' .step')) {
     b.onclick = async () => {
-      const next = Math.round((data.settings.text_size + Number(b.dataset.dir) * o.step) * 100) / 100;
+      const next = Math.round((data.settings[key] + Number(b.dataset.dir) * o.step) * 100) / 100;
       const clamped = Math.min(o.max, Math.max(o.min, next));
-      if (clamped === data.settings.text_size) return;
-      if (!await post('/settings/save', {text_size: clamped})) return;
-      data.settings.text_size = clamped;
+      if (clamped === data.settings[key]) return;
+      if (!await post('/settings/save', {[key]: clamped})) return;
+      data.settings[key] = clamped;
       val.textContent = Math.round(clamped * 100) + '%';
     };
   }
 }
+function renderTextSize() { renderStepper('text_size', 'text-size'); renderStepper('ui_size', 'ui-size'); }
 
 function render() {
   renderTextSize();

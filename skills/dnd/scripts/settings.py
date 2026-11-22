@@ -31,6 +31,8 @@ SKINS = ("vellum",)   # one look only: Vellum
 TYPE_SPEEDS = ("normal", "fast", "instant")
 NARRATOR_VOICES = ("am_adam", "am_fenrir", "am_onyx", "bm_george")   # Kokoro voices; first is the default
 TEXT_SIZE_MIN, TEXT_SIZE_MAX, TEXT_SIZE_STEP = 0.5, 2.0, 0.05
+# Interface text size: the left pane, Party Input and the combat side lists (the story has its own Text size).
+UI_SIZE_MIN, UI_SIZE_MAX, UI_SIZE_STEP = 0.8, 1.8, 0.05
 
 # Story and rules settings come first; the display settings that used to live in
 # the play screen's own column follow. All of them are global: one value, shown
@@ -45,6 +47,7 @@ DEFAULTS = {
     "theme": "dark",
     "skin": "vellum",
     "text_size": 0.75,
+    "ui_size": 1.0,
     "type_speed": "normal",
     "roll_on_screen": False,
     "sound_effects": True,
@@ -62,7 +65,7 @@ _CHOICES = {
 _BOOLS = ("explain_dutch", "narration_audio", "roll_on_screen", "sound_effects")
 
 #: Keys the play screen needs to draw itself.
-DISPLAY_KEYS = ("theme", "skin", "text_size", "type_speed", "roll_on_screen",
+DISPLAY_KEYS = ("theme", "skin", "text_size", "ui_size", "type_speed", "roll_on_screen",
                 "sound_effects", "narration_audio")
 
 
@@ -95,12 +98,17 @@ def _valid(key: str, value) -> bool:
     if key == "text_size":
         return (isinstance(value, (int, float)) and not isinstance(value, bool)
                 and TEXT_SIZE_MIN <= value <= TEXT_SIZE_MAX)
+    if key == "ui_size":
+        return (isinstance(value, (int, float)) and not isinstance(value, bool)
+                and UI_SIZE_MIN <= value <= UI_SIZE_MAX)
     return value in _CHOICES.get(key, ())
 
 
 def _normalize(key: str, value):
     if key == "text_size":
         return round(round(float(value) / TEXT_SIZE_STEP) * TEXT_SIZE_STEP, 2)
+    if key == "ui_size":
+        return round(round(float(value) / UI_SIZE_STEP) * UI_SIZE_STEP, 2)
     return value
 
 
