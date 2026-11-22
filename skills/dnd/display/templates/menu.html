@@ -40,6 +40,14 @@
   .panel .row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
   .panel .actions { margin-top:16px; display:flex; gap:10px; }
   .error { color:#e58a7a; min-height:1.2em; margin-top:10px; }
+  button.danger { background:transparent; color:#e58a7a; border:1px solid #6a3a32; padding:10px 14px; }
+  button.danger:hover:not(:disabled) { border-color:#e58a7a; }
+  button.danger.solid { background:#a8483a; color:#fff3ee; border-color:#a8483a; }
+  .confirm { flex-basis:100%; display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:4px; padding-top:10px;
+             border-top:1px dashed var(--line); color:#f0c8bc; font-size:.95rem; }
+  .card.wrap { flex-wrap:wrap; }
+  #trash-section[hidden] { display:none; }
+  .card.trashed { opacity:.85; }
 </style>
 </head>
 <body>
@@ -56,6 +64,12 @@
 
   <h2>Campaigns</h2>
   <div id="campaigns"><p class="empty">Looking for campaigns…</p></div>
+
+  <div id="trash-section" hidden>
+    <h2>Recently deleted</h2>
+    <p class="sub" style="margin:0 0 10px">Deleted campaigns wait here. Restore one, or delete it for good.</p>
+    <div id="trash"></div>
+  </div>
 
   <h2>New campaign</h2>
   <div class="card"><div class="info"><div class="name">Let the Dungeon Master create one</div>
@@ -136,8 +150,80 @@ function render(data) {
     btn.textContent = c.active ? 'Continue' : 'Load';
     btn.disabled = waitingFor !== null;
     btn.onclick = () => load(c.name, btn);
-    card.append(info, btn); box.appendChild(card);
+    const del = document.createElement('button');
+    del.className = 'danger'; del.textContent = 'Delete'; del.title = 'Delete this campaign';
+    del.disabled = waitingFor !== null;
+    del.onclick = () => askDelete(card, c);
+    card.append(info, btn, del); box.appendChild(card);
   }
+}
+
+// Delete asks first, in the card itself; the campaign goes to "Recently deleted", where it can be restored.
+let confirming = null;
+function askDelete(card, c) {
+  if (confirming) return;
+  confirming = c.name;
+  card.classList.add('wrap');
+  const row = document.createElement('div'); row.className = 'confirm';
+  const msg = document.createElement('span');
+  msg.textContent = `Delete "${c.name.replace(/-/g, ' ')}"?` + (c.active ? ' It is the open campaign; it will be closed.' : '') +
+    ' You can restore it from Recently deleted.';
+  const yes = document.createElement('button'); yes.className = 'danger solid'; yes.textContent = 'Yes, delete';
+  const no = document.createElement('button'); no.className = 'quiet'; no.textContent = 'Cancel';
+  no.onclick = () => { confirming = null; refresh(); };
+  yes.onclick = async () => {
+    yes.disabled = no.disabled = true;
+    const r = await fetch('/menu/delete', {method: 'POST', headers: {'Content-Type': 'application/json', 'X-DND-Token': TOKEN},
+                                           body: JSON.stringify({campaign: c.name})}).catch(() => null);
+    confirming = null;
+    statusEl.textContent = r && r.ok ? `"${c.name.replace(/-/g, ' ')}" was deleted. You can still restore it below.`
+                                     : 'Could not delete it. ' + (r ? await r.text() : 'The display did not answer.');
+    refresh(); refreshTrash();
+  };
+  row.append(msg, yes, no); card.appendChild(row);
+}
+
+function renderTrash(list) {
+  const sec = document.getElementById('trash-section'), box = document.getElementById('trash');
+  sec.hidden = !list.length; box.textContent = '';
+  for (const e of list) {
+    const card = document.createElement('div'); card.className = 'card trashed';
+    const info = document.createElement('div'); info.className = 'info';
+    const name = document.createElement('div'); name.className = 'name'; name.textContent = e.name.replace(/-/g, ' ');
+    const meta = document.createElement('div'); meta.className = 'meta';
+    meta.textContent = 'deleted ' + ago(e.deleted).replace('played ', '');
+    info.append(name, meta);
+    const back = document.createElement('button'); back.className = 'quiet'; back.textContent = 'Restore';
+    back.onclick = async () => {
+      const r = await fetch('/menu/restore', {method: 'POST', headers: {'Content-Type': 'application/json', 'X-DND-Token': TOKEN},
+                                              body: JSON.stringify({entry: e.entry})}).catch(() => null);
+      const j = r && r.ok ? await r.json() : null;
+      statusEl.textContent = j ? `"${j.campaign.replace(/-/g, ' ')}" is back.` : 'Could not restore it.';
+      refresh(); refreshTrash();
+    };
+    const gone = document.createElement('button'); gone.className = 'danger'; gone.textContent = 'Delete forever';
+    gone.onclick = () => {
+      if (card.querySelector('.confirm')) return;
+      card.classList.add('wrap');
+      const row = document.createElement('div'); row.className = 'confirm';
+      const msg = document.createElement('span'); msg.textContent = 'Delete it for good? This cannot be undone.';
+      const yes = document.createElement('button'); yes.className = 'danger solid'; yes.textContent = 'Delete forever';
+      const no = document.createElement('button'); no.className = 'quiet'; no.textContent = 'Cancel';
+      no.onclick = () => refreshTrash();
+      yes.onclick = async () => {
+        yes.disabled = no.disabled = true;
+        const r = await fetch('/menu/purge', {method: 'POST', headers: {'Content-Type': 'application/json', 'X-DND-Token': TOKEN},
+                                              body: JSON.stringify({entry: e.entry})}).catch(() => null);
+        statusEl.textContent = r && r.ok ? `"${e.name.replace(/-/g, ' ')}" is gone for good.` : 'Could not delete it.';
+        refreshTrash();
+      };
+      row.append(msg, yes, no); card.appendChild(row);
+    };
+    card.append(info, back, gone); box.appendChild(card);
+  }
+}
+async function refreshTrash() {
+  try { renderTrash((await (await fetch('/menu/trash')).json()).trash || []); } catch (e) { /* try again later */ }
 }
 
 async function quitAll() {
@@ -269,7 +355,7 @@ async function refresh() {
   try {
     const data = await (await fetch('/menu/campaigns')).json();
     window.lastCampaigns = data.campaigns;
-    render(data);
+    if (!confirming) render(data);        // do not redraw away an open "Delete?" question
     if (pending) {
       const fresh = data.campaigns.filter(c => !pending.before.has(c.name));
       const hit = fresh.find(c => c.name === pending.expected) || fresh[0];
@@ -287,6 +373,7 @@ async function refresh() {
 }
 loadOptions();
 refresh();
+refreshTrash();
 setInterval(() => { if (waitingFor || pending) refresh(); }, 2000);
 setInterval(() => { if (!waitingFor && !quitting) refresh(); }, 2500);   // keeps the 'no Dungeon Master' notice honest
 </script>

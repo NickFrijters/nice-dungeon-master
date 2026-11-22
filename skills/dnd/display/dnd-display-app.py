@@ -1602,6 +1602,120 @@ def menu_load():
     return "", 204
 
 
+# ── Managing campaigns: delete goes to a trash folder first, so a mistake can be undone ──
+def _trash_dir():
+    from paths import campaigns_dir
+    return campaigns_dir().parent / "campaign-trash"
+
+
+def _list_trash() -> list[dict]:
+    out = []
+    try:
+        entries = list(_trash_dir().iterdir())
+    except OSError:
+        return []
+    for d in entries:
+        if not d.is_dir() or "__" not in d.name:
+            continue
+        name, _, stamp = d.name.rpartition("__")
+        try:
+            when = d.stat().st_mtime
+        except OSError:
+            when = 0.0
+        out.append({"entry": d.name, "name": name, "deleted": when})
+    out.sort(key=lambda e: e["deleted"], reverse=True)
+    return out
+
+
+@app.route("/menu/trash")
+def menu_trash():
+    return jsonify({"trash": _list_trash()})
+
+
+@app.route("/menu/delete", methods=["POST"])
+def menu_delete():
+    """Move a campaign to the trash (it can be restored). Deleting the open campaign also closes it."""
+    if not _token_ok():
+        return "Forbidden", 403
+    if not _from_this_machine():
+        return _THIS_MACHINE_ONLY
+    data = request.get_json(force=True, silent=True) or {}
+    name = str(data.get("campaign", ""))
+    if name not in {c["name"] for c in _list_campaigns()}:
+        return "unknown campaign", 404
+    import shutil
+    from paths import campaigns_dir
+    src = campaigns_dir() / name
+    trash = _trash_dir()
+    try:
+        trash.mkdir(parents=True, exist_ok=True)
+        dst = trash / f"{name}__{_time.strftime('%Y%m%d-%H%M%S')}"
+        n = 1
+        while dst.exists():
+            dst = trash / f"{name}__{_time.strftime('%Y%m%d-%H%M%S')}-{n}"
+            n += 1
+        shutil.move(str(src), str(dst))
+    except OSError as e:
+        return f"could not delete: {e}", 500
+    if _active_campaign_name() == name:          # it was the open one: close it, so nothing points at a missing folder
+        try:
+            os.remove(CAMP_FILE)
+        except OSError:
+            pass
+        with _stats_lock:
+            for k in ("players",) + _DISPLAY_KEYS:
+                _current_stats.pop(k, None)
+            current = dict(_current_stats)
+        _persist_stats()
+        _broadcast({"stats": current})
+    return jsonify({"entry": dst.name}), 200
+
+
+@app.route("/menu/restore", methods=["POST"])
+def menu_restore():
+    """Bring a deleted campaign back from the trash under its old name (or 'name-restored' if that is taken)."""
+    if not _token_ok():
+        return "Forbidden", 403
+    if not _from_this_machine():
+        return _THIS_MACHINE_ONLY
+    data = request.get_json(force=True, silent=True) or {}
+    entry = str(data.get("entry", ""))
+    if entry not in {e["entry"] for e in _list_trash()}:
+        return "not in the trash", 404
+    import shutil
+    from paths import campaigns_dir
+    name = entry.rpartition("__")[0]
+    dst = campaigns_dir() / name
+    n = 1
+    while dst.exists():
+        dst = campaigns_dir() / (f"{name}-restored" if n == 1 else f"{name}-restored-{n}")
+        n += 1
+    try:
+        shutil.move(str(_trash_dir() / entry), str(dst))
+    except OSError as e:
+        return f"could not restore: {e}", 500
+    return jsonify({"campaign": dst.name}), 200
+
+
+@app.route("/menu/purge", methods=["POST"])
+def menu_purge():
+    """Delete a campaign from the trash for good. This cannot be undone."""
+    if not _token_ok():
+        return "Forbidden", 403
+    if not _from_this_machine():
+        return _THIS_MACHINE_ONLY
+    data = request.get_json(force=True, silent=True) or {}
+    entry = str(data.get("entry", ""))
+    if entry not in {e["entry"] for e in _list_trash()}:
+        return "not in the trash", 404
+    import shutil
+    try:
+        shutil.rmtree(_trash_dir() / entry)
+    except OSError as e:
+        return f"could not delete: {e}", 500
+    return "", 204
+
+
 def _clean_place(raw):
     """Where the party is, for the map card in the roleplay screen: a picture from the campaign's images folder,
     a pin on it (x, y as fractions 0-1 of the picture), an optional label, and an optional `view`: the part of the

@@ -10,6 +10,11 @@ Versions before **1.6.0** are reconstructed retroactively from git history; the 
 
 ## [Unreleased]
 
+## [2.50.0] — 2026-11-22 — delete and restore campaigns
+
+### Added
+- Main Menu: delete a campaign. Each campaign has a Delete button that asks first, inside the card. A deleted campaign goes to "Recently deleted" (a `campaign-trash` folder next to `campaigns`), where it can be restored (as `name-restored` if the name is taken again) or deleted for good, which also asks first. Deleting the open campaign closes it. Only campaigns and trash entries that exist can be touched, and only from the PC running the display.
+
 ## [2.49.0] — 2026-11-22 — one-call DM turns
 
 ### Added
