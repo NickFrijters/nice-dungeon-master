@@ -10,6 +10,12 @@ Versions before **1.6.0** are reconstructed retroactively from git history; the 
 
 ## [Unreleased]
 
+## [2.53.0] — 2026-11-22 — campaign pane left, now pane right
+
+### Changed
+- Play screen layout: the left pane is the campaign (characters, factions, quests; the turn order in combat), the right pane is "now": date, day, time of day, season and weather, where the party is, the party map, the NPCs here and the scene pictures. The small clock in the top-right corner moved into the pane (it stays in the corner on narrow screens, where the pane is hidden). The Interface text size covers the right pane too.
+- NPCs read better: the name and how they feel about the party on the first line, who they are ("Mother, shield and broken spear") on the line below.
+
 ## [2.52.0] — 2026-11-22 — interface text size; story pauses and follows properly
 
 ### Added
