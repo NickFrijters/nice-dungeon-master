@@ -37,5 +37,19 @@ class NowPaneTest(unittest.TestCase):
         self.assertIn("zoom: var(--ui-scale, 1); }", block("#scene-gallery { overflow-y: auto", "\n"))
 
 
+
+class ClearRaceTest(unittest.TestCase):
+    def test_a_clear_wipes_at_once_so_the_next_block_survives(self):
+        a = HTML.index("function clearDisplay(then) {")
+        body = HTML[a:HTML.index("\n}\n", a)]
+        wipe = body.index("textContent.innerHTML = '';")
+        self.assertNotIn("setTimeout(() => {\n", body[:wipe])          # nothing delays the wipe any more
+        self.assertIn("setTimeout(() => { textContent.style.opacity = '1'; }, 30);", body)
+
+    def test_location_shown_once(self):
+        self.assertIn("card.querySelector('.pm-label').textContent = '';", HTML)
+        self.assertIn("card.querySelector('.pm-cap').style.display = hasView ? '' : 'none';", HTML)
+
+
 if __name__ == "__main__":
     unittest.main()

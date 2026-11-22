@@ -5368,8 +5368,9 @@ function _renderPlace(pl) {
   const px = ((pl.x - view.x) / view.w * 100) + '%', py = ((pl.y - view.y) / view.h * 100) + '%';
   const inside = pl.x >= view.x && pl.x <= view.x + view.w && pl.y >= view.y && pl.y <= view.y + view.h;
   [pin, ring].forEach(e => { e.style.left = px; e.style.top = py; e.style.display = inside ? '' : 'none'; });
-  card.querySelector('.pm-label').textContent = pl.label || 'The party is here';
+  card.querySelector('.pm-label').textContent = '';            // the location is shown once, at the top of the pane
   card.querySelector('.pm-hint').textContent = hasView ? (_pmFull ? 'whole map' : 'zoomed') : '';
+  card.querySelector('.pm-cap').style.display = hasView ? '' : 'none';   // only the zoom hint is left under the map
   _nowPaneRefresh();
 }
 
@@ -5473,29 +5474,27 @@ function renderReplayBatch(items) {
 }
 
 function clearDisplay(then) {
-  // Fade out, wipe, fade back in, then call the callback.
+  // Wipe AT ONCE, then fade the empty page back in. The wipe used to wait 370 ms for a fade-out, and the DM now sends
+  // its opening within that time after a clear (campaign load): the opening was typed and then erased by the late
+  // wipe, leaving "Waiting for the Dungeon Master" forever.
+  charQueue        = [];
+  isTyping         = false;
+  _pageRelease();
+  _currentInlineEl = null;
+  if (currentCursor && currentCursor.parentNode) {
+    currentCursor.parentNode.removeChild(currentCursor);
+  }
+  currentCursor = null;
+  currentEl     = null;
+  clearTimeout(idleTimer);
+
+  textContent.innerHTML = '';
+  textScroll.scrollTop  = 0;
+  userScrolledUp = false;
+  _hideProcessingIndicator();
   textContent.style.opacity = '0';
-  setTimeout(() => {
-    // Abort any in-progress typewriter
-    charQueue        = [];
-    isTyping         = false;
-    _pageRelease();
-    _currentInlineEl = null;
-    if (currentCursor && currentCursor.parentNode) {
-      currentCursor.parentNode.removeChild(currentCursor);
-    }
-    currentCursor = null;
-    currentEl     = null;
-    clearTimeout(idleTimer);
-
-    textContent.innerHTML = '';
-    textScroll.scrollTop  = 0;
-    userScrolledUp = false;
-    textContent.style.opacity = '1';
-    _hideProcessingIndicator();
-
-    if (then) then();
-  }, 370); // matches the CSS transition duration
+  setTimeout(() => { textContent.style.opacity = '1'; }, 30);   // what arrives next fades in (a timer also runs in a background tab)
+  if (then) then();
 }
 
 function _showProcessingIndicator() {

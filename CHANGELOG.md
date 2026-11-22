@@ -10,6 +10,14 @@ Versions before **1.6.0** are reconstructed retroactively from git history; the 
 
 ## [Unreleased]
 
+## [2.53.1] — 2026-11-22 — opening no longer erased on load
+
+### Fixed
+- Loading a campaign could leave "Waiting for the Dungeon Master" on screen for good although the DM had answered. The DM clears the screen and then sends its opening; the page wiped the screen 370 ms after a clear (after a fade-out), and since the DM became faster its opening arrived within that time and was erased. The screen is now wiped at once and only fades back in.
+
+### Changed
+- The location is shown once, at the top of the right pane; the map card no longer repeats it underneath (only the zoomed / whole map hint stays when there is one).
+
 ## [2.53.0] — 2026-11-22 — campaign pane left, now pane right
 
 ### Changed
