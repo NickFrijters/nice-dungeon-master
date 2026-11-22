@@ -10,6 +10,12 @@ Versions before **1.6.0** are reconstructed retroactively from git history; the 
 
 ## [Unreleased]
 
+## [2.53.4] — 2026-11-22 — dice panel works again
+
+### Fixed
+- Rolling on the screen was impossible: the dice pad lived in a drawer of the old Editorial look, which has been hidden for good since only Vellum remains. When the DM asked a player for a roll, the game waited forever with nothing to roll with. A DM-requested roll now opens the dice pad as a panel in the middle of the screen, set up for that character and roll; it closes by itself after the roll was sent. A Dice button in Party Input opens it by hand, and it has a close button.
+- While the DM waits for a roll, the progress line says so ("the DM is waiting for Milo Hearthglow's roll, use the dice panel") instead of "waiting for the DM", and the "Waiting on" notice no longer covers the open panel. A new request also clears a leftover "request cancelled" line.
+
 ## [2.53.3] — 2026-11-22 — menu follows the DM into the story
 
 ### Fixed

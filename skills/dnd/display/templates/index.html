@@ -3399,6 +3399,17 @@
   body.combat.now-pane #world-clock { display: block; }
   /* the story keeps clear of the right pane as the interface text grows */
   #text-scroll { padding-right: calc(max(340px, 18vw) * var(--ui-scale, 1)); }
+  /* Dice panel: a DM-requested roll (or the Dice button) opens it above Party Input */
+  #dice-drawer.ed-open { display: block; position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 45;
+    width: min(400px, calc(92vw / var(--ui-scale, 1))); max-height: calc(90vh / var(--ui-scale, 1)); overflow-y: auto;
+    padding: 14px 16px 12px; border-radius: 10px;
+    background: rgba(18,12,5,.97); border: 1px solid rgba(235,205,120,.8); box-shadow: 0 10px 40px rgba(0,0,0,.8); zoom: var(--ui-scale, 1); }
+  #dice-drawer.ed-open #dice-pad { display: block; }
+  body.ed-drawer-open #dice-pending-badge { display: none !important; }   /* the open dice panel already shows the request */
+  #dice-close { position: absolute; top: 4px; right: 8px; background: none; border: 0; color: rgba(235,205,120,.9); font-size: 22px; cursor: pointer; }
+  #party-dice-btn { background: transparent; color: rgba(235,205,120,.9); border: 1px solid rgba(180,140,60,.45); border-radius: 4px;
+    font: 700 11px 'Cinzel', serif; letter-spacing: .1em; padding: 6px 10px; cursor: pointer; margin-left: auto; margin-right: 8px; }
+  #party-dice-btn:hover { border-color: rgba(235,205,120,.9); }
 </style>
 </head>
 <body>
@@ -3482,7 +3493,7 @@
 
 <!-- On-screen dice drawer. The #dice-pad is relocated into this drawer at load.
      Slides in from the right like the other drawers. -->
-<div id="dice-drawer"></div>
+<div id="dice-drawer"><button id="dice-close" type="button" aria-label="Close the dice">&times;</button></div>
 
 <!-- Transient toast (DM Help status, etc.) -->
 <div id="toast" role="status" aria-live="polite"></div>
@@ -3515,6 +3526,7 @@
     <div id="party-rows" role="group" aria-label="What each character does"></div>
     <div id="party-footer">
       <span id="party-hint">Type what each character does, then press GO.</span>
+      <button id="party-dice-btn" type="button" class="quiet-btn" title="Open the dice to roll">&#9860; Dice</button>
       <button id="party-go-btn" type="button" disabled title="Send everything that is filled in to the DM (Ctrl+Enter)">GO &#9654;</button>
     </div>
     <div id="staged-queue"></div>
@@ -4616,7 +4628,11 @@ function _turnTick() {
   _renderSteps(el.querySelector('.tb-steps'), st.names, st.idx);
   const lead = 'step ' + (st.idx + 1) + ' of ' + st.names.length + ' \u00b7 ';
   if (t.phase === 'wait') {
-    el.classList.add('tb-indet'); label.textContent = lead + 'waiting for the DM... ' + secs(t.t0) + 's'; return;
+    const rollers = window._dicePendingNames || [];
+    el.classList.add('tb-indet');
+    label.textContent = rollers.length ? lead + 'the DM is waiting for ' + rollers.join(' and ') + '’s roll — use the dice panel'
+                                       : lead + 'waiting for the DM... ' + secs(t.t0) + 's';
+    return;
   }
   if (t.phase === 'prep') {
     el.classList.add('tb-indet'); label.textContent = lead + 'preparing voice... ' + secs(t.prepT0 || t.t0) + 's'; return;
@@ -8860,6 +8876,9 @@ function _onscreenDiceOn() { return !!(window._DISPLAY && window._DISPLAY.roll_o
       const el = document.getElementById(id);
       if (el && !el.classList.contains('ed-open')) toggle(id);
     };
+    window._edCloseDrawers = closeAll;
+    const dc = document.getElementById('dice-close'); if (dc) dc.addEventListener('click', closeAll);
+    const db = document.getElementById('party-dice-btn'); if (db) db.addEventListener('click', () => toggle('dice-drawer'));
   }
 
 })();
@@ -8901,6 +8920,7 @@ function _updateDicePendingBadge(snapshot) {
   const badge = document.getElementById('dice-pending-badge');
   if (!badge) return;
   const entries = Array.isArray(snapshot) ? snapshot.filter(e => e && (e.pending || []).length) : [];
+  window._dicePendingNames = [...new Set(entries.flatMap(e => e.pending || []))];
   if (entries.length === 0) {
     badge.classList.remove('visible');
     badge.innerHTML = '';
@@ -9081,6 +9101,7 @@ function _initDicePad() {
         done.textContent = '✓ Rolled — waiting for DM';
       }
       _activeRequestId = '';
+      setTimeout(() => { if (window._edCloseDrawers) window._edCloseDrawers(); }, 1800);   // the result was seen: out of the way
     } else {
       // Free-roll path: unlock so the player can roll again freely.
       rollBtn.disabled = false;
@@ -9124,6 +9145,7 @@ function _initDicePad() {
     if (!isAny && !targets.includes(me)) return;                  // not for this pad
 
     _activeRequestId = String(req.request_id || '');
+    const _rl = document.getElementById('dp-result-line'); if (_rl) _rl.textContent = '';   // no leftover "cancelled" line
 
     // Spec → click the matching die button. If unknown, fall back to d20.
     const reqSpec = (req.spec || '1d20').toLowerCase();
