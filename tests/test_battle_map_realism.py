@@ -155,6 +155,18 @@ class BattleMapRealismTest(unittest.TestCase):
         t = clean({"map": {**sealed, "tokens": [{"name": "Ogre", "x": 7, "y": 1, "side": "enemy"}]}}, prev2)["map"]["tokens"][0]
         self.assertLess(t["x"], 5)                               # no walking through a solid wall
 
+    def test_a_swarm_may_share_a_square_but_never_stand_in_a_wall(self):
+        terrain = [T("wall", 0, 0, 12, 2), T("wall", 0, 3, 12, 2), T("web", 5, 2, 2, 1), T("grate", 11, 2)]
+        m = board("The Old Tunnel", terrain, [
+            {"name": "Balasar", "x": 6, "y": 2}, {"name": "Swarm 1", "x": 6, "y": 2, "side": "enemy", "swarm": True},
+            {"name": "Swarm 2", "x": 7, "y": 0, "side": "enemy", "swarm": True}])
+        pos = {t["name"]: (t["x"], t["y"]) for t in m["tokens"]}
+        self.assertEqual(pos["Swarm 1"], (6, 2))                 # in Balasar's space, as in the book
+        self.assertEqual(pos["Balasar"], (6, 2))
+        self.assertEqual(pos["Swarm 2"][1], 2)                   # pulled out of the wall into the tunnel
+        self.assertTrue(next(t for t in m["tokens"] if t["name"] == "Swarm 1").get("swarm"))
+        self.assertEqual([t["kind"] for t in m["terrain"]][-2:], ["web", "grate"])
+
     def test_nobody_stands_off_the_edge_of_a_published_picture(self):
         m = clean({"map": {"cols": 12, "rows": 8, "title": "Camp",
                            "image": {"src": "camp.png", "x": 0, "y": 0, "w": 8, "h": 8},     # the picture covers columns A-H only

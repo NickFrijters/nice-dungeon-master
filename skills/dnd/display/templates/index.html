@@ -3284,6 +3284,10 @@
   .cb-ter.road { background: radial-gradient(circle at 40% 40%, rgba(120,95,60,.3) 0 10%, transparent 11%), rgba(150,120,80,.55); }
   .cb-ter.rug { background: repeating-linear-gradient(45deg, rgba(150,40,35,.85) 0 6px, rgba(120,30,30,.85) 6px 12px); box-shadow: inset 0 0 0 3px rgba(210,170,80,.8); }
   .cb-ter.water { z-index: 0; }
+  .cb-ter.web { background: repeating-linear-gradient(30deg, rgba(235,235,225,.35) 0 1px, transparent 1px 7px), repeating-linear-gradient(-30deg, rgba(235,235,225,.35) 0 1px, transparent 1px 7px),
+      radial-gradient(circle, rgba(230,230,220,.25), rgba(230,230,220,.08) 70%); }
+  .cb-ter.grate { background: repeating-linear-gradient(90deg, #2a2a2e 0 3px, transparent 3px 8px), repeating-linear-gradient(0deg, #2a2a2e 0 3px, transparent 3px 10px);
+      box-shadow: inset 0 0 0 2px #1a1a1e; }
   @keyframes cbFlicker { from { opacity: .75; } to { opacity: 1; } }
   .cb-token { position: absolute; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-sizing: border-box;
     font: 700 12px 'Cinzel', serif; color: #1a1208; cursor: grab; user-select: none; touch-action: none; z-index: 2;
@@ -6624,8 +6628,8 @@ function _renderCombat(to) {
 }
 // The same movement rules as the server (_TERRAIN_BLOCK / _TERRAIN_SLOW): what blocks or slows on the map LOOKS like it.
 const _CB_BLOCK = new Set(['wall', 'pillar', 'table', 'tree', 'boulder', 'crate', 'barrel', 'statue', 'cliff', 'pit',
-  'altar', 'bed', 'shelf', 'wagon', 'tent']);
-const _CB_SLOW = new Set(['water', 'difficult', 'rubble', 'bush', 'mud', 'ice', 'sand', 'snowdrift', 'log', 'deepwater', 'brush']);
+  'altar', 'bed', 'shelf', 'wagon', 'tent', 'grate']);
+const _CB_SLOW = new Set(['water', 'difficult', 'rubble', 'bush', 'mud', 'ice', 'sand', 'snowdrift', 'log', 'deepwater', 'brush', 'web']);
 const _CB_OVER = new Set(['bridge', 'door', 'road']);
 // What each kind of terrain means at the table (5e): shown when hovering a square, and used for cover on attacks.
 // cover: 1 = half (+2 AC and Dex saves), 2 = three-quarters (+5), 3 = total (cannot be targeted through it).
@@ -6640,7 +6644,8 @@ const _CB_INFO = {
   difficult: ['Rough ground', 0, 'difficult terrain'], rubble: ['Rubble', 0, 'difficult terrain'], mud: ['Mud', 0, 'difficult terrain'],
   ice: ['Ice', 0, 'difficult terrain: slippery'], sand: ['Deep sand', 0, 'difficult terrain'], snowdrift: ['Snowdrift', 0, 'difficult terrain'],
   log: ['Fallen log', 1, 'difficult terrain'], bush: ['Bushes', 0, 'difficult terrain; lightly obscured'],
-  brush: ['Undergrowth', 0, 'difficult terrain; lightly obscured'],
+  brush: ['Undergrowth', 0, 'difficult terrain; lightly obscured'], web: ['Webs', 0, 'difficult terrain; lightly obscured; they burn'],
+  grate: ['Iron grate', 0, 'blocks movement until opened; you can see and shoot through it'],
   door: ['Door', 0, 'open ground; a closed door blocks sight'], stairs: ['Stairs', 0, 'open ground'],
   fire: ['Fire', 0, 'open ground, but it burns: fire damage when you enter or start your turn there'],
   bridge: ['Bridge', 0, 'open ground over what is below'], road: ['Road', 0, 'open ground'], rug: ['Rug', 0, 'open ground'],
@@ -6945,7 +6950,8 @@ function _renderCombatMap(to) {
     map.appendChild(svg);
   }
   m.tokens.forEach(tk => {
-    const sz = tk.size || 1, size = Math.round(cell * sz * 0.86), off = Math.round((cell * sz - size) / 2);
+    // a swarm sharing someone's square is drawn smaller in the corner, so both stay visible
+    const sz = tk.size || 1, size = Math.round(cell * sz * (tk.swarm ? 0.6 : 0.86)), off = tk.swarm ? Math.round(cell * sz - size - 1) : Math.round((cell * sz - size) / 2);
     const h = _cbHp(tk.name);
     const t = document.createElement('div');
     t.className = 'cb-token ' + tk.side + (tk.name === to.current ? ' current' : '') + (h.hp === 0 ? ' down' : '');

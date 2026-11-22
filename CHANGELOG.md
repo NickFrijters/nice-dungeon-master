@@ -10,6 +10,15 @@ Versions before **1.6.0** are reconstructed retroactively from git history; the 
 
 ## [Unreleased]
 
+## [2.47.0] — 2026-11-22 — swarms, webs and grates
+
+### Added
+- Swarms (`"swarm": true` on a token) may share a square with another creature, as in 5e, and are drawn smaller in the corner so both stay visible. They still cannot stand in a wall.
+- Two terrain kinds found in a live run of the test campaign's Old Tunnel: `web` (difficult terrain, lightly obscured, burns) and `grate` (a locked grate or portcullis: blocks movement, but you can see and shoot through it), each with its own look and hover text.
+
+### Checked
+- A live DM turn on a copy of the test campaign, following only the written rules: the Old Tunnel board was built from the campaign notes and the published chapter (single-file stone tunnel, cellar door, webs, the rats' nest, the locked grate), a swarm attack was rolled and narrated in one short line, and a move the DM pushed into the tunnel wall was held in the tunnel. The grid was checked on all 14 settings and on the published maps.
+
 ## [2.46.0] — 2026-11-22 — hover info and cover from the map
 
 ### Added

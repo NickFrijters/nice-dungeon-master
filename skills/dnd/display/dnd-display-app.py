@@ -1698,8 +1698,8 @@ _BIOME_WORDS = (   # when the DM gives no biome, the map title decides (first ma
     ("dungeon", ("dungeon", "crypt", "tomb", "cellar", "vault", "prison", "keep", "catacomb", "ruin", "ruins", "barrow")),
 )
 _TERRAIN_BLOCK = {"wall", "pillar", "table", "tree", "boulder", "crate", "barrel", "statue", "cliff", "pit",
-                  "altar", "bed", "shelf", "wagon", "tent"}
-_TERRAIN_SLOW = {"water", "difficult", "rubble", "bush", "mud", "ice", "sand", "snowdrift", "log", "deepwater", "brush"}
+                  "altar", "bed", "shelf", "wagon", "tent", "grate"}
+_TERRAIN_SLOW = {"water", "difficult", "rubble", "bush", "mud", "ice", "sand", "snowdrift", "log", "deepwater", "brush", "web"}
 _TERRAIN_CLEAR = {"door", "stairs", "fire", "bridge", "road", "rug"}      # plain ground; bridge/door/road also cancel what is under them
 _TERRAIN_KINDS = _TERRAIN_BLOCK | _TERRAIN_SLOW | _TERRAIN_CLEAR
 
@@ -1890,13 +1890,14 @@ def _place_tokens_sensibly(toks, terrain, cols, rows, void=()) -> None:
     blocked |= set(void)
     taken = set()
 
-    def fits(x, y, sz):
+    def fits(x, y, sz, share=False):     # a swarm may share a square with another creature (5e), never with a wall
         cells = [(x + i, y + j) for i in range(sz) for j in range(sz)]
-        return all(0 <= a < cols and 0 <= b < rows and (a, b) not in blocked and (a, b) not in taken for a, b in cells)
+        return all(0 <= a < cols and 0 <= b < rows and (a, b) not in blocked and (share or (a, b) not in taken) for a, b in cells)
 
     for tk in toks:
         sz = tk.get("size") or 1
-        if not fits(tk["x"], tk["y"], sz):
+        share = bool(tk.get("swarm"))
+        if not fits(tk["x"], tk["y"], sz, share):
             seen, q, spot = {(tk["x"], tk["y"])}, [(tk["x"], tk["y"])], None
             while q and spot is None:
                 cx, cy = q.pop(0)
@@ -1905,12 +1906,14 @@ def _place_tokens_sensibly(toks, terrain, cols, rows, void=()) -> None:
                     if (nx, ny) in seen or not (0 <= nx < cols and 0 <= ny < rows):
                         continue
                     seen.add((nx, ny))
-                    if fits(nx, ny, sz):
+                    if fits(nx, ny, sz, share):
                         spot = (nx, ny)
                         break
                     q.append((nx, ny))
             if spot:
                 tk["x"], tk["y"] = spot
+        if share:
+            continue                         # a swarm does not keep others out of its square either
         for i in range(sz):
             for j in range(sz):
                 taken.add((tk["x"] + i, tk["y"] + j))
@@ -1948,7 +1951,8 @@ def _clean_combat(raw, prev=None, place_label: str = ""):
                          "side": "enemy" if tk.get("side") == "enemy" else "pc",
                          "size": _n(tk.get("size", 1), 1, 3) or 1,
                          "speed": _n(tk.get("speed"), 0, 200), "conditions": conds,
-                         **({"fly": True} if tk.get("fly") else {}), **({"teleport": True} if tk.get("teleport") else {})})
+                         **({"fly": True} if tk.get("fly") else {}), **({"swarm": True} if tk.get("swarm") else {}),
+                         **({"teleport": True} if tk.get("teleport") else {})})
         terrain = []
         for tr in (m.get("terrain") or [])[:300]:
             if not isinstance(tr, dict):
@@ -1957,7 +1961,8 @@ def _clean_combat(raw, prev=None, place_label: str = ""):
             kind = {"rock": "boulder", "rocks": "boulder", "trees": "tree", "bushes": "bush", "undergrowth": "brush",
                     "barrels": "barrel", "crates": "crate", "column": "pillar", "chasm": "pit", "river": "water",
                     "lake": "deepwater", "shallowwater": "water", "carpet": "rug", "bookshelf": "shelf",
-                    "bookcase": "shelf", "snow": "snowdrift"}.get(kind, kind)
+                    "bookcase": "shelf", "snow": "snowdrift", "webs": "web", "cobweb": "web", "cobwebs": "web",
+                    "bars": "grate", "portcullis": "grate", "gate": "grate"}.get(kind, kind)
             if kind not in _TERRAIN_KINDS:
                 continue
             x, y = _n(tr.get("x"), 0, 99), _n(tr.get("y"), 0, 99)
