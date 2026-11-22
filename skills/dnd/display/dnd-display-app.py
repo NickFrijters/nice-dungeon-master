@@ -1719,6 +1719,14 @@ def _clean_combat(raw, prev=None):
             w = _n(tr.get("w", 1), 1, 26) or 1
             h = _n(tr.get("h", 1), 1, 26) or 1
             terrain.append({"kind": kind, "x": x, "y": y, "w": min(w, cols - x), "h": min(h, rows - y)})
+        # A move a player planned but has not sent yet (arrow on the map) survives a DM push that left the token where it was.
+        prev_toks = {t["name"]: t for t in (((prev or {}).get("map") or {}).get("tokens") or []) if isinstance(t, dict)}
+        for t in toks:
+            old = prev_toks.get(t["name"])
+            if old and old.get("plan") and (old.get("x"), old.get("y")) == (t["x"], t["y"]):
+                pl = old["plan"]
+                if 0 <= pl.get("x", -1) < cols and 0 <= pl.get("y", -1) < rows:
+                    t["plan"] = dict(pl)
         out["map"] = {"cols": cols, "rows": rows, "title": str(m.get("title", ""))[:60],
                       "tokens": toks, "terrain": terrain}
         img = _clean_map_image(m.get("image"), cols, rows, ((prev or {}).get("map") or {}).get("image"))
@@ -1759,6 +1767,59 @@ def combat_move():
     _persist_stats()
     _broadcast({"stats": current})
     return "", 204
+
+
+@app.route("/combat/plan", methods=["POST"])
+def combat_plan():
+    """A player dragged a token: a PLANNED move (an arrow on every screen) until GO sends the turn to the DM.
+    Body {name, x, y, ft} plans or re-plans; {name, cancel: true} (or dropping it back on its own square) cancels."""
+    if not _token_ok():
+        return "Forbidden", 403
+    data = request.get_json(force=True, silent=True) or {}
+    name = str(data.get("name", ""))
+    with _stats_lock:
+        m = (_current_stats.get("combat") or {}).get("map")
+        tok = next((t for t in (m or {}).get("tokens", []) if t["name"] == name), None)
+        if not tok:
+            return "unknown token", 404
+        if data.get("cancel"):
+            tok.pop("plan", None)
+        else:
+            try:
+                x, y = int(data.get("x")), int(data.get("y"))
+            except (TypeError, ValueError):
+                return "bad position", 400
+            if not (0 <= x < m["cols"] and 0 <= y < m["rows"]):
+                return "off the map", 400
+            if (x, y) == (tok["x"], tok["y"]):
+                tok.pop("plan", None)
+            else:
+                try:
+                    ft = max(0, min(999, int(data.get("ft") or 0)))
+                except (TypeError, ValueError):
+                    ft = 0
+                tok["plan"] = {"x": x, "y": y, "ft": ft}
+        current = dict(_current_stats)
+    _persist_stats()
+    _broadcast({"stats": current})
+    return "", 204
+
+
+def _commit_planned_moves() -> bool:
+    """GO was pressed: planned moves become real positions (the text sent to the DM already says where they went)."""
+    changed = False
+    with _stats_lock:
+        m = (_current_stats.get("combat") or {}).get("map")
+        for t in (m or {}).get("tokens", []):
+            pl = t.pop("plan", None)
+            if pl:
+                t["x"], t["y"] = pl["x"], pl["y"]
+                changed = True
+        current = dict(_current_stats)
+    if changed:
+        _persist_stats()
+        _broadcast({"stats": current})
+    return changed
 
 
 @app.route("/combat/image", methods=["POST"])
@@ -3472,6 +3533,7 @@ def party_input():
         for character, text in entries.items():
             _staged[character] = {"text": text, "ready": True, "timestamp": now}
     _persist_staged()
+    _commit_planned_moves()
     _check_auto_trigger(force=True)
     return "", 204
 

@@ -3132,6 +3132,35 @@
   body.combat #text-content .divider, body.combat #text-content .tts-status { display: none; }
   /* "Waiting on…" sits beside the story strip in combat, not in the middle of the battle map */
   body.combat #dice-pending-badge { top: auto; bottom: calc(22vh + 84px); left: auto; right: 40px; transform: none; max-width: 320px; }
+  /* planned moves: the token stays (faded), a see-through copy waits at the new spot, an arrow joins them until GO */
+  #cb-map .cb-token.planned { opacity: .45; }
+  #cb-map .cb-token.plan-ghost { opacity: .85; border-style: dashed; z-index: 3; box-shadow: 0 0 0 2px rgba(255,215,110,.85), 0 0 14px rgba(255,205,90,.6); }
+  #cb-map svg.cb-arrows { position: absolute; left: 0; top: 0; pointer-events: none; z-index: 2; overflow: visible; }
+  #cb-map svg.cb-arrows line { stroke: rgba(255,215,110,.95); stroke-width: 4; stroke-dasharray: 9 6; stroke-linecap: round;
+    filter: drop-shadow(0 1px 2px rgba(0,0,0,.9)); animation: cbDash 1s linear infinite; }
+  @keyframes cbDash { to { stroke-dashoffset: -15; } }
+  #cb-map .cb-arrow-ft { position: absolute; transform: translate(-50%, -50%); z-index: 4; pointer-events: none; padding: 1px 7px; border-radius: 9px;
+    font: 700 11px 'Cinzel', serif; color: #1a1208; background: rgba(255,215,110,.95); box-shadow: 0 2px 5px rgba(0,0,0,.7); }
+  /* picking a target for a weapon or spell */
+  body.cb-arming #cb-map .cb-token, body.cb-arming .cb-hp { cursor: crosshair; }
+  body.cb-arming #cb-map .cb-token.enemy { box-shadow: 0 0 0 3px rgba(255,90,70,.95), 0 0 16px rgba(255,90,70,.7); }
+  body.cb-arming .cb-hp:hover { border-color: rgba(255,225,130,.9); }
+  #cb-armed { position: absolute; left: 50%; top: 10px; transform: translateX(-50%); z-index: 10; display: flex; gap: 8px; align-items: center;
+    padding: 6px 12px; border-radius: 10px; background: rgba(20,14,6,.92); border: 1px solid rgba(255,215,110,.8);
+    font: 12px 'Cinzel', serif; letter-spacing: 1px; color: rgba(255,235,170,1); box-shadow: 0 6px 20px rgba(0,0,0,.7); white-space: nowrap; }
+  #cb-armed button { font: 700 11px 'Cinzel', serif; color: rgba(255,235,170,1); background: rgba(40,28,10,.9); border: 1px solid rgba(235,205,120,.7);
+    border-radius: 12px; padding: 2px 10px; cursor: pointer; }
+  body.combat #sheet-modal .atk-name, body.combat #sheet-modal .sm-spell-tag, body.combat #sheet-modal .sm-feature-name,
+  body.combat #sheet-modal .sm-inventory-list li { cursor: pointer; }
+  body.combat #sheet-modal .atk-name:hover, body.combat #sheet-modal .sm-spell-tag:hover { outline: 1px solid rgba(255,215,110,.8); }
+  /* fixed text in a Party Input row: what the table did (cannot be edited, only taken back with its x) */
+  .party-row .pr-auto { grid-column: 2; display: flex; flex-wrap: wrap; gap: 4px; }
+  .party-row .pr-auto + input { grid-column: 2; }
+  .party-row:has(.pr-auto) .pr-name { grid-row: span 2; }
+  .pr-chip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 4px 2px 9px; border-radius: 10px; user-select: none;
+    font: 12px 'EB Garamond', Georgia, serif; color: #1a1208; background: rgba(255,215,110,.92); }
+  .pr-chip-x { border: none; background: rgba(0,0,0,.18); color: #1a1208; border-radius: 50%; width: 16px; height: 16px; line-height: 14px;
+    padding: 0; cursor: pointer; font-size: 13px; }
   #cb-order { grid-column: 1 / -1; display: flex; gap: 8px; align-items: stretch; overflow-x: auto; scrollbar-width: none; padding: 2px 2px 6px; }
   .cb-round { align-self: center; font-family: 'Cinzel', serif; font-size: 13px; letter-spacing: 2px; text-transform: uppercase;
     color: rgba(235,205,120,.95); padding: 0 12px 0 4px; white-space: nowrap; }
@@ -5734,6 +5763,7 @@ let _openSheetName = null;
 
 function openSheet(name) {
   _openSheetName = name;
+  window._smPlayer = name;     // in combat, what is clicked on this sheet becomes this character's action
   const p = _playerData[name];
   if (!p) {
     console.warn(
@@ -6446,8 +6476,9 @@ function _updateCombat(stats) {
   if (on !== wasCombat) {   // the story area becomes a short strip (or a full page again): keep the newest text in view
     [60, 400].forEach(ms => setTimeout(() => { const ts = document.getElementById('text-scroll'); if (ts) ts.scrollTop = ts.scrollHeight; }, ms));
   }
-  if (!on) return;
+  if (!on) { if (_cbArmed) _cbDisarm(); _cbRenderChips(); return; }
   _renderCombat(to);
+  _cbRenderChips();
 }
 // HP of a combatant by name: party from the sheet data, enemies from the board.
 function _cbHp(name) {
@@ -6482,6 +6513,7 @@ function _renderCombat(to) {
   const side = document.getElementById('cb-side'); side.textContent = '';
   const addHp = (cls, name, hp, max, note, cur) => {
     const d = document.createElement('div'); d.className = 'cb-hp ' + cls + (cur ? ' current' : '');
+    d.addEventListener('click', () => { if (_cbArmed) _cbArmTarget(name); });   // a target can also be picked here
     const top = document.createElement('div'); top.className = 'cb-hp-name';
     const nm = document.createElement('span'); nm.textContent = name;
     const v = document.createElement('span'); v.textContent = (hp != null ? hp : '?') + (max != null ? ' / ' + max : '');
@@ -6712,6 +6744,27 @@ function _renderCombatMap(to) {
   }
   const ghost = document.createElement('div'); ghost.id = 'cb-ghost'; map.appendChild(ghost);
   const dist = document.createElement('div'); dist.id = 'cb-dist'; map.appendChild(dist);
+  // Planned moves (not sent yet): an arrow from where the token stands to where the player wants it, until GO.
+  const planned = m.tokens.filter(tk => tk.plan);
+  if (planned.length) {
+    const NS = 'http://www.w3.org/2000/svg', svg = document.createElementNS(NS, 'svg');
+    svg.setAttribute('class', 'cb-arrows'); svg.setAttribute('width', map.style.width); svg.setAttribute('height', map.style.height);
+    svg.innerHTML = '<defs><marker id="cb-arrowhead" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse">' +
+      '<path d="M0,0 L10,5 L0,10 z" fill="rgba(255,215,110,.95)"/></marker></defs>';
+    planned.forEach(tk => {
+      const sz = tk.size || 1, c = v => pad + v * cell + cell * sz / 2;
+      const ln = document.createElementNS(NS, 'line');
+      ln.setAttribute('x1', c(tk.x)); ln.setAttribute('y1', c(tk.y)); ln.setAttribute('x2', c(tk.plan.x)); ln.setAttribute('y2', c(tk.plan.y));
+      ln.setAttribute('marker-end', 'url(#cb-arrowhead)');
+      svg.appendChild(ln);
+      if (tk.plan.ft) {
+        const lb = document.createElement('div'); lb.className = 'cb-arrow-ft'; lb.textContent = tk.plan.ft + ' ft';
+        lb.style.cssText = `left:${(c(tk.x) + c(tk.plan.x)) / 2}px;top:${(c(tk.y) + c(tk.plan.y)) / 2}px`;
+        map.appendChild(lb);
+      }
+    });
+    map.appendChild(svg);
+  }
   m.tokens.forEach(tk => {
     const sz = tk.size || 1, size = Math.round(cell * sz * 0.86), off = Math.round((cell * sz - size) / 2);
     const h = _cbHp(tk.name);
@@ -6734,6 +6787,14 @@ function _renderCombatMap(to) {
     t.addEventListener('pointerenter', () => _cbInspect(tk, h));
     t.addEventListener('pointerleave', () => _cbInspect(null));
     map.appendChild(t);
+    if (tk.plan) {                                   // the planned spot: a see-through copy that can be dragged again
+      t.classList.add('planned');
+      const g = t.cloneNode(true); g.classList.remove('planned', 'current'); g.classList.add('plan-ghost');
+      g.style.left = (pad + tk.plan.x * cell + off) + 'px'; g.style.top = (pad + tk.plan.y * cell + off) + 'px';
+      g.title = tk.name + ': planned move, sent with GO';
+      g.addEventListener('pointerdown', ev => _tokenDrag(ev, g, tk, m));
+      map.appendChild(g);
+    }
     // HP changed since the last draw: a number floats up from the token, like damage on the table
     const was = _cbPrevHp[tk.name];
     if (was != null && h.hp != null && h.hp !== was) {
@@ -6754,7 +6815,129 @@ function _cbInspect(tk, h) {
   el.textContent = tk.name + (h && h.max ? ' · ' + h.hp + '/' + h.max + ' HP' : '') + ' · speed ' + _cbSpeedFt(tk) + ' ft' +
     ((tk.conditions || []).length ? ' · ' + tk.conditions.join(', ') : '');
 }
+// ── Turn building in combat ─────────────────────────────────────────────────
+// What a player does on the table becomes fixed text in their Party Input row (a chip they cannot edit, only
+// remove with its x); they can type more after it. A dragged token = a planned move. A weapon or spell clicked
+// on the character sheet, then a target clicked on the map = an attack or a spell. Everything goes with GO.
+let _cbArmed = null;              // {actor, kind: 'attack'|'spell', name} while a target is being picked
+let _cbActs = {};                 // actor -> [{id, text}] attacks / spells / features / items picked this turn
+function _cbCell(x, y) { return String.fromCharCode(65 + x) + (y + 1); }
+function _cbOpenInput() { const p = document.getElementById('input-panel'); if (p) p.classList.remove('collapsed'); }
+function _cbRowFor(name) {
+  const rows = (typeof _partyRows === 'function') ? _partyRows() : [];
+  return rows.find(r => (r.dataset.char || '').toLowerCase() === String(name).toLowerCase()) || rows.find(r => r.dataset.char === 'Everybody');
+}
+// Fixed text per row: planned moves (from the shared board) + picked actions.
+function _cbAutoTexts() {
+  const out = {};
+  const add = (actor, id, text) => {
+    const row = _cbRowFor(actor); if (!row) return;
+    const key = row.dataset.char, who = key === 'Everybody' ? actor + ': ' : '';
+    (out[key] = out[key] || []).push({ id, actor, text: who + text });
+  };
+  const m = _combatState && _combatState.map;
+  ((m && m.tokens) || []).forEach(tk => {
+    if (!tk.plan) return;
+    // no brackets: the input filter strips them before the DM sees the text
+    const sp = _cbSpeedFt(tk), over = tk.plan.ft > sp ? ', more than the ' + sp + ' ft speed' : '';
+    add(tk.name, 'move:' + tk.name, 'Moves from ' + _cbCell(tk.x, tk.y) + ' to ' + _cbCell(tk.plan.x, tk.plan.y) +
+      (tk.plan.ft ? ', ' + tk.plan.ft + ' ft' + over : '') + '.');
+  });
+  Object.entries(_cbActs).forEach(([actor, list]) => (list || []).forEach(a => add(actor, a.id, a.text)));
+  return out;
+}
+function _cbAutoText(char) { return ((_cbAutoTexts()[char]) || []).map(a => a.text).join(' '); }
+function _cbRenderChips() {
+  if (typeof _partyRows !== 'function') return;
+  const all = _cbAutoTexts();
+  _partyRows().forEach(r => {
+    let box = r.querySelector('.pr-auto');
+    const list = all[r.dataset.char] || [];
+    if (!list.length) { if (box) box.remove(); return; }
+    if (!box) { box = document.createElement('div'); box.className = 'pr-auto'; r.insertBefore(box, r.querySelector('input')); }
+    box.textContent = '';
+    list.forEach(a => {
+      const chip = document.createElement('span'); chip.className = 'pr-chip'; chip.textContent = a.text;
+      const x = document.createElement('button'); x.type = 'button'; x.className = 'pr-chip-x'; x.textContent = '×'; x.title = 'Take this back';
+      x.addEventListener('click', () => _cbRemoveAuto(a));
+      chip.appendChild(x); box.appendChild(chip);
+    });
+  });
+  if (typeof _partyRefresh === 'function') _partyRefresh();
+}
+function _cbRemoveAuto(a) {
+  if (a.id.startsWith('move:')) {
+    fetch('/combat/plan', { method: 'POST', headers: { 'Content-Type': 'application/json', ...(_dndToken ? { 'X-DND-Token': _dndToken } : {}) },
+      body: JSON.stringify({ name: a.id.slice(5), cancel: true }) }).catch(() => {});
+    return;
+  }
+  Object.keys(_cbActs).forEach(k => { _cbActs[k] = (_cbActs[k] || []).filter(x => x.id !== a.id); if (!_cbActs[k].length) delete _cbActs[k]; });
+  _cbActsChanged();
+}
+function _cbActsChanged(fromRelay) {
+  _cbRenderChips();
+  if (!fromRelay && window._relaySend) window._relaySend({ t: 'combat-acts', acts: _cbActs });
+}
+function _cbAddAct(actor, text) {
+  (_cbActs[actor] = _cbActs[actor] || []).push({ id: 'act:' + Date.now() + ':' + Math.random().toString(36).slice(2, 6), text });
+  _cbOpenInput(); _cbActsChanged();
+}
+window._relayHandlers = window._relayHandlers || [];
+window._relayHandlers.push(function(msg) {
+  if (msg && msg.t === 'combat-acts' && msg.acts && typeof msg.acts === 'object') { _cbActs = msg.acts; _cbActsChanged(true); }
+  else if (msg && msg.t === 'fields-request' && Object.keys(_cbActs).length && window._relaySend) window._relaySend({ t: 'combat-acts', acts: _cbActs });
+});
+// Weapon or spell picked on the sheet: now pick the target on the map (or the HP list).
+function _cbArm(actor, kind, name) {
+  _cbArmed = { actor, kind, name };
+  document.body.classList.add('cb-arming');
+  let bar = document.getElementById('cb-armed');
+  if (!bar) {
+    bar = document.createElement('div'); bar.id = 'cb-armed';
+    const wrap = document.getElementById('cb-map-wrap'); (wrap || document.body).appendChild(bar);
+  }
+  bar.textContent = '';
+  const t = document.createElement('span');
+  t.textContent = actor + ': ' + name + ' — click the target';
+  const none = document.createElement('button'); none.type = 'button'; none.textContent = kind === 'spell' ? 'No target' : 'No target';
+  none.addEventListener('click', () => _cbArmTarget(null));
+  const cancel = document.createElement('button'); cancel.type = 'button'; cancel.textContent = 'Cancel';
+  cancel.addEventListener('click', _cbDisarm);
+  bar.append(t, none, cancel);
+}
+function _cbDisarm() {
+  _cbArmed = null; document.body.classList.remove('cb-arming');
+  const bar = document.getElementById('cb-armed'); if (bar) bar.remove();
+}
+function _cbArmTarget(target) {
+  const a = _cbArmed; if (!a) return;
+  _cbDisarm();
+  const enemy = !!target && (((_combatState && _combatState.enemies) || []).some(e => e.name === target) ||
+    ((_combatState && _combatState.map && _combatState.map.tokens) || []).some(t => t.name === target && t.side === 'enemy'));
+  let text;
+  if (a.kind === 'attack') text = target ? 'Attacks ' + target + ' with ' + a.name + '.' : 'Attacks with ' + a.name + '.';
+  else if (!target) text = 'Casts ' + a.name + '.';
+  else if (target === a.actor) text = 'Casts ' + a.name + ' on themselves.';
+  else text = 'Casts ' + a.name + (enemy ? ' at ' : ' on ') + target + '.';
+  _cbAddAct(a.actor, text);
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && _cbArmed) _cbDisarm(); });
+// In combat, clicking a weapon, spell, feature or item on the character sheet adds it to that character's turn.
+document.addEventListener('click', e => {
+  if (!document.body.classList.contains('combat')) return;
+  const el = e.target && e.target.closest && e.target.closest('#sheet-modal .atk-name, #sheet-modal .sm-spell-tag, #sheet-modal .sm-feature-name, #sheet-modal .sm-inventory-list li');
+  if (!el || !window._smPlayer) return;
+  e.preventDefault(); e.stopPropagation();
+  const name = (el.dataset.srdName || el.textContent || '').trim(); if (!name) return;
+  const actor = window._smPlayer;
+  const modal = document.getElementById('sheet-modal'); if (modal) modal.classList.remove('open');
+  if (el.classList.contains('atk-name')) _cbArm(actor, 'attack', name);
+  else if (el.classList.contains('sm-spell-tag')) _cbArm(actor, 'spell', name);
+  else _cbAddAct(actor, 'Uses ' + name + '.');
+}, true);
+
 function _tokenDrag(ev, el, tk, m) {
+  if (_cbArmed) { ev.preventDefault(); _cbArmTarget(tk.name); return; }   // picking a target for a weapon or spell
   ev.preventDefault(); el.setPointerCapture(ev.pointerId); el.classList.add('dragging'); _cbDragging = true;
   const map = document.getElementById('cb-map'), { cell, pad } = map._geom;
   const ghost = document.getElementById('cb-ghost'), dist = document.getElementById('cb-dist');
@@ -6785,9 +6968,14 @@ function _tokenDrag(ev, el, tk, m) {
     el.removeEventListener('pointermove', move); el.removeEventListener('pointerup', up);
     el.classList.remove('dragging'); ghost.style.display = dist.style.display = 'none'; _cbDragging = false;
     const [x, y] = cellAt(e);
-    if (x < 0 || y < 0 || x + sz > m.cols || y + sz > m.rows || (x === tk.x && y === tk.y) || walled(x, y) || occupied(x, y)) { _renderCombatMap(_currentTurnOrder || {}); return; }
-    fetch('/combat/move', { method: 'POST', headers: { 'Content-Type': 'application/json', ...(_dndToken ? { 'X-DND-Token': _dndToken } : {}) },
-      body: JSON.stringify({ name: tk.name, x, y }) }).catch(() => _renderCombatMap(_currentTurnOrder || {}));
+    const home = x === tk.x && y === tk.y;
+    if (!home && (x < 0 || y < 0 || x + sz > m.cols || y + sz > m.rows || walled(x, y) || occupied(x, y))) { _renderCombatMap(_currentTurnOrder || {}); return; }
+    if (home && !tk.plan) { _renderCombatMap(_currentTurnOrder || {}); return; }
+    // Not sent yet: the move is PLANNED (arrow on every screen, text in the party input) until GO.
+    fetch('/combat/plan', { method: 'POST', headers: { 'Content-Type': 'application/json', ...(_dndToken ? { 'X-DND-Token': _dndToken } : {}) },
+      body: JSON.stringify(home ? { name: tk.name, cancel: true } : { name: tk.name, x, y, ft: feetTo(x, y) }) })
+      .catch(() => _renderCombatMap(_currentTurnOrder || {}));
+    if (!home) _cbOpenInput();
   };
   el.addEventListener('pointermove', move); el.addEventListener('pointerup', up);
 }
@@ -7761,7 +7949,7 @@ let _partyNames = [];
 
 function _partyRows() { return Array.from(_partyRowsEl.querySelectorAll('.party-row')); }
 
-function _partyFields() {
+function _partyFields() {         // what was typed in each row (kept in step between screens)
   const out = {};
   _partyRows().forEach(r => {
     const v = r.querySelector('input').value;
@@ -7769,11 +7957,19 @@ function _partyFields() {
   });
   return out;
 }
+function _partyTexts() {          // what GO sends: the fixed combat text (moves, attacks, spells) first, then what was typed
+  const out = {};
+  _partyRows().forEach(r => {
+    const v = [typeof _cbAutoText === 'function' ? _cbAutoText(r.dataset.char) : '', r.querySelector('input').value.trim()].filter(Boolean).join(' ');
+    if (v) out[r.dataset.char] = v;
+  });
+  return out;
+}
 
 function _partyRefresh() {
   let n = 0;
   _partyRows().forEach(r => {
-    const has = r.querySelector('input').value.trim() !== '';
+    const has = r.querySelector('input').value.trim() !== '' || !!r.querySelector('.pr-chip');
     r.classList.toggle('filled', has);
     if (has && !r.hidden) n++;
   });
@@ -7810,6 +8006,7 @@ function _buildPartyRows(players) {
   });
   _partyRefresh();
   _applyRowGate();
+  if (typeof _cbRenderChips === 'function') _cbRenderChips();
 }
 
 // The DM's input gate: only the characters it is waiting on can type.
@@ -7830,7 +8027,7 @@ function _applyRowGate() {
 }
 
 async function _partyGo() {
-  const entries = Object.entries(_partyFields()).map(([character, text]) => ({ character, text }));
+  const entries = Object.entries(_partyTexts()).map(([character, text]) => ({ character, text }));
   if (!entries.length) return;
   _partyGoBtn.disabled = true;
   _partyGoBtn.textContent = 'Sending\u2026';
@@ -7845,6 +8042,7 @@ async function _partyGo() {
     if (res.ok) {
       localStorage.removeItem('dnd_awaiting_approval');
       _partyRows().forEach(r => { r.querySelector('input').value = ''; });
+      if (typeof _cbActsChanged === 'function') { _cbActs = {}; _cbActsChanged(); }   // the picked attacks and spells went with it (moves: the server moved the tokens)
       _partyRefresh();
       _partySync(true);                             // the other screens clear theirs too
       _turnStart();                                 // loading bar until text and voice are done

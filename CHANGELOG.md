@@ -10,6 +10,13 @@ Versions before **1.6.0** are reconstructed retroactively from git history; the 
 
 ## [Unreleased]
 
+## [2.42.0] — 2026-11-22 — build your combat turn on the table
+
+### Added
+- Combat: build your turn on the table. Dragging a token now PLANS the move: the token stays put (faded), a see-through copy waits on the new square and a moving dashed arrow with the distance joins them on every screen. Nothing reaches the DM until GO; then the tokens move.
+- Each planned move becomes fixed text at the start of that character's Party Input row ("Moves from C4 to F5, 15 ft."), which cannot be edited by hand, only taken back with its x. The player types anything extra after it. Dropping the token back on its own square cancels the move.
+- Combat: click a weapon or spell on your character sheet, then click the target on the map (or in the HP list): "Attacks Goblin 1 with Longsword." or "Casts Cure Wounds on Joris." is added the same way. A "No target" button, Cancel and Escape are there too. Clicking a feature or an item adds "Uses …" straight away. Picked actions are shared with every screen and go with GO.
+
 ## [2.41.1] — 2026-11-16 — roll badge cleans up
 
 ### Fixed
