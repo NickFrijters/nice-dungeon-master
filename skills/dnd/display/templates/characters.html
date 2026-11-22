@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Manage characters</title>
+<style>
+  :root { --bg:#14110f; --panel:#1f1a17; --line:#3a312b; --text:#eadfd0; --dim:#9c8f80; --gold:#d6a24a; }
+  * { box-sizing: border-box; }
+  body { margin:0; min-height:100vh; background:var(--bg); color:var(--text);
+         font-family: Georgia, "Times New Roman", serif; display:flex; justify-content:center; }
+  main { width:min(820px, 100%); padding:48px 24px; }
+  h1 { color:var(--gold); font-size:2.2rem; margin:0 0 4px; letter-spacing:.04em; }
+  .sub { color:var(--dim); margin:0 0 28px; }
+  h2 { font-size:1.05rem; color:var(--gold); text-transform:uppercase; letter-spacing:.12em; margin:30px 0 10px; }
+  h2 small { color:var(--dim); text-transform:none; letter-spacing:0; font-size:.85rem; margin-left:8px; }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:10px;
+          padding:14px 16px; margin-bottom:10px; display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+  .card .info { flex:1; min-width:200px; }
+  .card .name { font-size:1.15rem; }
+  .card .meta { color:var(--dim); font-size:.9rem; margin-top:2px; }
+  button { background:var(--gold); color:#1a1208; border:0; border-radius:8px; padding:9px 16px;
+           font:inherit; font-weight:bold; cursor:pointer; }
+  button:disabled { background:var(--line); color:var(--dim); cursor:default; }
+  button.quiet { background:transparent; color:var(--text); border:1px solid var(--line); }
+  button.quiet:hover:not(:disabled) { border-color:var(--gold); color:var(--gold); }
+  button.danger { background:transparent; color:#e58a7a; border:1px solid #6a3a32; }
+  button.danger:hover:not(:disabled) { border-color:#e58a7a; }
+  button.danger.solid { background:#a8483a; color:#fff3ee; border-color:#a8483a; }
+  select { background:var(--bg); color:var(--text); border:1px solid var(--line); border-radius:6px; padding:8px 10px; font:inherit; }
+  .row2 { flex-basis:100%; display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:4px; padding-top:10px;
+          border-top:1px dashed var(--line); font-size:.95rem; }
+  .row2.warn { color:#f0c8bc; }
+  .sheet { flex-basis:100%; margin-top:6px; padding:12px 14px; border-radius:8px; background:#16120f; border:1px solid var(--line);
+           max-height:420px; overflow:auto; white-space:pre-wrap; font:14px/1.45 Georgia, serif; color:#e3d7c6; }
+  .sheet .h { color:var(--gold); font-weight:bold; }
+  .empty { color:var(--dim); font-style:italic; }
+  .badge { font-size:.75rem; color:#1a1208; background:var(--gold); border-radius:8px; padding:1px 8px; margin-left:8px; vertical-align:middle; }
+  #status { margin-top:24px; color:var(--gold); min-height:1.5em; }
+  a.back { color:var(--dim); text-decoration:none; display:inline-block; margin-bottom:18px; }
+  a.back:hover { color:var(--gold); }
+  #trash-section[hidden] { display:none; }
+</style>
+</head>
+<body>
+<main>
+  <a class="back" href="/menu">&#8592; Main Menu</a>
+  <h1>Manage characters</h1>
+  <p class="sub">Every party, and the roster of all characters you have played. Deleted characters can be restored.</p>
+  <div id="status" role="status"></div>
+  <div id="parties"><p class="empty">Looking for characters…</p></div>
+  <h2>All characters <small>the roster: the latest copy of every character</small></h2>
+  <div id="roster"></div>
+  <div id="trash-section" hidden>
+    <h2>Recently deleted</h2>
+    <div id="trash"></div>
+  </div>
+</main>
+<script>
+const TOKEN = {{ lan_token|tojson }};
+const statusEl = document.getElementById('status');
+let campaigns = [];
+let busy = false;          // a question or a sheet is open: do not redraw it away
+
+const pretty = s => String(s || '').replace(/-/g, ' ');
+const post = (path, body) => fetch(path, {method: 'POST', headers: {'Content-Type': 'application/json', 'X-DND-Token': TOKEN},
+                                          body: JSON.stringify(body)}).catch(() => null);
+function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+function ago(ts) {
+  if (!ts) return '';
+  const days = Math.floor((Date.now() / 1000 - ts) / 86400);
+  return days <= 0 ? 'today' : days === 1 ? 'yesterday' : `${days} days ago`;
+}
+function summary(c) {
+  const bits = [];
+  if (c.race || c.class) bits.push([c.race, c.class].filter(Boolean).join(' '));
+  if (c.level) bits.push('level ' + c.level);
+  if (c.hp) bits.push(`HP ${c.hp.current}/${c.hp.max}`);
+  if (c.ac) bits.push('AC ' + c.ac);
+  return bits.join(' · ') || 'no details in the sheet';
+}
+
+function charCard(c, roster) {
+  const card = el('div', 'card');
+  const info = el('div', 'info');
+  info.append(el('div', 'name', c.name), el('div', 'meta', summary(c)));
+  const view = el('button', 'quiet', 'View sheet');
+  view.onclick = () => toggleSheet(card, c);
+  card.append(info, view);
+  if (roster) {
+    const add = el('button', 'quiet', 'Add to campaign');
+    add.onclick = () => askCopy(card, c);
+    card.append(add);
+  }
+  const del = el('button', 'danger', 'Delete');
+  del.onclick = () => askDelete(card, c);
+  card.append(del);
+  return card;
+}
+
+async function toggleSheet(card, c) {
+  const open = card.querySelector('.sheet');
+  if (open) { open.remove(); busy = !!document.querySelector('.sheet, .row2'); return; }
+  busy = true;
+  const box = el('div', 'sheet', 'Loading…'); card.appendChild(box);
+  try {
+    const j = await (await fetch(`/characters/view?scope=${encodeURIComponent(c.scope)}&file=${encodeURIComponent(c.file)}`)).json();
+    box.textContent = '';
+    for (const line of j.text.split('\n')) {                 // the sheet as text, headings in gold
+      const d = el('div', /^#/.test(line) ? 'h' : '', line.replace(/^#+\s*/, '').replace(/\*\*/g, ''));
+      if (!line.trim()) d.innerHTML = '&nbsp;';
+      box.appendChild(d);
+    }
+  } catch (e) { box.textContent = 'Could not read this sheet.'; }
+}
+
+function askDelete(card, c) {
+  if (card.querySelector('.row2')) return;
+  busy = true;
+  const row = el('div', 'row2 warn');
+  const where = c.scope === 'roster' ? 'from the roster' : `from the party of "${pretty(c.scope)}"`;
+  row.append(el('span', '', `Delete ${c.name} ${where}? You can restore it from Recently deleted.`));
+  const yes = el('button', 'danger solid', 'Yes, delete'), no = el('button', 'quiet', 'Cancel');
+  no.onclick = () => { row.remove(); busy = !!document.querySelector('.sheet, .row2'); };
+  yes.onclick = async () => {
+    yes.disabled = no.disabled = true;
+    const r = await post('/characters/delete', {scope: c.scope, file: c.file});
+    statusEl.textContent = r && r.ok ? `${c.name} was deleted. You can still restore it below.` : 'Could not delete it.';
+    busy = false; refresh();
+  };
+  row.append(yes, no); card.appendChild(row);
+}
+
+function askCopy(card, c) {
+  if (card.querySelector('.row2')) return;
+  busy = true;
+  const row = el('div', 'row2');
+  const sel = el('select');
+  if (!campaigns.length) { row.append(el('span', '', 'There are no campaigns yet.')); }
+  for (const name of campaigns) { const o = el('option', '', pretty(name)); o.value = name; sel.appendChild(o); }
+  const go = el('button', '', 'Add'), no = el('button', 'quiet', 'Cancel');
+  go.disabled = !campaigns.length;
+  no.onclick = () => { row.remove(); busy = !!document.querySelector('.sheet, .row2'); };
+  go.onclick = async () => {
+    go.disabled = no.disabled = true;
+    const r = await post('/characters/copy', {file: c.file, campaign: sel.value});
+    statusEl.textContent = r && r.ok ? `${c.name} joined the party of "${pretty(sel.value)}".`
+                                     : (r ? await r.text() : 'Could not add the character.');
+    busy = false; refresh();
+  };
+  row.append(el('span', '', `Add ${c.name} to`), sel, go, no); card.appendChild(row);
+}
+
+function trashCard(e) {
+  const card = el('div', 'card');
+  const info = el('div', 'info');
+  info.append(el('div', 'name', pretty(e.name)),
+              el('div', 'meta', (e.scope === 'roster' ? 'from the roster' : 'from ' + pretty(e.scope)) + ' · deleted ' + ago(e.deleted)));
+  const back = el('button', 'quiet', 'Restore');
+  back.onclick = async () => {
+    const r = await post('/characters/restore', {entry: e.entry});
+    const j = r && r.ok ? await r.json() : null;
+    statusEl.textContent = j ? `${pretty(e.name)} is back${j.scope === 'roster' ? ' in the roster' : ' in ' + pretty(j.scope)}.` : 'Could not restore it.';
+    refresh();
+  };
+  const gone = el('button', 'danger', 'Delete forever');
+  gone.onclick = () => {
+    if (card.querySelector('.row2')) return;
+    busy = true;
+    const row = el('div', 'row2 warn');
+    row.append(el('span', '', 'Delete it for good? This cannot be undone.'));
+    const yes = el('button', 'danger solid', 'Delete forever'), no = el('button', 'quiet', 'Cancel');
+    no.onclick = () => { row.remove(); busy = !!document.querySelector('.sheet, .row2'); };
+    yes.onclick = async () => {
+      yes.disabled = no.disabled = true;
+      const r = await post('/characters/purge', {entry: e.entry});
+      statusEl.textContent = r && r.ok ? `${pretty(e.name)} is gone for good.` : 'Could not delete it.';
+      busy = false; refresh();
+    };
+    row.append(yes, no); card.appendChild(row);
+  };
+  card.append(info, back, gone);
+  return card;
+}
+
+function render(d) {
+  campaigns = d.campaigns.map(c => c.campaign);
+  const parties = document.getElementById('parties'); parties.textContent = '';
+  if (!d.campaigns.length) parties.append(el('p', 'empty', 'No campaigns yet.'));
+  for (const camp of d.campaigns) {
+    const h = el('h2', '', 'Party of ' + pretty(camp.campaign));
+    if (camp.active) h.append(el('span', 'badge', 'open'));
+    parties.append(h);
+    if (!camp.characters.length) parties.append(el('p', 'empty', 'No characters in this party yet.'));
+    camp.characters.forEach(c => parties.append(charCard(c, false)));
+  }
+  const roster = document.getElementById('roster'); roster.textContent = '';
+  if (!d.roster.length) roster.append(el('p', 'empty', 'The roster is empty.'));
+  d.roster.forEach(c => roster.append(charCard(c, true)));
+  document.getElementById('trash-section').hidden = !d.trash.length;
+  const trash = document.getElementById('trash'); trash.textContent = '';
+  d.trash.forEach(e => trash.append(trashCard(e)));
+}
+
+async function refresh(force) {
+  if (busy && !force) return;
+  try { render(await (await fetch('/characters/list')).json()); } catch (e) { /* try again */ }
+}
+refresh(true);
+setInterval(() => refresh(), 5000);
+</script>
+</body>
+</html>

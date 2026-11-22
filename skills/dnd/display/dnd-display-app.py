@@ -1716,6 +1716,202 @@ def menu_purge():
     return "", 204
 
 
+# ── Managing characters: each campaign's party, and the global roster (latest copy of every PC) ──
+def _char_scopes() -> dict:
+    """scope -> characters folder. Scope 'roster' is the global roster; every other scope is a campaign name."""
+    from paths import characters_dir, campaigns_dir
+    out = {"roster": characters_dir()}
+    for c in _list_campaigns():
+        out[c["name"]] = campaigns_dir() / c["name"] / "characters"
+    return out
+
+
+def _char_entry(scope: str, path) -> dict:
+    import party as _party
+    try:
+        info = _party.parse_character(path.read_text(encoding="utf-8", errors="replace")) or {}
+    except OSError:
+        info = {}
+    return {"scope": scope, "file": path.name, "name": info.get("name") or path.stem,
+            "race": info.get("race", ""), "class": info.get("class", ""), "level": info.get("level"),
+            "hp": info.get("hp"), "ac": info.get("ac")}
+
+
+def _list_characters() -> dict:
+    out = {"roster": [], "campaigns": []}
+    for scope, folder in _char_scopes().items():
+        try:
+            files = sorted(f for f in folder.glob("*.md") if f.is_file())
+        except OSError:
+            files = []
+        chars = [_char_entry(scope, f) for f in files]
+        if scope == "roster":
+            out["roster"] = chars
+        else:
+            out["campaigns"].append({"campaign": scope, "active": scope == _active_campaign_name(), "characters": chars})
+    return out
+
+
+def _char_trash_dir():
+    from paths import characters_dir
+    return characters_dir().parent / "character-trash"
+
+
+def _list_char_trash() -> list[dict]:
+    out = []
+    try:
+        files = [f for f in _char_trash_dir().glob("*.md") if f.is_file() and f.name.count("__") >= 2]
+    except OSError:
+        return []
+    for f in files:
+        scope, stem = f.stem.split("__")[0], "__".join(f.stem.split("__")[1:-1])
+        try:
+            when = f.stat().st_mtime
+        except OSError:
+            when = 0.0
+        out.append({"entry": f.name, "scope": scope, "name": stem, "deleted": when})
+    out.sort(key=lambda e: e["deleted"], reverse=True)
+    return out
+
+
+def _char_path(scope: str, file: str):
+    """The real file for (scope, file), only if it is one the listing shows. None otherwise."""
+    folder = _char_scopes().get(scope)
+    if folder is None or not file.endswith(".md") or "/" in file or "\\" in file or ".." in file:
+        return None
+    p = folder / file
+    return p if p.is_file() else None
+
+
+@app.route("/characters")
+def characters_page():
+    return render_template("characters.html", lan_token=_lan_token or "")
+
+
+@app.route("/characters/list")
+def characters_list():
+    return jsonify({**_list_characters(), "trash": _list_char_trash()})
+
+
+@app.route("/characters/view")
+def characters_view():
+    p = _char_path(str(request.args.get("scope", "")), str(request.args.get("file", "")))
+    if not p:
+        return "unknown character", 404
+    return jsonify({"text": p.read_text(encoding="utf-8", errors="replace")[:60000]})
+
+
+def _guard_manage():
+    if not _token_ok():
+        return "Forbidden", 403
+    if not _from_this_machine():
+        return _THIS_MACHINE_ONLY
+    return None
+
+
+@app.route("/characters/delete", methods=["POST"])
+def characters_delete():
+    """Move a character file to the trash (it can be restored). From the open campaign it also leaves the sidebar."""
+    bad = _guard_manage()
+    if bad:
+        return bad
+    data = request.get_json(force=True, silent=True) or {}
+    scope, file = str(data.get("scope", "")), str(data.get("file", ""))
+    p = _char_path(scope, file)
+    if not p:
+        return "unknown character", 404
+    import shutil
+    name = _char_entry(scope, p)["name"]
+    trash = _char_trash_dir()
+    try:
+        trash.mkdir(parents=True, exist_ok=True)
+        dst = trash / f"{scope}__{p.stem}__{_time.strftime('%Y%m%d-%H%M%S')}.md"
+        n = 1
+        while dst.exists():
+            dst = trash / f"{scope}__{p.stem}__{_time.strftime('%Y%m%d-%H%M%S')}-{n}.md"
+            n += 1
+        shutil.move(str(p), str(dst))
+    except OSError as e:
+        return f"could not delete: {e}", 500
+    if scope != "roster" and scope == _active_campaign_name():
+        with _stats_lock:
+            _current_stats["players"] = [x for x in _current_stats.get("players", []) if x.get("name") != name]
+            current = dict(_current_stats)
+        _persist_stats()
+        _broadcast({"stats": current})
+    return jsonify({"entry": dst.name}), 200
+
+
+@app.route("/characters/restore", methods=["POST"])
+def characters_restore():
+    """Put a deleted character back where it was (the roster if its campaign is gone; '-restored' if the name is taken)."""
+    bad = _guard_manage()
+    if bad:
+        return bad
+    data = request.get_json(force=True, silent=True) or {}
+    entry = str(data.get("entry", ""))
+    hit = next((e for e in _list_char_trash() if e["entry"] == entry), None)
+    if not hit:
+        return "not in the trash", 404
+    import shutil
+    scopes = _char_scopes()
+    scope = hit["scope"] if hit["scope"] in scopes else "roster"
+    folder = scopes[scope]
+    stem = hit["name"]
+    dst = folder / f"{stem}.md"
+    n = 1
+    while dst.exists():
+        dst = folder / (f"{stem}-restored.md" if n == 1 else f"{stem}-restored-{n}.md")
+        n += 1
+    try:
+        folder.mkdir(parents=True, exist_ok=True)
+        shutil.move(str(_char_trash_dir() / entry), str(dst))
+    except OSError as e:
+        return f"could not restore: {e}", 500
+    return jsonify({"scope": scope, "file": dst.name}), 200
+
+
+@app.route("/characters/purge", methods=["POST"])
+def characters_purge():
+    """Delete a character from the trash for good. This cannot be undone."""
+    bad = _guard_manage()
+    if bad:
+        return bad
+    data = request.get_json(force=True, silent=True) or {}
+    entry = str(data.get("entry", ""))
+    if entry not in {e["entry"] for e in _list_char_trash()}:
+        return "not in the trash", 404
+    try:
+        (_char_trash_dir() / entry).unlink()
+    except OSError as e:
+        return f"could not delete: {e}", 500
+    return "", 204
+
+
+@app.route("/characters/copy", methods=["POST"])
+def characters_copy():
+    """Add a roster character to a campaign's party (a copy; the roster keeps its own)."""
+    bad = _guard_manage()
+    if bad:
+        return bad
+    data = request.get_json(force=True, silent=True) or {}
+    file, campaign = str(data.get("file", "")), str(data.get("campaign", ""))
+    src = _char_path("roster", file)
+    folder = _char_scopes().get(campaign) if campaign != "roster" else None
+    if not src or folder is None:
+        return "unknown character or campaign", 404
+    dst = folder / file
+    if dst.exists():
+        return "That campaign already has a character with this name.", 409
+    import shutil
+    try:
+        folder.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(str(src), str(dst))
+    except OSError as e:
+        return f"could not copy: {e}", 500
+    return jsonify({"scope": campaign, "file": file}), 200
+
+
 def _clean_place(raw):
     """Where the party is, for the map card in the roleplay screen: a picture from the campaign's images folder,
     a pin on it (x, y as fractions 0-1 of the picture), an optional label, and an optional `view`: the part of the

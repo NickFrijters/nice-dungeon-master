@@ -10,6 +10,11 @@ Versions before **1.6.0** are reconstructed retroactively from git history; the 
 
 ## [Unreleased]
 
+## [2.51.0] — 2026-11-22 — manage characters screen
+
+### Added
+- Main Menu: a Manage characters screen. It shows the party of every campaign and the roster (the latest copy of every character), each with race, class, level, HP and AC. View sheet opens the full character sheet in the card. Add to campaign copies a roster character into a campaign's party. Delete asks first and moves the character to "Recently deleted" (a `character-trash` folder), from where it can be restored (to the roster if its campaign is gone, as `-restored` if the name is taken) or deleted for good. Deleting a character from the open campaign also takes it off the sidebar. Changes are only possible from the PC running the display.
+
 ## [2.50.0] — 2026-11-22 — delete and restore campaigns
 
 ### Added
