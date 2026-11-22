@@ -1820,7 +1820,65 @@ def _furnish(biome: str, title: str, cols: int, rows: int, toks) -> list:
     return out
 
 
-def _place_tokens_sensibly(toks, terrain, cols, rows) -> None:
+def _terrain_cells(terrain, cols, rows, fly=False):
+    """(blocked, slow) squares. A bridge, door or road clears what is under it. Flyers only stop at walls."""
+    blocked, slow, clear = set(), set(), set()
+    for t in terrain:
+        cells = {(x, y) for x in range(t["x"], t["x"] + t["w"]) for y in range(t["y"], t["y"] + t["h"])}
+        k = t["kind"]
+        if fly:
+            if k in ("wall", "cliff", "pillar", "shelf"):
+                blocked |= cells
+        elif k in _TERRAIN_BLOCK:
+            blocked |= cells
+        elif k in _TERRAIN_SLOW:
+            slow |= cells
+        if k in ("bridge", "door", "road"):
+            clear |= cells
+    return blocked - clear, slow - clear
+
+
+def _keep_moves_honest(toks, prev_map, terrain, cols, rows) -> None:
+    """A creature that was already on this map can only have walked where the map lets it: around walls and trees,
+    difficult ground counting double, at most twice its speed in one round (a Dash). A move that is not possible
+    stops at the reachable square nearest to where it was sent. `fly: true` creatures only stop at walls;
+    `teleport: true` on a push skips the check for that one move (Misty Step, a portal)."""
+    if not prev_map or prev_map.get("cols") != cols or prev_map.get("rows") != rows:
+        return
+    before = {t["name"]: (t["x"], t["y"]) for t in prev_map.get("tokens", []) if isinstance(t, dict)}
+    for tk in toks:
+        old = before.get(tk["name"])
+        if not old or old == (tk["x"], tk["y"]) or tk.pop("teleport", False):
+            continue
+        blocked, slow = _terrain_cells(terrain, cols, rows, fly=bool(tk.get("fly")))
+        limit = 2 * max(5, tk.get("speed") or 30) // 5                  # squares, Dash included
+        cost, q = {old: 0}, [old]
+        while q:
+            cx, cy = q.pop(0)
+            for dx in (-1, 0, 1):
+                for dy in (-1, 0, 1):
+                    n = (cx + dx, cy + dy)
+                    if n == (cx, cy) or not (0 <= n[0] < cols and 0 <= n[1] < rows) or n in blocked:
+                        continue
+                    c = cost[(cx, cy)] + (2 if n in slow else 1)
+                    if c <= limit and c < cost.get(n, 1e9):
+                        cost[n] = c
+                        q.append(n)
+        target = (tk["x"], tk["y"])
+        if target not in cost:
+            best = min(cost, key=lambda c: (max(abs(c[0] - target[0]), abs(c[1] - target[1])), cost[c]))
+            tk["x"], tk["y"] = best
+
+
+def _picture_void(image, cols, rows) -> set:
+    """Squares of the grid the published picture does not cover: nothing can stand there."""
+    if not image:
+        return set()
+    x0, y0, x1, y1 = image["x"], image["y"], image["x"] + image["w"], image["y"] + image["h"]
+    return {(x, y) for x in range(cols) for y in range(rows) if x + 0.5 < x0 or x + 0.5 > x1 or y + 0.5 < y0 or y + 0.5 > y1}
+
+
+def _place_tokens_sensibly(toks, terrain, cols, rows, void=()) -> None:
     """Nobody stands inside a wall, tree or boulder, or on top of somebody else: such a token moves to the nearest free
     square (walking distance), so what the map shows is always possible."""
     cell_kinds = {}
@@ -1829,6 +1887,7 @@ def _place_tokens_sensibly(toks, terrain, cols, rows) -> None:
             for y in range(t["y"], t["y"] + t["h"]):
                 cell_kinds.setdefault((x, y), set()).add(t["kind"])
     blocked = {c for c, ks in cell_kinds.items() if (ks & _TERRAIN_BLOCK) and not (ks & {"bridge", "door", "road"})}
+    blocked |= set(void)
     taken = set()
 
     def fits(x, y, sz):
@@ -1888,7 +1947,8 @@ def _clean_combat(raw, prev=None, place_label: str = ""):
             toks.append({"name": str(tk["name"])[:40], "x": x, "y": y,
                          "side": "enemy" if tk.get("side") == "enemy" else "pc",
                          "size": _n(tk.get("size", 1), 1, 3) or 1,
-                         "speed": _n(tk.get("speed"), 0, 200), "conditions": conds})
+                         "speed": _n(tk.get("speed"), 0, 200), "conditions": conds,
+                         **({"fly": True} if tk.get("fly") else {}), **({"teleport": True} if tk.get("teleport") else {})})
         terrain = []
         for tr in (m.get("terrain") or [])[:300]:
             if not isinstance(tr, dict):
@@ -1920,12 +1980,16 @@ def _clean_combat(raw, prev=None, place_label: str = ""):
         if len(terrain) < 3 and not m.get("image"):            # a bare drawn map would not look like any place: furnish it
             terrain = terrain + _furnish(biome, title or place_label, cols, rows, toks)
             furnished = True
-        _place_tokens_sensibly(toks, terrain, cols, rows)
+        prev_map = (prev or {}).get("map") or {}
+        _keep_moves_honest(toks, prev_map if prev_map.get("title", "") == title else None, terrain, cols, rows)
+        img = _clean_map_image(m.get("image"), cols, rows, prev_map.get("image"))
+        _place_tokens_sensibly(toks, terrain, cols, rows, _picture_void(img, cols, rows))
+        for tk in toks:
+            tk.pop("teleport", None)
         out["map"] = {"cols": cols, "rows": rows, "title": title,
                       "biome": biome, "tokens": toks, "terrain": terrain}
         if furnished:
             out["map"]["furnished"] = True
-        img = _clean_map_image(m.get("image"), cols, rows, ((prev or {}).get("map") or {}).get("image"))
         if img:
             out["map"]["image"] = img
     return out
@@ -1988,7 +2052,7 @@ def combat_plan():
             if not (0 <= x < m["cols"] and 0 <= y < m["rows"]):
                 return "off the map", 400
             probe = [{**t, "x": t["x"], "y": t["y"]} for t in m.get("tokens", []) if t is not tok] + [{**tok, "x": x, "y": y}]
-            _place_tokens_sensibly(probe, m.get("terrain", []), m["cols"], m["rows"])
+            _place_tokens_sensibly(probe, m.get("terrain", []), m["cols"], m["rows"], _picture_void(m.get("image"), m["cols"], m["rows"]))
             if (probe[-1]["x"], probe[-1]["y"]) != (x, y):
                 return "that square is blocked", 409           # a wall, tree, boulder... or somebody already stands there
             if (x, y) == (tok["x"], tok["y"]):

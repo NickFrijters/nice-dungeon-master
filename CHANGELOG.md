@@ -10,6 +10,12 @@ Versions before **1.6.0** are reconstructed retroactively from git history; the 
 
 ## [Unreleased]
 
+## [2.45.0] — 2026-11-22 — monster moves follow the map
+
+### Changed
+- Monster moves follow the map: a creature that was already on the board cannot have walked through a wall or more than twice its speed (a Dash) in one push, counting difficult ground double; it stops at the nearest square it could have reached. `fly: true` creatures only stop at walls, and `teleport: true` on a push allows one Misty Step or portal.
+- On a published picture, squares the picture does not cover are off-limits: nobody can stand or plan a move there. The DM instructions also say to mark what the picture shows as obstacles (tents, rocks, sky, chasms) as terrain.
+
 ## [2.44.0] — 2026-11-22 — battle maps always look like a place
 
 ### Added

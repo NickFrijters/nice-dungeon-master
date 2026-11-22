@@ -132,6 +132,35 @@ class BattleMapRealismTest(unittest.TestCase):
         m = clean({"map": {"cols": 12, "rows": 8, "title": "", "tokens": []}}, None, "Misty Forest - the old road")["map"]
         self.assertEqual(m["biome"], "forest")
 
+    def test_monsters_only_move_where_the_map_lets_them(self):
+        walls = [T("wall", 5, 0, 1, 7), T("tree", 2, 2), T("mud", 7, 0, 2, 8)]               # a wall with a gap at row 7
+        start = {"cols": 12, "rows": 8, "title": "Yard", "terrain": walls,
+                 "tokens": [{"name": "Ogre", "x": 4, "y": 1, "side": "enemy", "speed": 30}]}
+        prev = clean({"map": start})
+
+        def push(x, y, **extra):
+            m = {**start, "tokens": [{"name": "Ogre", "x": x, "y": y, "side": "enemy", "speed": 30, **extra}]}
+            t = clean({"map": m}, prev)["map"]["tokens"][0]
+            return (t["x"], t["y"])
+
+        self.assertEqual(push(3, 4), (3, 4))                     # an ordinary step
+        self.assertEqual(push(6, 1), (6, 1))                     # around the wall through the gap: 6+6 squares, within a Dash (12)
+        far = push(11, 1)                                        # past the wall and through mud: too far even with a Dash
+        self.assertNotEqual(far, (11, 1))
+        self.assertLessEqual(far[0], 9)
+        self.assertEqual(push(11, 1, teleport=True), (11, 1))    # Misty Step / portal: allowed for that one move
+        self.assertEqual(push(6, 1, fly=True), (6, 1))
+        sealed = {**start, "terrain": [T("wall", 5, 0, 1, 8), T("rug", 1, 1), T("rug", 9, 5)]}   # 3 pieces: not furnished
+        prev2 = clean({"map": sealed})
+        t = clean({"map": {**sealed, "tokens": [{"name": "Ogre", "x": 7, "y": 1, "side": "enemy"}]}}, prev2)["map"]["tokens"][0]
+        self.assertLess(t["x"], 5)                               # no walking through a solid wall
+
+    def test_nobody_stands_off_the_edge_of_a_published_picture(self):
+        m = clean({"map": {"cols": 12, "rows": 8, "title": "Camp",
+                           "image": {"src": "camp.png", "x": 0, "y": 0, "w": 8, "h": 8},     # the picture covers columns A-H only
+                           "tokens": [{"name": "Goblin", "x": 10, "y": 3, "side": "enemy"}]}})["map"]
+        self.assertLess(m["tokens"][0]["x"], 8)
+
     def test_dm_rules(self):
         self.assertIn("Battle map = the place (hard rule)", COMMANDS)
         for word in ("`map.biome`", "**blocking**", "**difficult**", "Never put a token inside blocking terrain"):
