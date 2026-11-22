@@ -1557,7 +1557,7 @@ def _open_campaign_here(name: str) -> None:
     if already:
         return
     # Always replace: a campaign with no character files must not keep the last party on screen.
-    body: dict = {"campaign": name, "players": players, "replace_players": True}
+    body: dict = {"campaign": name, "players": players, "replace_players": True, "_internal": True}
     try:
         with app.test_client() as c:       # the same code path as a push from Claude
             c.post("/stats", json=body, headers={"X-DND-Token": _lan_token or ""})
@@ -2923,6 +2923,14 @@ _turn_clock_lock = threading.Lock()
 LATENCY_FILE = rt("latency.jsonl")
 
 
+def _dm_answered() -> None:
+    """The DM put something on screen: the input its wait handed over has been acted on (see autorun_wait.py)."""
+    try:
+        os.remove(rt(".input_handed"))
+    except OSError:
+        pass
+
+
 def _turn_clock_start() -> None:
     with _turn_clock_lock:
         _turn_clock["t0"], _turn_clock["first"] = _time.time(), None
@@ -2960,6 +2968,7 @@ def chunk():
         return "", 204
 
     _turn_clock_hit(data)
+    _dm_answered()
 
     is_action      = bool(data.get("action"))
     is_player      = bool(data.get("player"))
@@ -3160,6 +3169,21 @@ def stats():
     data = request.get_json(silent=True) or {}
     if not data:
         return "", 204
+    internal = bool(data.pop("_internal", False))       # the display's own pushes (Main Menu) are not the DM answering
+    if not internal and any(k not in ("autorun_waiting", "autorun_cycle") for k in data):
+        _dm_answered()
+
+    # An EMPTY party for a campaign that does have character files is a mistake (the DM going by memory, e.g. after
+    # an aborted character creation): show the characters from the files instead, so the sidebar matches the disk.
+    if data.get("replace_players") and data.get("players") == [] and not internal:
+        try:
+            import party as _party
+            camp = str(data.get("campaign") or _active_campaign_name() or "")
+            from_files = _party.load_party(camp) if camp else []
+        except Exception:
+            from_files = []
+        if from_files:
+            data["players"] = from_files
 
     _effect_expire_events: list[dict] = []
     with _stats_lock:

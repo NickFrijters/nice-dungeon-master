@@ -10,6 +10,15 @@ Versions before **1.6.0** are reconstructed retroactively from git history; the 
 
 ## [Unreleased]
 
+## [2.51.1] — 2026-11-22 — no lost loads, no blank screens
+
+### Fixed
+- A Main Menu Load (or a players' turn) could be lost when the DM's wait ran in the background: the wait took the request and nobody read it, so the story screen stayed empty. Input the wait hands over is now remembered until the DM answers on screen; if it was never answered, the next wait hands it over once more, marked as such. The DM instructions also say never to run the wait in the background.
+- An empty party pushed for a campaign that has character files (the DM going by memory, e.g. after an aborted character creation) now shows the characters from the files instead, so a character added in Manage characters is not wiped off the sidebar. The DM instructions say to read the party from disk on every load.
+
+### Added
+- The story screen is never blank without a reason: while it is empty it says "Waiting for the Dungeon Master", or, for a campaign without characters, how to start ("type in the Everybody row who you want to play and press GO"). The DM instructions say never to wait silently on an empty screen when a campaign has no characters.
+
 ## [2.51.0] — 2026-11-22 — manage characters screen
 
 ### Added

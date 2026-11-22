@@ -33,6 +33,10 @@ SESSION_FILE = os.path.join(RT, ".autorun-session")
 # Touched every few seconds while a Claude session is waiting for input, so the
 # Main Menu can tell whether anyone is there to answer it.
 HEARTBEAT_FILE = os.path.join(RT, ".dm-heartbeat")
+# What the last wait handed to the DM, until the DM answers on screen (the display deletes it then). If a wait
+# hands input over and the DM never acts on it (a wait that ran in the background, a crash), the next wait gives
+# it back once instead of the players' turn or a Main Menu request being lost.
+HANDED_FILE = os.path.join(RT, ".input_handed")
 
 
 def _beat():
@@ -87,9 +91,23 @@ def _post(path, payload):
 
 _post("/stats", {"autorun_waiting": True, "autorun_cycle": {"interval": interval, "ts": time.time()}})
 
-# Poll loop — exit when queue appears, session changes, or 9 minutes pass
 content = ""
-for _i in range(5400):  # 0.1s * 5400 = 9 min: a player's GO is picked up within a tenth of a second
+_redelivered = False
+try:
+    _h = json.load(open(HANDED_FILE, encoding="utf-8"))
+    if _h.get("content", "").strip() and not _h.get("again") and time.time() - float(_h.get("ts", 0)) < 900:
+        content = _h["content"]
+        _redelivered = True
+        _h["again"] = True                  # give it back only once, so a request can never loop
+        with open(HANDED_FILE, "w", encoding="utf-8") as f:
+            json.dump(_h, f)
+    else:
+        os.remove(HANDED_FILE)
+except (OSError, ValueError):
+    pass
+
+# Poll loop — exit when queue appears, session changes, or 9 minutes pass
+for _i in (range(0) if _redelivered else range(5400)):  # 0.1 s * 5400 = 9 min: a GO is picked up within a tenth of a second
     if _i % 30 == 0:
         _beat()
     if os.path.exists(QFILE):
@@ -122,6 +140,13 @@ try:
 except Exception:
     pass
 
+if content.strip() and not _redelivered:
+    try:
+        with open(HANDED_FILE, "w", encoding="utf-8") as f:
+            json.dump({"content": content, "ts": time.time()}, f)
+    except OSError:
+        pass
+
 _post("/stats", {"autorun_waiting": False})
 if content:
     _post("/queue/consumed", None)          # clear the display's queue indicator
@@ -137,4 +162,7 @@ if content.strip():
         sys.stdout.write("\n".join(settings.directive_lines(camp)) + "\n")
     except Exception:
         pass
+if _redelivered:
+    sys.stdout.write("[[This input was handed to you before but never answered on screen (the earlier wait may have run in "
+                     "the background). Act on it now.]]\n")
 sys.stdout.write(content)

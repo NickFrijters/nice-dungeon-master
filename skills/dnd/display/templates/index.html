@@ -3369,6 +3369,11 @@
     font: 11px 'Cinzel', serif; letter-spacing: 1px; background: rgba(15,10,5,.85); border: 1px solid rgba(180,140,60,.35); color: rgba(215,200,165,.85); }
   #dm-latency.show { display: block; }
   #dm-latency.ok { color: rgba(140,215,140,.95); } #dm-latency.slow { color: rgba(235,190,90,.95); } #dm-latency.bad { color: rgba(235,110,95,.95); }
+  #story-empty { display: none; max-width: 560px; margin: 18vh auto 0; text-align: center; color: rgba(215,200,165,.8);
+    font: 17px/1.5 'EB Garamond', Georgia, serif; }
+  #text-content:empty + #story-empty { display: block; }
+  #story-empty .se-title { font: 600 15px 'Cinzel', serif; letter-spacing: 3px; text-transform: uppercase; color: rgba(235,205,120,.9); margin-bottom: 8px; }
+  body.combat #story-empty { display: none !important; }
 </style>
 </head>
 <body>
@@ -3576,6 +3581,8 @@
 <!-- Text -->
 <div id="text-scroll">
   <div id="text-content"></div>
+  <!-- shown only while the story is empty, so the screen always says what is going on -->
+  <div id="story-empty"><div class="se-title">Waiting for the Dungeon Master</div><div class="se-text">The story starts here as soon as the DM answers.</div></div>
 </div>
 <button id="page-continue" type="button">Continue &#9662;</button>
 <button id="new-content-pill" type="button" aria-label="Jump to newest narration">New ↓</button>
@@ -6391,6 +6398,7 @@ setInterval(() => {
 // ── Stats update ─────────────────────────────────────────────────────────────
 
 function updateStats(stats) {
+  if (stats && 'players' in stats) _storyEmptyHint(stats.players);
   if (!stats || !stats.players) return;
   setTimeout(() => _updateCombat(stats), 0);   // after the turn order below has been stored
   const sidebar = document.getElementById('sidebar');
@@ -8815,6 +8823,15 @@ function _showDmLatency(r) {
   const el = document.getElementById('dm-latency'); if (!el || typeof r.reply !== 'number') return;
   el.textContent = 'DM answered in ' + r.reply.toFixed(1) + ' s';
   el.className = 'show ' + (r.reply <= 5 ? 'ok' : (r.reply <= 10 ? 'slow' : 'bad'));
+}
+// What the empty story screen says: a campaign without characters needs the players to say who they are.
+function _storyEmptyHint(players) {
+  const box = document.getElementById('story-empty'); if (!box) return;
+  const none = Array.isArray(players) && players.length === 0;
+  box.querySelector('.se-title').textContent = none ? 'No characters yet' : 'Waiting for the Dungeon Master';
+  box.querySelector('.se-text').textContent = none
+    ? 'Open Party Input below, type in the Everybody row who you want to play (or "let’s create our characters") and press GO.'
+    : 'The story starts here as soon as the DM answers.';
 }
 function _updateDicePendingBadge(snapshot) {
   const badge = document.getElementById('dice-pending-badge');
