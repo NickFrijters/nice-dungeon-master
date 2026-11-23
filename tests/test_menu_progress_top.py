@@ -67,6 +67,23 @@ class StoryReadyTest(unittest.TestCase):
         self.assertTrue(self.client.get("/menu/campaigns").get_json()["story_ready"])
         self.assertEqual(self.client.get("/").status_code, 200)                     # the story page stays
 
+    def test_last_sessions_story_on_disk_is_not_a_live_story(self):
+        # The real situation: the display is restarted with the menu, the old story is still in the log for the
+        # active campaign, and the new DM is waiting at the Main Menu.
+        self.mod._MENU_FIRST = True
+        self.mod._story_live = False
+        Path(self.mod.CAMP_FILE).write_text("camp", encoding="utf-8")
+        with self.mod._text_log_lock:
+            self.mod._text_log.clear()
+            self.mod._text_log.append({"text": "Old story from yesterday.", "_camp": "camp"})
+        self.assertEqual(self.client.get("/").status_code, 302)                            # the address bar shows the menu
+        self.assertFalse(self.client.get("/menu/campaigns").get_json()["story_ready"])     # no "Go to the story", Continue loads
+        self.client.post("/chunk", json={"text": "Welcome back."})
+        self.assertTrue(self.client.get("/menu/campaigns").get_json()["story_ready"])     # the DM answered: now it is live
+        self.client.post("/menu/exit", json={})                                              # Save & exit goes back to the menu
+        self.assertFalse(self.client.get("/menu/campaigns").get_json()["story_ready"])
+        self.assertEqual(self.client.get("/").status_code, 302)
+
     def test_menu_offers_the_story_and_keeps_its_buttons(self):
         self.assertIn('id="story-ready"', MENU)
         self.assertIn("(c.active && window.lastStoryReady) ? (location.href = '/')", MENU)

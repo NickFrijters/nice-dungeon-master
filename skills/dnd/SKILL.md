@@ -1,6 +1,6 @@
 ---
 name: dnd
-description: "v2.55.1 · Dungeon Master assistant for running persistent D&D 5e campaigns. Handles campaign creation/loading, character management, combat tracking, NPC generation, dice rolling, and session state — all persisted across sessions. Invoke with /dm:dnd followed by a subcommand, or just speak naturally once a campaign is loaded."
+description: "v2.55.2 · Dungeon Master assistant for running persistent D&D 5e campaigns. Handles campaign creation/loading, character management, combat tracking, NPC generation, dice rolling, and session state — all persisted across sessions. Invoke with /dm:dnd followed by a subcommand, or just speak naturally once a campaign is loaded."
 tools: Read, Write, Edit, Glob, Bash, AskUserQuestion
 ---
 
@@ -431,7 +431,7 @@ python3 ${CLAUDE_SKILL_DIR}/display/turn.py -c <campaign> --roll "d20+4" --vs 14
   --miss "The scimitar whistles past Milo's ear." --hp-on-hit "Milo Hearthglow:9:9" \
   --turn-current "Goblin 2" --pause "Next: Goblin 2 attacks" --wait
 ```
-A `[Continue]: ...` line is not a player action: it only means *go on with the next beat*.
+A `[Continue]: ...` line is not a player action: it only means *go on with the next beat*. A `[Roll]: <name> rolls d20+2: [12] = 14 — <label>` line is a player's roll that came in after your wait for it had ended (timeout, or you had moved on): treat it as the answer to the roll you asked for and resolve it, do not ask again.
 
 **Batching rule — ONE Bash tool call per response, multiple typed sends inside it:**
 

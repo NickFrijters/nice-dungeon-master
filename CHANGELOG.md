@@ -10,6 +10,12 @@ Versions before **1.6.0** are reconstructed retroactively from git history; the 
 
 ## [Unreleased]
 
+## [2.55.2] — 2026-11-23 — menu vs story state, lost rolls
+
+### Fixed (found by the user's own test, with real leftover state)
+- Opening the address bar, or pressing Continue, put you in a play screen nobody was answering while the DM was waiting at the Main Menu. The story log is kept on disk, so a display that was restarted with the menu (or sent back to it with Save & exit) still counted last session's story as "the DM is in the story". The story only counts as live once the DM has put text on screen in this run since the last visit to the menu; until then `/` shows the menu and Continue sends a normal Load to the DM.
+- A roll the DM had stopped waiting for (its wait for the death save timed out after 120 s) was lost, so the DM never answered. Such a roll now reaches the DM as an input line `[Roll]: <name> rolls ...`, and the DM rules say to treat it as the answer.
+
 ## [2.55.1] — 2026-11-23 — third playtest fixes
 
 ### Fixed (third live playtest)

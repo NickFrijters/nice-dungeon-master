@@ -1366,6 +1366,8 @@ _input_lock = threading.Lock()
 _dice_pending: dict = {}
 _dice_pending_lock = threading.Lock()
 # What each player rolled for a request, so the DM gets the number in the same call that waited for it.
+_dice_last_poll: dict = {}         # request_id -> when the DM last asked how it is going (it is waiting while this is fresh)
+_DICE_POLL_FRESH = 20.0
 _dice_results: dict = {}          # request_id -> {character: {"total", "natural", "text", "at"}}
 
 
@@ -1582,12 +1584,18 @@ def _open_campaign_here(name: str) -> None:
         pass
 
 
+# True once the DM has put story text on screen in THIS run of the display since the last visit to the menu. The story
+# log is kept on disk, so without this a restarted display (or one back at the menu after Save & exit) still looked
+# "in the story" from last time: the address bar skipped the menu and Continue opened a play screen nobody answered.
+_story_live: bool = False
+
+
 def _story_ready() -> bool:
     """The DM has opened the active campaign and put its story on screen (the newest story block belongs to it)."""
     active = _active_campaign_name()
     with _text_log_lock:
         last = _text_log[-1] if _text_log else None
-    return bool(active and last and last.get("_camp") == active)
+    return bool(_story_live and active and last and last.get("_camp") == active)
 
 
 @app.route("/menu")
@@ -2476,7 +2484,8 @@ def menu_exit():
         return "Forbidden", 403
     if not _from_this_machine():
         return _THIS_MACHINE_ONLY
-    global _MENU_FIRST, _exit_requested_at
+    global _MENU_FIRST, _exit_requested_at, _story_live
+    _story_live = False
     asked_claude = _dm_listening()
     if asked_claude:
         try:
@@ -3057,6 +3066,8 @@ def chunk():
     _turn_clock_hit(data)
     _dm_answered()
     if not any(data.get(k) for k in ("player", "npc", "dice", "dutch", "tutor", "action", "image")):
+        global _story_live
+        _story_live = True                               # the DM is in the story: the menu may offer "Go to the story"
         _close_answered_rolls()
         _end_beat_pause()                                # the DM went on: no Continue is waited for any more
 
@@ -3985,13 +3996,18 @@ def player_dice():
     # Correlate against any pending DM request. Case-insensitive match on the
     # character name — drop them from the request's expected-rollers set.
     pending_changed = False
+    queue_roll = False
     if req_id:
         with _dice_pending_lock:
             entry = _dice_pending.get(req_id)
+            _waiting = (_time.time() - _dice_last_poll.get(req_id, 0.0)) < _DICE_POLL_FRESH
+            if entry is None:
+                queue_roll = not _waiting          # the DM's request is gone and nobody is polling for it
             if entry is not None:
                 ci = character.lower()
                 matched = next((c for c in entry["chars"] if c.lower() == ci), None)
                 if matched is not None:
+                    queue_roll = not _waiting      # the DM stopped waiting (timeout, other turn): hand the roll over as input
                     entry["chars"].discard(matched)
                     pending_changed = True
                     now = _time.time()
@@ -4004,6 +4020,14 @@ def player_dice():
                         _turn_clock_start(after_roll=True)      # the players' roll is in: the DM's next answer is timed from here (plus the DM's time before the request), not from GO
     if pending_changed:
         _broadcast({"dice_pending": _dice_pending_snapshot()})
+    if queue_roll:
+        # A roll nobody is waiting for any more would be lost (the DM's wait timed out after 120 s): give it to the DM
+        # as the next input, where its wait loop picks it up.
+        try:
+            with _staged_lock, open(QUEUE_FILE, "a", encoding="utf-8") as f:
+                f.write("[Roll]: " + " ".join(text.split()) + "\n")
+        except OSError:
+            pass
 
     return jsonify({
         "character": character,
@@ -4112,6 +4136,7 @@ def dice_request_status(request_id):
     if not _token_ok():
         return "Forbidden", 403
     with _dice_pending_lock:
+        _dice_last_poll[request_id] = _time.time()          # the DM is waiting on this one right now
         entry = _dice_pending.get(request_id)
         results = {k: {"total": v["total"], "natural": v["natural"], "text": v["text"]}
                    for k, v in (_dice_results.get(request_id) or {}).items()}
