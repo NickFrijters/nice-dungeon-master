@@ -10,6 +10,11 @@ Versions before **1.6.0** are reconstructed retroactively from git history; the 
 
 ## [Unreleased]
 
+## [2.54.0] — 2026-11-23 — beat by beat
+
+### Added
+- Beat by beat: when several things happen at once (an encounter starting, a round of monster attacks, a fall), the DM now shows one step, then a pulsing **Continue** button (or Enter) appears. The next step only comes after you press it. `turn.py --pause "Next: ..."` shows the button; pressing it queues a `[Continue]` line for the DM. The turn tracker says "press Continue to see what happens next". This also keeps each DM answer short, which helps the 5-second goal.
+
 ## [2.53.5] — 2026-11-22 — roll notice closes when the DM moves on
 
 ### Fixed

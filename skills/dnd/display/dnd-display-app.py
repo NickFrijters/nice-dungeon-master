@@ -2987,6 +2987,56 @@ def _turn_clock_hit(data: dict) -> None:
     _broadcast({"dm_latency": rec})
 
 
+# ── Beat by beat: the DM shows one step, then waits for the table to press Continue ──
+# The DM sends a short beat and POSTs /beat/pause {label: "Next: the kobolds attack"}; every screen shows a Continue
+# button. Pressing it (any screen) puts "[Continue]: <label>" in the DM's queue, so its wait hands it over and the DM
+# resolves the next beat. Nothing big happens off screen, and every beat is a quick answer.
+_beat_pause: dict | None = None
+_beat_lock = threading.Lock()
+
+
+def _end_beat_pause() -> None:
+    global _beat_pause
+    with _beat_lock:
+        had, _beat_pause = _beat_pause, None
+    if had:
+        _broadcast({"beat_pause": None})
+
+
+@app.route("/beat/pause", methods=["POST"])
+def beat_pause():
+    if not _token_ok():
+        return "Forbidden", 403
+    data = request.get_json(force=True, silent=True) or {}
+    label = re.sub(r"[`\\$]", "", str(data.get("label", "")))[:120].strip() or "Continue"
+    global _beat_pause
+    with _beat_lock:
+        _beat_pause = {"label": label, "id": secrets.token_hex(4), "at": _time.time()}
+        info = dict(_beat_pause)
+    _broadcast({"beat_pause": info})
+    return jsonify(info), 200
+
+
+@app.route("/beat/continue", methods=["POST"])
+def beat_continue():
+    """Somebody at the table pressed Continue: tell the DM to play the next beat."""
+    if not _token_ok():
+        return "Forbidden", 403
+    global _beat_pause
+    with _beat_lock:
+        info, _beat_pause = _beat_pause, None
+    if not info:
+        return "", 204                                   # already continued (another screen was quicker)
+    try:
+        with _staged_lock, open(QUEUE_FILE, "a", encoding="utf-8") as f:
+            f.write(f"[Continue]: {info['label']}\n")
+    except OSError:
+        return "could not queue", 500
+    _turn_clock_start()                                  # the next beat is timed like any answer
+    _broadcast({"beat_pause": None})
+    return "", 204
+
+
 @app.route("/chunk", methods=["POST"])
 def chunk():
     if not _token_ok():
@@ -3000,6 +3050,7 @@ def chunk():
     _dm_answered()
     if not any(data.get(k) for k in ("player", "npc", "dice", "dutch", "tutor", "action", "image")):
         _close_answered_rolls()
+        _end_beat_pause()                                # the DM went on: no Continue is waited for any more
 
     is_action      = bool(data.get("action"))
     is_player      = bool(data.get("player"))
@@ -4216,6 +4267,7 @@ def party_input():
         for character, text in entries.items():
             _staged[character] = {"text": text, "ready": True, "timestamp": now}
     _persist_staged()
+    _end_beat_pause()
     _commit_planned_moves()
     _check_auto_trigger(force=True)
     return "", 204
@@ -4412,6 +4464,10 @@ def stream():
             q.put_nowait({"queue_status": list(_queue_status)})
 
     # Send current pending dice requests so the "Waiting on…" badge survives reload.
+    with _beat_lock:
+        _bp = dict(_beat_pause) if _beat_pause else None
+    if _bp:
+        q.put_nowait({"beat_pause": _bp})             # a screen that opens mid-pause shows the Continue button too
     snap = _dice_pending_snapshot()
     if snap:
         q.put_nowait({"dice_pending": snap})

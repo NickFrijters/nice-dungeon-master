@@ -65,6 +65,7 @@ A running adventure is either **Roleplay** or **Combat**. The screen switches au
 - PERFORMANCE: Waiting for the DM should never take more than 5 seconds (this probably needs data management improvements). That means that if we need larger pieces of text which take long to generate, cut it into pieces and continue working while the characters read or hear the first part.
 - FLAVOUR: Add ambient sounds to match with the background visuals.
 - ADDITION: In-adventure time of day tracking, this should also actually influence the adventure
+- IMAGES: These should all be replaced with self-made icons (made by you, Claude) instead of the current png's
 - INTERFACE: Build the character creation screen
 
 ## Status

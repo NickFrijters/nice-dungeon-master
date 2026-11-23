@@ -1,6 +1,6 @@
 ---
 name: dnd
-description: "v2.53.5 · Dungeon Master assistant for running persistent D&D 5e campaigns. Handles campaign creation/loading, character management, combat tracking, NPC generation, dice rolling, and session state — all persisted across sessions. Invoke with /dm:dnd followed by a subcommand, or just speak naturally once a campaign is loaded."
+description: "v2.54.0 · Dungeon Master assistant for running persistent D&D 5e campaigns. Handles campaign creation/loading, character management, combat tracking, NPC generation, dice rolling, and session state — all persisted across sessions. Invoke with /dm:dnd followed by a subcommand, or just speak naturally once a campaign is loaded."
 tools: Read, Write, Edit, Glob, Bash, AskUserQuestion
 ---
 
@@ -423,6 +423,15 @@ It prints `ROLL total=17 natural=12 hit damage=5` for your bookkeeping, and with
 - **No roll needed:** `--narrate "..."` instead of `--roll`/`--hit`/`--miss`. Plain dice lines you rolled yourself go in `--dice`.
 - **Several rolls in one turn** (two monsters, an area spell): roll them in one `dice.py` call first, then one `turn.py` with `--narrate`: two calls at most.
 - Do not run `check_input.py` when the input came from the wait. Do **not** read files in a normal turn: work from what is in context, and read only when a rule requires it (a named NPC's first scene, a new chapter, a fact you must verify). Decide the outcome and write it straight away, keep narration within the Flavour limit (combat: 10 to 40 words), and leave bigger bookkeeping (consequence ledger, relationships, sheets) to scene boundaries. The longer `send.py` patterns below are still needed for images, XP and inspiration blocks; for ordinary turns, `turn.py` is faster.
+
+**Beat by beat (hard rule): never skip the steps in between.** When a player's action sets off a chain (combat starts, several monsters act, someone drops, a trap and its aftermath), do not resolve it all at once and show only the end: the table must see how it got there. Play it as beats: one beat is one notable thing (the player's action resolved; combat starts with what triggers it and the initiative order, board pushed; one monster's or NPC's turn; a character dropping). After a beat, if what comes next is *not* the players' decision, end the call with `--pause "Next: <what happens next>"` and `--wait`: every screen shows a Continue button, and the next input is `[Continue]: <label>` when someone presses it (button or Enter). Then play the next beat the same way. When the next thing *is* the players' (their turn, a roll they must make), do not pause: ask them. Example of what not to do: the player declares an action and the next thing they see is their character at 0 HP being asked for death saves. Do instead: beat 1 "the cultists spring the ambush; initiative: Goblin 1, Milo, Goblin 2" + pause "Next: Goblin 1 attacks"; beat 2 the goblin's attack and damage + pause "Next: Goblin 2 attacks"; beat 3 Goblin 2's attack, then it is Milo's turn: ask Milo, no pause. Each beat is short (combat: 10 to 40 words) and one `turn.py` call, so each answer stays near the 5-second target:
+```bash
+python3 ${CLAUDE_SKILL_DIR}/display/turn.py -c <campaign> --roll "d20+4" --vs 14 --damage "1d6+2" \
+  --label "Goblin 1 — Scimitar vs Milo Hearthglow (AC 14)" --hit "The goblin's blade bites Milo's arm for {dmg}." \
+  --miss "The scimitar whistles past Milo's ear." --hp-on-hit "Milo Hearthglow:9:9" \
+  --turn-current "Goblin 2" --pause "Next: Goblin 2 attacks" --wait
+```
+A `[Continue]: ...` line is not a player action: it only means *go on with the next beat*.
 
 **Batching rule — ONE Bash tool call per response, multiple typed sends inside it:**
 

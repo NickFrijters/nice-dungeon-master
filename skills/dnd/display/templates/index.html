@@ -3410,6 +3410,16 @@
   #party-dice-btn { background: transparent; color: rgba(235,205,120,.9); border: 1px solid rgba(180,140,60,.45); border-radius: 4px;
     font: 700 11px 'Cinzel', serif; letter-spacing: .1em; padding: 6px 10px; cursor: pointer; margin-left: auto; margin-right: 8px; }
   #party-dice-btn:hover { border-color: rgba(235,205,120,.9); }
+  /* Beat by beat: one step on screen, then Continue */
+  #beat-continue { position: fixed; left: calc(50% + 40px); bottom: 150px; transform: translateX(-50%); z-index: 31; display: none;
+    flex-direction: column; align-items: center; gap: 2px; cursor: pointer; padding: 10px 30px; border-radius: 24px;
+    background: rgba(40,28,10,.95); border: 2px solid rgba(235,205,120,.95); box-shadow: 0 6px 30px rgba(0,0,0,.7);
+    color: rgba(255,235,170,1); animation: pageNudge 1.6s ease-in-out infinite; zoom: var(--ui-scale, 1); }
+  #beat-continue.show { display: flex; }
+  #beat-continue .bc-go { font: 700 14px 'Cinzel', serif; letter-spacing: .16em; text-transform: uppercase; }
+  #beat-continue .bc-next { font: italic 13px 'EB Garamond', Georgia, serif; color: rgba(230,215,180,.85); }
+  #beat-continue .bc-next:empty { display: none; }
+  body.combat #beat-continue { bottom: calc(22vh + 74px); }
 </style>
 </head>
 <body>
@@ -3623,6 +3633,8 @@
   <div id="story-empty"><div class="se-title">Waiting for the Dungeon Master</div><div class="se-text">The story starts here as soon as the DM answers.</div></div>
 </div>
 <button id="page-continue" type="button">Continue &#9662;</button>
+<!-- beat by beat: the DM showed one step and waits for the table before the next -->
+<button id="beat-continue" type="button"><span class="bc-go">Continue &#9656;</span><span class="bc-next"></span></button>
 <button id="new-content-pill" type="button" aria-label="Jump to newest narration">New ↓</button>
 
 <script>
@@ -4628,6 +4640,7 @@ function _turnTick() {
   _renderSteps(el.querySelector('.tb-steps'), st.names, st.idx);
   const lead = 'step ' + (st.idx + 1) + ' of ' + st.names.length + ' \u00b7 ';
   if (t.phase === 'wait') {
+    if (window._beatPause) { el.classList.remove('tb-indet'); label.textContent = 'press Continue to see what happens next'; return; }
     const rollers = window._dicePendingNames || [];
     el.classList.add('tb-indet');
     label.textContent = rollers.length ? lead + 'the DM is waiting for ' + rollers.join(' and ') + '’s roll — use the dice panel'
@@ -8654,6 +8667,7 @@ function connect() {
       window._onDiceRequestCancelled(payload.dice_request_cancelled);
     }
     if (payload.dm_latency) _showDmLatency(payload.dm_latency);
+    if ('beat_pause' in payload) _showBeatPause(payload.beat_pause);
     if (payload.dice_pending !== undefined) {
       _updateDicePendingBadge(payload.dice_pending);
     }
@@ -8902,6 +8916,26 @@ function _escHtml(s) {
 // Driven by the server's dice_pending SSE event (snapshot of all active
 // requests). Hidden when the snapshot is empty.
 // How long the DM took to answer the last GO: green within the 5-second target, amber up to 10, red beyond.
+// Beat by beat: the DM played one step and waits; Continue (button or Enter, on any screen) asks for the next.
+window._beatPause = null;
+function _showBeatPause(bp) {
+  window._beatPause = bp || null;
+  const b = document.getElementById('beat-continue'); if (!b) return;
+  b.querySelector('.bc-next').textContent = bp && bp.label && bp.label !== 'Continue' ? bp.label : '';
+  b.classList.toggle('show', !!bp);
+}
+async function _beatContinue() {
+  if (!window._beatPause) return;
+  _showBeatPause(null);                               // at once here; the server tells the other screens
+  try { await fetch('/beat/continue', { method: 'POST', headers: _authHeaders(), body: '{}' }); } catch (_) {}
+}
+document.getElementById('beat-continue').addEventListener('click', _beatContinue);
+document.addEventListener('keydown', e => {
+  if (!window._beatPause || _pageHeld) return;        // a page pause takes the Enter first
+  if ((e.key === 'Enter' || e.key === ' ') && !/^(INPUT|TEXTAREA|SELECT|BUTTON)$/.test((e.target && e.target.tagName) || '')) {
+    e.preventDefault(); _beatContinue();
+  }
+});
 function _showDmLatency(r) {
   const el = document.getElementById('dm-latency'); if (!el || typeof r.reply !== 'number') return;
   el.textContent = 'DM answered in ' + r.reply.toFixed(1) + ' s';

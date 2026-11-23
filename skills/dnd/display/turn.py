@@ -149,6 +149,8 @@ def main(argv=None) -> int:
     ap.add_argument("--turn-current")
     ap.add_argument("--turn-round", type=int)
     ap.add_argument("--wait", action="store_true")
+    ap.add_argument("--pause", metavar="NEXT", help='beat by beat: show a Continue button ("Next: the kobolds attack") '
+                                                     'and, with --wait, go on only when the table presses it')
     # roll and resolve in the same call: write both outcomes, the script picks one
     ap.add_argument("--roll", help='dice for the action, e.g. "d20+5" or "d20+5 adv"')
     ap.add_argument("--vs", type=int, help="AC or DC to beat (equal or higher succeeds)")
@@ -222,6 +224,17 @@ def main(argv=None) -> int:
         finally:
             sys.argv = old
 
+    if a.pause:
+        import json
+        import urllib.request
+        try:
+            token = send._read_token()
+            urllib.request.urlopen(urllib.request.Request(
+                send.BASE_URL + "/beat/pause", data=json.dumps({"label": a.pause}).encode(), method="POST",
+                headers={"Content-Type": "application/json", **({"X-DND-Token": token} if token else {})}),
+                timeout=10, context=send._SSL_CTX)
+        except Exception as e:
+            print(f"turn.py: could not show the Continue button: {e}", file=sys.stderr)
     if resolved:
         print(resolved[3], flush=True)            # the outcome, for the DM's own bookkeeping
     if a.wait:
