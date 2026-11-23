@@ -47,7 +47,8 @@ class UiSizeSettingTest(unittest.TestCase):
 class FollowTheTextTest(unittest.TestCase):
     def test_only_the_reader_stops_the_follow_and_it_follows_instantly(self):
         self.assertIn("else if (Date.now() - _readerScrollAt < 1200) userScrolledUp = true;", HTML)
-        self.assertIn("textScroll.scrollTo({ top: textScroll.scrollHeight, behavior: 'instant' });", HTML)
+        self.assertIn("textScroll.scrollTo({ top, behavior: 'instant' });", HTML)        # top = the end (in combat: the newest line)
+        self.assertIn("let top = textScroll.scrollHeight;", HTML)
         self.assertIn("(_pageHeld ? 'press Continue or Enter to read on' : 'writing...')", HTML)
 
 

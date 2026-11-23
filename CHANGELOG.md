@@ -10,6 +10,14 @@ Versions before **1.6.0** are reconstructed retroactively from git history; the 
 
 ## [Unreleased]
 
+## [2.54.3] — 2026-11-23 — live playtest fixes
+
+### Fixed (live playtest with a real DM session and a browser)
+- A turn order sent as `{name, init}` objects showed `[object Object]` in the initiative bar. Names and objects both work now.
+- Under the battle map a long recap stopped after a few letters ("press Continue") and only its last line was visible, because most of the strip was reserved space. The pause now counts the text on the page, the strip keeps the newest line above an open Party Input, and Party Input folds away after GO in combat.
+- "DM answered in N s" counted the time a player spent on the dice panel; it now restarts when the roll comes in.
+- Loading a campaign in the middle of a fight cost about 26 s (the DM ran `--help` twice to learn the flags). The load procedure now spells out the exact turn-order and board formats and says to push them in one call.
+
 ## [2.54.2] — 2026-11-23 — header place, punctuation, latency badge
 
 ### Fixed

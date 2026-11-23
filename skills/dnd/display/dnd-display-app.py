@@ -3398,6 +3398,11 @@ def stats():
         if "turn_order" in data:
             new_to = data["turn_order"]
             old_to = _current_stats.get("turn_order") or {}
+            if isinstance(new_to, dict) and isinstance(new_to.get("order"), list):
+                # The DM may list {"name": ..., "init": 17} objects; the screen wants plain names.
+                new_to["order"] = [str(e.get("name") or e.get("character") or "") if isinstance(e, dict) else str(e)
+                                   for e in new_to["order"]]
+                new_to["order"] = [n for n in new_to["order"] if n]
             if isinstance(new_to, dict) and new_to and "order" not in new_to and old_to.get("order"):
                 new_to = {**old_to, **new_to}    # `--turn-current` / `--turn-round` only move the pointer: keep the order
             if (not new_to) or not isinstance(new_to, dict) or new_to.get("current") != old_to.get("current") \
@@ -3965,6 +3970,7 @@ def player_dice():
                         "total": total, "natural": kept[0] if len(kept) == 1 else None, "text": text, "at": now}
                     if not entry["chars"]:
                         _dice_pending.pop(req_id, None)
+                        _turn_clock_start()      # the players' roll is in: the DM's next answer is timed from here, not from GO
     if pending_changed:
         _broadcast({"dice_pending": _dice_pending_snapshot()})
 

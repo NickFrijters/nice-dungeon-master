@@ -52,5 +52,19 @@ class PlaytestFollowUpTest(unittest.TestCase):
         self.assertIn("l.className = ''; l.textContent = '';", html)
 
 
+class PlaytestRound2Test(unittest.TestCase):
+    def test_wiring(self):
+        app = (D / "dnd-display-app.py").read_text(encoding="utf-8")
+        html = (D / "templates" / "index.html").read_text(encoding="utf-8")
+        self.assertIn("the players' roll is in: the DM's next answer is timed from here", app)      # latency excludes the player's roll
+        self.assertIn('new_to["order"] = [str(e.get("name")', app)                                   # {name, init} objects accepted
+        self.assertIn("function _orderNames(o)", html)
+        self.assertIn("_inCombat = ", html.replace("const inCombat", "_inCombat"))                    # combat reserves only what the panel covers
+        self.assertIn("const pb = parseFloat(getComputedStyle(textScroll).paddingBottom) || 0;", html)
+        self.assertIn("_inputPanel.classList.add('collapsed'); _inputArrow.textContent", html)       # panel folds after GO in combat
+        cmds = (ROOT / "skills" / "dnd" / "SKILL-commands.md").read_text(encoding="utf-8")
+        self.assertIn("Do not run `push_stats.py --help`", cmds)
+
+
 if __name__ == "__main__":
     unittest.main()

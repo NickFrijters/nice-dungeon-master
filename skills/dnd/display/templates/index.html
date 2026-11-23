@@ -3659,6 +3659,8 @@ let bgActive = 'a'; // which bg layer is currently showing
 // The header names the real place when the DM gave one (party map label, or the battle map's title); the
 // keyword-guessed scene name ("The Inn") is only the fallback.
 window._cbMapTitle = '';
+// The turn order is a list of names; a DM that sends {name, init} objects still works.
+function _orderNames(o) { return (Array.isArray(o) ? o : []).map(e => (e && typeof e === 'object') ? String(e.name || e.character || '') : String(e)).filter(Boolean); }
 function _refreshSceneTitle() {
   const ind = document.getElementById('scene-indicator'); if (!ind) return;
   let pm = ''; try { pm = (_pmLast && _pmLast.label) || ''; } catch (_) {}      // _pmLast is declared further down
@@ -4444,7 +4446,11 @@ function _pageShouldHold() {
   const h = textScroll.clientHeight;
   if (textScroll.scrollHeight <= h + 2) return false;   // nothing has scrolled yet: nothing can be pushed out of sight
   const cv = document.body.classList.contains('combat') ? document.getElementById('combat-view') : null;
-  const topGap = cv ? Math.max(0, cv.getBoundingClientRect().bottom - textScroll.getBoundingClientRect().top) : h * 0.10;
+  // Under the battle map the pane is a short strip whose scroll height is mostly reserved padding: judge by how
+  // much text is on this page instead (one more line must still fit in the strip).
+  if (cv) { const pb = parseFloat(getComputedStyle(textScroll).paddingBottom) || 0;
+    return (_pageY(_pageLast()) + 30 - _pageStartY) > Math.max(60, h - pb - 24); }
+  const topGap = h * 0.10;
   const visibleTop = Math.max(0, textScroll.scrollHeight - h) + topGap;   // what stays in view once it scrolls to the end
   return _pageStartY < visibleTop - 4;
 }
@@ -5622,7 +5628,14 @@ function scrollToBottom() {
   if (!userScrolledUp) {
     // Instant, not smooth: a smooth scroll re-aimed at every typed letter falls behind and left the last lines under
     // Party Input. Following the text line by line needs no animation.
-    textScroll.scrollTo({ top: textScroll.scrollHeight, behavior: 'instant' });
+    // Under the battle map the strip is short and what follows the text (progress chips, voice row) would push the
+    // text itself up out of view: end on the newest line of text, not on the end of the container.
+    let top = textScroll.scrollHeight;
+    if (document.body.classList.contains('combat') && currentEl && currentEl.isConnected) {
+      const pb = parseFloat(getComputedStyle(textScroll).paddingBottom) || 0;   // what the open Party Input panel covers
+      top = Math.max(0, _pageY(_pageLast()) + 10 - (textScroll.clientHeight - pb));
+    }
+    textScroll.scrollTo({ top, behavior: 'instant' });
     _hideNewPill();
   } else {
     // New narration landed below the fold — surface the "New ↓" pill so the
@@ -6632,7 +6645,7 @@ function updateStats(stats) {
       document.getElementById('sb-round').textContent = merged.round ?? 1;
       const list = document.getElementById('sb-turn-list');
       list.innerHTML = '';
-      (merged.order || []).forEach(name => {
+      _orderNames(merged.order).forEach(name => {
         const el = document.createElement('div');
         el.className = 'sb-turn-item sb-turn-has-icon' + (name === merged.current ? ' sb-turn-current' : '');
         const isPC = name in _playerData;
@@ -6653,9 +6666,10 @@ let _cbPrevHp = {};
 function _updateCombat(stats) {
   if ('combat' in stats) _combatState = stats.combat || null;
   const to = ('turn_order' in stats && !stats.turn_order) ? null : _currentTurnOrder;
-  const on = !!(to && (to.order || []).length);
+  const on = !!(to && _orderNames(to.order).length);
   const wasCombat = document.body.classList.contains('combat');
   document.body.classList.toggle('combat', on);
+  if (typeof _reserveInputSpace === 'function') _reserveInputSpace();
   if (on !== wasCombat) {   // the story area becomes a short strip (or a full page again): keep the newest text in view
     [60, 400].forEach(ms => setTimeout(() => { const ts = document.getElementById('text-scroll'); if (ts) ts.scrollTop = ts.scrollHeight; }, ms));
   }
@@ -6680,7 +6694,7 @@ function _renderCombat(to) {
   const bar = document.getElementById('cb-order');
   bar.textContent = '';
   const rd = document.createElement('div'); rd.className = 'cb-round'; rd.innerHTML = 'Round<b></b>'; rd.querySelector('b').textContent = to.round ?? 1; bar.appendChild(rd);
-  (to.order || []).forEach(n => {
+  _orderNames(to.order).forEach(n => {
     const h = _cbHp(n);
     const c = document.createElement('div');
     c.className = 'cb-card' + (h.pc ? '' : ' enemy') + (n === to.current ? ' current' : '') + (h.hp === 0 ? ' down' : '');
@@ -8344,6 +8358,9 @@ async function _partyGo() {
       _partyRefresh();
       _partySync(true);                             // the other screens clear theirs too
       _turnStart();                                 // loading bar until text and voice are done
+      if (document.body.classList.contains('combat')) {   // under the battle map the open panel covers the answer strip
+        _inputPanel.classList.add('collapsed'); _inputArrow.textContent = '▲';
+      }
       return;
     }
     const why = res.status === 409 ? await res.text()
@@ -8397,7 +8414,10 @@ function _reserveInputSpace() {
   const rect = panel.getBoundingClientRect();
   if (rect.height === 0 || rect.top >= window.innerHeight) { scroll.style.paddingBottom = ''; return; }
   const reserve = Math.round(window.innerHeight - rect.top) + 16;
-  scroll.style.paddingBottom = Math.max(40, reserve) + 'px';
+  // Under the battle map the story strip already ends 62px above the bottom edge: only what the panel covers beyond
+  // that needs reserving (the full amount squeezed a 3-line strip down to its last line).
+  const inCombat = document.body.classList.contains('combat');
+  scroll.style.paddingBottom = (inCombat ? Math.max(6, reserve - 62) : Math.max(40, reserve)) + 'px';
 }
 
 (function _initReserveInputSpace() {
