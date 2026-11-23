@@ -10,6 +10,19 @@ Versions before **1.6.0** are reconstructed retroactively from git history; the 
 
 ## [Unreleased]
 
+## [2.55.0] — 2026-11-23 — readable screens, board patch
+
+### Added
+- Board changes without resending the board: `turn.py --enemy-hp "Kobold 1:3:5" --move "Sylvar Bladfluisteraar:D7" --remove-token "Kobold 2"`. The DM rules now say the board must match the words (a playtest showed "hits Kobold 1 for 2" with Kobold 1 still at 5/5 and Sylvar still in place), and that the opening line of a fight goes out before the board is built (that wait was 16 to 19 s on a blank screen).
+
+### Fixed / easier to read (visual playtest with a real DM and a browser)
+- What the table just sent stays visible under the story while the DM works, and after Continue the same progress indicator shows (before, only faint dots).
+- The top fade dimmed the first lines of the story although nothing had scrolled; the fade is now short.
+- Party cards, quests and factions were 7 to 10 px at 35 to 60% brightness; bigger and brighter. The hover text on a square is bigger. The corner clock in combat is readable.
+- The "Kokoro TTS ready / Retry" row under every block is hidden while idle.
+- The character sheet showed speed as "9 M FT".
+- In combat the story strip no longer asks for Continue after one line while Party Input is open (it keeps room for three lines), and the corner clock is readable.
+
 ## [2.54.4] — 2026-11-23 — one-call combat turns, resistance
 
 ### Added

@@ -3467,6 +3467,31 @@ def stats():
         if "quests" in data:
             _current_stats["quests"] = data["quests"]
 
+        # combat_patch: change a few things on the board without resending it (enemy HP, token squares, conditions)
+        _cp = data.get("combat_patch")
+        if isinstance(_cp, dict) and isinstance(_current_stats.get("combat"), dict):
+            import copy as _copy
+            _raw = _copy.deepcopy(_current_stats["combat"])
+            _same = lambda a, b: str(a or "").strip().lower() == str(b or "").strip().lower()
+            for _e in (_cp.get("enemies") or []):
+                for _t in (_raw.get("enemies") or []):
+                    if isinstance(_e, dict) and _same(_t.get("name"), _e.get("name")):
+                        for _k in ("hp", "max", "note"):
+                            if _k in _e:
+                                _t[_k] = _e[_k]
+            _m = _raw.get("map")
+            if isinstance(_m, dict):
+                for _p in (_cp.get("tokens") or []):
+                    for _t in (_m.get("tokens") or []):
+                        if isinstance(_p, dict) and _same(_t.get("name"), _p.get("name")):
+                            for _k in ("x", "y", "conditions"):
+                                if _k in _p:
+                                    _t[_k] = _p[_k]
+                _gone = [str(n).strip().lower() for n in (_cp.get("remove") or [])]
+                if _gone:
+                    _m["tokens"] = [_t for _t in (_m.get("tokens") or []) if str(_t.get("name", "")).strip().lower() not in _gone]
+            data["combat"] = _raw
+
         # combat board replaces entirely (null/{} clears): enemies with HP, plus the battle map
         if "combat" in data:
             _current_stats["combat"] = _clean_combat(data["combat"], _current_stats.get("combat"),

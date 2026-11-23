@@ -81,5 +81,43 @@ class TurnPyBoardAndResistTest(unittest.TestCase):
         self.assertTrue(seen <= {"0", "5", "10"} and "5" in seen, seen)       # 1d1+9 = 10 normally, 5 halved, 10 on a crit (2d1+9=11 -> 5)
 
 
+class VisualPlaytestTest(unittest.TestCase):
+    def setUp(self):
+        self.html = (D / "templates" / "index.html").read_text(encoding="utf-8")
+
+    def test_readability_changes(self):
+        h = self.html
+        self.assertIn("transparent 0, transparent 3vh, rgba(0,0,0,.08) 4.2vh", h)       # first line not dimmed
+        self.assertIn("#sidebar .sb-hp-nums { font-size: 12px;", h)
+        self.assertIn("#sidebar .sb-faction-name, #sidebar .sb-quest-name { font-size: 11px;", h)
+        self.assertIn(".tts-status.st-idle { display: none; }", h)
+        self.assertIn("font: 14px/1.4 'EB Garamond', Georgia, serif; color: rgba(245,235,205,.98); }", h)  # square tooltip
+        self.assertIn("body.combat #world-clock #wc-date", h)
+
+    def test_sent_text_stays_visible_and_waiting_shows_after_continue(self):
+        h = self.html
+        self.assertIn("sent.className = 'tb-sent'", h)
+        self.assertIn("window._lastSent = entries.map(", h)
+        self.assertIn("if (typeof _turnStart === 'function') _turnStart();", h)
+
+    def test_combat_strip_keeps_three_lines(self):
+        self.assertIn("Math.max(96, h - pb - 24)", self.html)
+
+    def test_speed_unit_not_doubled(self):
+        self.assertIn("(typeof p.speed === 'string' && /[a-z]/i.test(p.speed)) ? p.speed", self.html)
+
+    def test_board_patch_options_and_rules(self):
+        t = (D / "turn.py").read_text(encoding="utf-8")
+        for flag in ('"--enemy-hp"', '"--move"', '"--remove-token"'):
+            self.assertIn("ap.add_argument(" + flag, t)
+        import sys
+        sys.path.insert(0, str(D)); sys.path.insert(0, str(ROOT / "skills" / "dnd" / "scripts"))
+        import turn
+        self.assertEqual((turn._cell("C7"), turn._cell("2,6")), ((2, 6), (2, 6)))
+        skill = (ROOT / "skills" / "dnd" / "SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("The board must match the words (hard rule)", skill)
+        self.assertIn("When a fight starts, the table gets words within seconds", skill)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -13,6 +13,7 @@ micro-save, the turn pointer, and optionally the autorun wait for the next playe
         --event "Dagna burned swarm 2 (9 dmg)" [--flag "Label: text"] [--unflag Label] \\
         --turn-current "Rattenzwerm 2" [--turn-round 3] \\
         [--combat '{...}'] [--turn-order '{...}']   (the battle board, pushed first, in the same call)
+        [--enemy-hp "Kobold 1:3:5"] [--move "Sylvar Bladfluisteraar:C7"] [--remove-token "Kobold 2"]   (change the board, no resend)
         [--resist half|double]                      (with --damage: swarms and resistances)
         [--wait]            (then wait for the next players' input and print it, like autorun_wait.py)
 
@@ -143,6 +144,43 @@ def _resolve(a):
     return line, text, extra, summary
 
 
+def _cell(spec):
+    """'C7' -> (2, 6); '2,6' -> (2, 6) (columns A=0, rows start at 1 on screen, 0 in the data)."""
+    spec = spec.strip()
+    if "," in spec:
+        x, y = spec.split(",", 1)
+        return int(x), int(y)
+    letters = "".join(c for c in spec if c.isalpha()).upper()
+    digits = "".join(c for c in spec if c.isdigit())
+    col = 0
+    for ch in letters:
+        col = col * 26 + (ord(ch) - 64)
+    return col - 1, int(digits) - 1
+
+
+def _patch_board(enemy_hp, moves, removes):
+    """Change just those things on the combat board (no need to resend the whole map)."""
+    import json
+    import urllib.request
+    patch = {"enemies": [], "tokens": [], "remove": list(removes)}
+    for spec in enemy_hp:
+        name, _, rest = spec.partition(":")
+        cur, _, mx = rest.partition(":")
+        e = {"name": name.strip(), "hp": int(cur)}
+        if mx.strip():
+            e["max"] = int(mx)
+        patch["enemies"].append(e)
+    for spec in moves:
+        name, _, cell = spec.rpartition(":")
+        x, y = _cell(cell)
+        patch["tokens"].append({"name": name.strip(), "x": x, "y": y})
+    token = send._read_token()
+    urllib.request.urlopen(urllib.request.Request(
+        send.BASE_URL + "/stats", data=json.dumps({"combat_patch": patch}).encode(), method="POST",
+        headers={"Content-Type": "application/json", **({"X-DND-Token": token} if token else {})}),
+        timeout=10, context=send._SSL_CTX)
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("-c", "--campaign")
@@ -158,6 +196,9 @@ def main(argv=None) -> int:
     ap.add_argument("--wait", action="store_true")
     ap.add_argument("--combat", help="battle board JSON (same as push_stats.py --combat), pushed with this turn")
     ap.add_argument("--turn-order", help="turn order JSON (same as push_stats.py --turn-order), pushed with this turn")
+    ap.add_argument("--enemy-hp", action="append", default=[], metavar="NAME:CUR[:MAX]", help="an enemy's HP on the board now")
+    ap.add_argument("--move", action="append", default=[], metavar="NAME:C7", help="a token's new square on the board (column letter + row number)")
+    ap.add_argument("--remove-token", action="append", default=[], metavar="NAME", help="take a defeated creature's token off the board")
     ap.add_argument("--resist", choices=["half", "double"], help="target resists (half damage, rounded down) or is vulnerable (double)")
     ap.add_argument("--pause", metavar="NEXT", help='beat by beat: show a Continue button ("Next: the kobolds attack") '
                                                      'and, with --wait, go on only when the table presses it')
@@ -180,6 +221,11 @@ def main(argv=None) -> int:
             print(f"turn.py: roll failed: {e}", file=sys.stderr)
             return 2
 
+    if a.enemy_hp or a.move or a.remove_token:
+        try:
+            _patch_board(a.enemy_hp, a.move, a.remove_token)
+        except Exception as e:
+            print(f"turn.py: board update failed: {e}", file=sys.stderr)
     if a.combat or a.turn_order:
         old_argv = sys.argv
         sys.argv = ["push_stats.py"] + (["--turn-order", a.turn_order] if a.turn_order else []) +                    (["--combat", a.combat] if a.combat else [])

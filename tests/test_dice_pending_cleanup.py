@@ -112,6 +112,22 @@ class DicePendingCleanupTest(unittest.TestCase):
         self.client.post("/stats", json={"turn_order": None})
         self.assertFalse(self.mod._current_stats.get("turn_order"))
 
+    def test_board_patch_changes_hp_and_squares_without_a_resend(self):
+        board = {"enemies": [{"name": "Goblin 1", "hp": 7, "max": 7}, {"name": "Goblin 2", "hp": 7, "max": 7}],
+                 "map": {"cols": 12, "rows": 8, "biome": "dungeon", "title": "Hall",
+                         "tokens": [{"name": "Dagna", "x": 1, "y": 3}, {"name": "Goblin 1", "x": 8, "y": 3, "side": "enemy"},
+                                    {"name": "Goblin 2", "x": 8, "y": 5, "side": "enemy"}]}}
+        self.client.post("/stats", json={"combat": board})
+        self.client.post("/stats", json={"combat_patch": {"enemies": [{"name": "goblin 1", "hp": 3}],
+                                                          "tokens": [{"name": "Dagna", "x": 3, "y": 3}], "remove": ["Goblin 2"]}})
+        c = self.mod._current_stats["combat"]
+        self.assertEqual([(e["name"], e["hp"], e["max"]) for e in c["enemies"]], [("Goblin 1", 3, 7), ("Goblin 2", 7, 7)])
+        toks = {t["name"]: (t["x"], t["y"]) for t in c["map"]["tokens"]}
+        self.assertEqual(toks["Dagna"], (3, 3))
+        self.assertNotIn("Goblin 2", toks)
+        self.assertEqual(c["map"]["title"], "Hall")                       # the rest of the map is untouched
+        self.client.post("/stats", json={"combat": {}})
+
     def test_badge_moves_out_of_the_map_in_combat(self):
         html = (DISPLAY / "templates" / "index.html").read_text(encoding="utf-8")
         self.assertIn("body.combat #dice-pending-badge", html)

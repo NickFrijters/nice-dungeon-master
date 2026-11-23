@@ -1652,6 +1652,7 @@
   .tts-st-track { flex: 1 1 90px; min-width: 70px; max-width: 220px; height: 3px; border-radius: 2px;
     background: rgba(180, 140, 60, 0.16); overflow: hidden; }
   .tts-st-fill { display: block; height: 100%; width: 0%; background: currentColor; transition: width 0.25s linear; }
+  .tts-status.st-idle { display: none; }   /* "Kokoro TTS ready / Retry" under every block was noise; it shows while generating, playing, on errors */
   .tts-status.st-gen  { color: rgba(220, 185, 100, 0.95); }
   .tts-status.st-gen .tts-st-dot { animation: tts-pulse 1s ease-in-out infinite; }
   .tts-status.st-gen .tts-st-fill { width: 35%; animation: tts-slide 1.2s ease-in-out infinite; }
@@ -2929,8 +2930,8 @@
      fully invisible at the frame edge, easing in to fully visible about a quarter of the way down.
      (vh, not px: the same look on a laptop and on a TV.) */
   #text-scroll{
-    -webkit-mask-image:linear-gradient(to bottom, transparent 0, transparent 4vh, rgba(0,0,0,.08) 7vh, rgba(0,0,0,.25) 10vh, rgba(0,0,0,.5) 13vh, rgba(0,0,0,.78) 17vh, rgba(0,0,0,.95) 20vh, #000 23vh, #000 100%);
-            mask-image:linear-gradient(to bottom, transparent 0, transparent 4vh, rgba(0,0,0,.08) 7vh, rgba(0,0,0,.25) 10vh, rgba(0,0,0,.5) 13vh, rgba(0,0,0,.78) 17vh, rgba(0,0,0,.95) 20vh, #000 23vh, #000 100%);
+    -webkit-mask-image:linear-gradient(to bottom, transparent 0, transparent 3vh, rgba(0,0,0,.08) 4.2vh, rgba(0,0,0,.25) 5.2vh, rgba(0,0,0,.5) 6.3vh, rgba(0,0,0,.78) 7.5vh, rgba(0,0,0,.95) 8.5vh, #000 9vh, #000 100%);
+            mask-image:linear-gradient(to bottom, transparent 0, transparent 3vh, rgba(0,0,0,.08) 4.2vh, rgba(0,0,0,.25) 5.2vh, rgba(0,0,0,.5) 6.3vh, rgba(0,0,0,.78) 7.5vh, rgba(0,0,0,.95) 8.5vh, #000 9vh, #000 100%);
   }
   /* GO button + TV staged-actions panel */
   #go-btn{ background:rgba(60,150,80,.25); color:rgba(170,235,170,.95); border:1px solid rgba(110,200,120,.6); border-radius:4px;
@@ -3135,9 +3136,9 @@
   /* "Waiting on…" sits beside the story strip in combat, not in the middle of the battle map */
   body.combat #dice-pending-badge { top: auto; bottom: calc(22vh + 84px); left: auto; right: 40px; transform: none; max-width: 320px; }
   /* what a square is and does, on hover */
-  #cb-tip { position: absolute; z-index: 12; display: none; pointer-events: none; max-width: 220px; padding: 6px 9px; border-radius: 8px;
+  #cb-tip { position: absolute; z-index: 12; display: none; pointer-events: none; max-width: 280px; padding: 7px 10px; border-radius: 8px;
     background: rgba(18,12,5,.95); border: 1px solid rgba(235,205,120,.7); box-shadow: 0 6px 18px rgba(0,0,0,.7);
-    font: 12px/1.35 'EB Garamond', Georgia, serif; color: rgba(240,228,198,.97); }
+    font: 14px/1.4 'EB Garamond', Georgia, serif; color: rgba(245,235,205,.98); }
   #cb-tip b { display: block; font: 700 11px 'Cinzel', serif; letter-spacing: 1px; color: rgba(255,225,130,1); margin-bottom: 2px; }
   /* planned moves: the token stays (faded), a see-through copy waits at the new spot, an arrow joins them until GO */
   #cb-map .cb-token.planned { opacity: .45; }
@@ -3397,6 +3398,7 @@
   body.now-pane #world-clock { display: none; }
   @media (max-width: 1100px) { body.now-pane #world-clock { display: block; } }
   body.combat.now-pane #world-clock { display: block; }
+  body.combat #world-clock #wc-date, body.combat #world-clock #wc-sub { font-size: 11px; color: rgba(225,200,140,.9); }
   /* the story keeps clear of the right pane as the interface text grows */
   #text-scroll { padding-right: calc(max(340px, 18vw) * var(--ui-scale, 1)); }
   /* Dice panel: a DM-requested roll (or the Dice button) opens it above Party Input */
@@ -3412,6 +3414,19 @@
   #party-dice-btn:hover { border-color: rgba(235,205,120,.9); }
   /* Beat by beat: one step on screen, then Continue */
   body.page-held #beat-continue { display: none !important; }   /* one Continue at a time: the text page first */
+  #turn-bar .tb-sent { font: italic 14px/1.4 'EB Garamond', Georgia, serif; color: rgba(235,215,170,.9); margin-bottom: 6px; padding-left: 10px; border-left: 2px solid rgba(235,190,90,.6); }
+  #turn-bar .tb-sent:empty { display: none; }
+  /* Party cards: the numbers a player looks at most (HP, XP, AC, speed) were 8-10px and dim; a notch bigger and brighter. */
+  #sidebar .sb-identity { font-size: 11px; color: rgba(215,200,165,.72); }
+  #sidebar .sb-label { font-size: 9px; color: rgba(205,165,80,.85); }
+  #sidebar .sb-hp-nums { font-size: 12px; color: rgba(245,230,195,.96); }
+  #sidebar .sb-xp-nums { font-size: 10px; color: rgba(220,180,95,.85); }
+  #sidebar .sb-quick-stats { font-size: 10px; color: rgba(220,205,170,.85); }
+  /* Quests and factions: 7.5-9px at 35-60% opacity was unreadable from the table. */
+  #sidebar .sb-factions-header, #sidebar .sb-quests-header { font-size: 9px; color: rgba(205,165,80,.75); }
+  #sidebar .sb-faction-name, #sidebar .sb-quest-name { font-size: 11px; color: rgba(225,212,180,.92); }
+  #sidebar .sb-faction-standing, #sidebar .sb-quest-status { font-size: 9px; }
+  #sidebar .sb-quick-stats span.val { color: rgba(248,235,200,.99); }
 #beat-continue { position: fixed; left: calc(50% + 40px); bottom: 150px; transform: translateX(-50%); z-index: 31; display: none;
     flex-direction: column; align-items: center; gap: 2px; cursor: pointer; padding: 10px 30px; border-radius: 24px;
     background: rgba(40,28,10,.95); border: 2px solid rgba(235,205,120,.95); box-shadow: 0 6px 30px rgba(0,0,0,.7);
@@ -4449,7 +4464,8 @@ function _pageShouldHold() {
   // Under the battle map the pane is a short strip whose scroll height is mostly reserved padding: judge by how
   // much text is on this page instead (one more line must still fit in the strip).
   if (cv) { const pb = parseFloat(getComputedStyle(textScroll).paddingBottom) || 0;
-    return (_pageY(_pageLast()) + 30 - _pageStartY) > Math.max(60, h - pb - 24); }
+    // At least three lines (96px) stay usable even while Party Input is open, or a single line would already ask for Continue.
+    return (_pageY(_pageLast()) + 30 - _pageStartY) > Math.max(96, h - pb - 24); }
   const topGap = h * 0.10;
   const visibleTop = Math.max(0, textScroll.scrollHeight - h) + topGap;   // what stays in view once it scrolls to the end
   return _pageStartY < visibleTop - 4;
@@ -4659,6 +4675,12 @@ function _turnTick() {
   const st = _turnSteps(t, _ttsAutoNarrate && _TTS_AVAILABLE);
   _renderSteps(el.querySelector('.tb-steps'), st.names, st.idx);
   const lead = 'step ' + (st.idx + 1) + ' of ' + st.names.length + ' \u00b7 ';
+  { // what the table just sent stays in view while the DM works, so it never feels lost
+    let sent = el.querySelector('.tb-sent');
+    if (!sent) { sent = document.createElement('div'); sent.className = 'tb-sent'; el.insertBefore(sent, el.firstChild); }
+    const msg = t.phase === 'wait' ? (window._lastSent || '') : '';
+    if (sent.textContent !== msg) sent.textContent = msg;
+  }
   if (t.phase === 'wait') {
     if (window._beatPause) { el.classList.remove('tb-indet'); label.textContent = 'press Continue to see what happens next'; return; }
     const rollers = window._dicePendingNames || [];
@@ -6002,7 +6024,7 @@ function openSheet(name) {
     ['HP',       hp.current != null ? `${hp.current}/${hp.max}` : '—'],
     ['AC',       p.ac       ?? '—'],
     ['Init',     p.initiative ?? '—'],
-    ['Speed',    p.speed    != null ? p.speed + (p.speed <= 18 ? ' m' : ' ft') : '—'],
+    ['Speed',    p.speed    != null ? ((typeof p.speed === 'string' && /[a-z]/i.test(p.speed)) ? p.speed : p.speed + (p.speed <= 18 ? ' m' : ' ft')) : '—'],
     ['Hit Dice', hd.die     ? `${hd.remaining ?? '?'}/${hd.max ?? '?'} ${hd.die}` : '—'],
   ];
   if (hp.temp) stripData.splice(1, 0, ['Temp HP', '+' + hp.temp]);
@@ -8357,6 +8379,7 @@ async function _partyGo() {
       if (typeof _cbActsChanged === 'function') { _cbActs = {}; _cbActsChanged(); }   // the picked attacks and spells went with it (moves: the server moved the tokens)
       _partyRefresh();
       _partySync(true);                             // the other screens clear theirs too
+      window._lastSent = entries.map(e => (e.character && e.character !== 'Everybody' ? e.character.split(' ')[0] + ': ' : '') + e.text).join('  ·  ').slice(0, 220);
       _turnStart();                                 // loading bar until text and voice are done
       if (document.body.classList.contains('combat')) {   // under the battle map the open panel covers the answer strip
         _inputPanel.classList.add('collapsed'); _inputArrow.textContent = '▲';
@@ -8964,6 +8987,8 @@ function _showBeatPause(bp) {
 async function _beatContinue() {
   if (!window._beatPause) return;
   _showBeatPause(null);                               // at once here; the server tells the other screens
+  window._lastSent = '';
+  if (typeof _turnStart === 'function') _turnStart();   // the same progress indicator as after GO, so waiting is visible
   try { await fetch('/beat/continue', { method: 'POST', headers: _authHeaders(), body: '{}' }); } catch (_) {}
 }
 document.getElementById('beat-continue').addEventListener('click', _beatContinue);
