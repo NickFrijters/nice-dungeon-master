@@ -66,5 +66,20 @@ class PlaytestRound2Test(unittest.TestCase):
         self.assertIn("Do not run `push_stats.py --help`", cmds)
 
 
+class TurnPyBoardAndResistTest(unittest.TestCase):
+    def test_resist_halves_and_board_options_exist(self):
+        import sys, types
+        sys.path.insert(0, str(D)); sys.path.insert(0, str(ROOT / "skills" / "dnd" / "scripts"))
+        import turn
+        src = (D / "turn.py").read_text(encoding="utf-8")
+        for flag in ('"--combat"', '"--turn-order"', '"--resist"'):
+            self.assertIn("ap.add_argument(" + flag, src)
+        a = types.SimpleNamespace(damage="1d1+9", roll="d20+30", ask=None, label="x", vs=1, hit="{dmg}", miss="", hp_on_hit=None, resist="half")
+        seen = set()
+        for _ in range(60):
+            seen.add(turn._resolve(a)[3].split("damage=")[1])
+        self.assertTrue(seen <= {"0", "5", "10"} and "5" in seen, seen)       # 1d1+9 = 10 normally, 5 halved, 10 on a crit (2d1+9=11 -> 5)
+
+
 if __name__ == "__main__":
     unittest.main()

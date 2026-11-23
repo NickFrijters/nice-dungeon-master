@@ -12,6 +12,8 @@ micro-save, the turn pointer, and optionally the autorun wait for the next playe
         --npc "Escobert: Hurry, the grate!" \\
         --event "Dagna burned swarm 2 (9 dmg)" [--flag "Label: text"] [--unflag Label] \\
         --turn-current "Rattenzwerm 2" [--turn-round 3] \\
+        [--combat '{...}'] [--turn-order '{...}']   (the battle board, pushed first, in the same call)
+        [--resist half|double]                      (with --damage: swarms and resistances)
         [--wait]            (then wait for the next players' input and print it, like autorun_wait.py)
 
 --narrate - reads the narration from stdin. Every step that fails is reported on stderr; the others still run.
@@ -115,6 +117,11 @@ def _resolve(a):
         num, die, mod, *_rest = dice.parse_notation(a.damage)
         rolls = dice.roll_dice(num * (2 if crit else 1), die)
         dmg = max(0, sum(rolls) + mod)
+        resist = getattr(a, "resist", None)
+        if resist == "half":
+            dmg //= 2
+        elif resist == "double":
+            dmg *= 2
     verdict = ("critical hit" if crit else ("hit" if attack else "success")) if ok else ("miss" if attack else "failure")
     vs_txt = f" vs {a.vs}" if a.vs is not None else ""
     nat_txt = f" (natural {nat})" if nat in (1, 20) else ""
@@ -149,6 +156,9 @@ def main(argv=None) -> int:
     ap.add_argument("--turn-current")
     ap.add_argument("--turn-round", type=int)
     ap.add_argument("--wait", action="store_true")
+    ap.add_argument("--combat", help="battle board JSON (same as push_stats.py --combat), pushed with this turn")
+    ap.add_argument("--turn-order", help="turn order JSON (same as push_stats.py --turn-order), pushed with this turn")
+    ap.add_argument("--resist", choices=["half", "double"], help="target resists (half damage, rounded down) or is vulnerable (double)")
     ap.add_argument("--pause", metavar="NEXT", help='beat by beat: show a Continue button ("Next: the kobolds attack") '
                                                      'and, with --wait, go on only when the table presses it')
     # roll and resolve in the same call: write both outcomes, the script picks one
@@ -169,6 +179,18 @@ def main(argv=None) -> int:
         except Exception as e:
             print(f"turn.py: roll failed: {e}", file=sys.stderr)
             return 2
+
+    if a.combat or a.turn_order:
+        old_argv = sys.argv
+        sys.argv = ["push_stats.py"] + (["--turn-order", a.turn_order] if a.turn_order else []) +                    (["--combat", a.combat] if a.combat else [])
+        try:
+            with contextlib.redirect_stdout(io.StringIO()):
+                push_stats.main()
+        except SystemExit as e:
+            if e.code not in (None, 0):
+                print(f"turn.py: board push failed ({e.code})", file=sys.stderr)
+        finally:
+            sys.argv = old_argv
 
     for spec in a.player:
         name, line = _split(spec)

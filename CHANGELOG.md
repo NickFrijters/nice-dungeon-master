@@ -10,6 +10,11 @@ Versions before **1.6.0** are reconstructed retroactively from git history; the 
 
 ## [Unreleased]
 
+## [2.54.4] — 2026-11-23 — one-call combat turns, resistance
+
+### Added
+- `turn.py --combat '{...}' --turn-order '{...}'` push the battle board in the same call as the turn (one call per combat turn instead of two), and `--resist half|double` applies resistance or vulnerability to rolled damage (swarms).
+
 ## [2.54.3] — 2026-11-23 — live playtest fixes
 
 ### Fixed (live playtest with a real DM session and a browser)
