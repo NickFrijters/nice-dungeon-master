@@ -10,6 +10,12 @@ Versions before **1.6.0** are reconstructed retroactively from git history; the 
 
 ## [Unreleased]
 
+## [2.56.0] — 2026-11-23 — one-click combat actions, allies
+
+### Added
+- One-click actions in combat: the active player's attacks and spells (cantrips dashed) are buttons at the top of the right column ("Dagna's turn: pick an action"). Click one, then click the target on the map or in the list; the sentence (with cover) lands in that player's Party Input as before. The sheet route still works.
+- Allies: friendly NPCs in a fight (Linan Swift next to Milo) now show in the initiative bar and in an **Allies** list with HP. The DM gives them in `--combat` as `allies`, and any friendly token that is not a player shows up even without it. The side list scrollbar is visible when the list is longer than the window.
+
 ## [2.55.4] — 2026-11-23 — End fight button, typing watchdog
 
 ### Added / Fixed

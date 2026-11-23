@@ -3325,12 +3325,19 @@
     #cb-legend { flex-wrap: wrap; gap: 2px 12px; } #cb-legend .cb-title { font-size: 11px; letter-spacing: 2px; }
     .cb-hp .cb-hp-name { font-size: 12px; } .cb-card { min-width: 76px; padding: 5px 8px 7px; font-size: 11px; }
   }
-  #cb-side { overflow-y: auto; min-height: 0; scrollbar-width: none; padding: 4px 2px; }
+  #cb-side { overflow-y: auto; min-height: 0; scrollbar-width: thin; scrollbar-color: rgba(200,165,80,.5) transparent; padding: 4px 2px; }
   #cb-side.tight .cb-hp { margin-bottom: 3px; padding: 2px 8px; }
   #cb-side.tight h4 { margin: 4px 0 3px; }
   #cb-side.tight .cb-hp-note { display: none; }
   #cb-side.tighter .cb-hp .cb-hp-name { font-size: 11px; }
   #cb-side.tighter .cb-hp { padding: 1px 8px; margin-bottom: 2px; }
+  .cb-acts { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 4px; }
+  .cb-act { padding: 3px 9px; border-radius: 11px; cursor: pointer; font: 12.5px 'EB Garamond', Georgia, serif; color: rgba(245,232,200,.97);
+    background: rgba(70,45,15,.85); border: 1px solid rgba(235,190,90,.6); }
+  .cb-act.spell { background: rgba(45,35,85,.85); border-color: rgba(170,150,235,.65); }
+  .cb-act.cantrip { border-style: dashed; }
+  .cb-act:hover, .cb-act.armed { color: #fff; border-color: rgba(255,225,140,1); box-shadow: 0 0 0 1px rgba(255,225,140,.7); }
+  .cb-hp.ally .cb-hp-fill { background: rgba(110,190,150,.9); }
   #cb-side h4 { margin: 8px 0 6px; font: 11px 'Cinzel', serif; letter-spacing: 2px; text-transform: uppercase; color: rgba(200,165,80,.85); }
   .cb-hp { margin-bottom: 5px; padding: 4px 9px; border-radius: 6px; background: rgba(0,0,0,.35); border: 1px solid rgba(180,140,60,.18); }
   .cb-hp.enemy { border-color: rgba(220,80,70,.25); }
@@ -6730,9 +6737,20 @@ function _updateCombat(stats) {
   _cbRenderChips();
 }
 // HP of a combatant by name: party from the sheet data, enemies from the board.
+// Friendly NPCs in the fight (Linan Swift next to Milo): the DM's `allies` list, plus any friendly token that is not a player.
+function _cbAllies() {
+  const out = ((_combatState && _combatState.allies) || []).map(a => ({ ...a }));
+  const m = _combatState && _combatState.map;
+  ((m && m.tokens) || []).forEach(t => {
+    if (t.side === 'pc' && !_playerData[t.name] && !out.some(a => a.name === t.name)) out.push({ name: t.name, hp: null, max: null, note: '' });
+  });
+  return out;
+}
 function _cbHp(name) {
   const p = _playerData[name];
   if (p) return { hp: p.hp && p.hp.current, max: p.hp && p.hp.max, pc: true, note: '' };
+  const al = _cbAllies().find(x => x.name === name);
+  if (al) return { hp: al.hp, max: al.max, pc: true, ally: true, note: al.note || '' };
   const e = ((_combatState && _combatState.enemies) || []).find(x => x.name === name);
   return e ? { hp: e.hp, max: e.max, pc: false, note: e.note || '' } : { hp: null, max: null, pc: false, note: '' };
 }
@@ -6773,8 +6791,35 @@ function _renderCombat(to) {
     if (note) { const t = document.createElement('div'); t.className = 'cb-hp-note'; t.textContent = note; d.appendChild(t); }
     side.appendChild(d);
   };
+  // The active player's attacks and spells, one click each: pick, then click the target on the map.
+  const actor = _playerData[to.current];
+  const sh = actor && actor.sheet;
+  if (sh) {
+    const names = [];
+    (sh.attacks || []).forEach(a => { if (a && a.name) names.push(['attack', a.name, false]); });
+    const sp = sh.spells || {};
+    Object.keys(sp).forEach(k => { if (Array.isArray(sp[k])) sp[k].forEach(n => { if (typeof n === 'string' && n) names.push(['spell', n, k === 'cantrips']); }); });
+    const seen = new Set(), uniq = names.filter(x => { const key = x[0] + '|' + x[1].toLowerCase(); if (seen.has(key)) return false; seen.add(key); return true; });
+    if (uniq.length) {
+      const hh = document.createElement('h4'); hh.textContent = actor.name.split(' ')[0] + "'s turn: pick an action"; side.appendChild(hh);
+      const row = document.createElement('div'); row.className = 'cb-acts';
+      uniq.forEach(([kind, name, cantrip]) => {
+        const b = document.createElement('button'); b.type = 'button';
+        b.className = 'cb-act ' + kind + (cantrip ? ' cantrip' : '') + (_cbArmed && _cbArmed.name === name ? ' armed' : '');
+        b.textContent = name; b.title = kind === 'attack' ? 'Attack: then click the target' : (cantrip ? 'Cantrip: then click the target' : 'Spell: then click the target');
+        b.addEventListener('click', () => _cbArm(actor.name, kind, name));
+        row.appendChild(b);
+      });
+      side.appendChild(row);
+    }
+  }
   const h1 = document.createElement('h4'); h1.textContent = 'Party'; side.appendChild(h1);
   Object.values(_playerData).forEach(p => addHp('pc', p.name, p.hp && p.hp.current, p.hp && p.hp.max, '', p.name === to.current));
+  const allies = _cbAllies();
+  if (allies.length) {
+    const h3 = document.createElement('h4'); h3.textContent = 'Allies'; side.appendChild(h3);
+    allies.forEach(a => addHp('pc ally', a.name, a.hp, a.max, a.note, a.name === to.current));
+  }
   const en = (_combatState && _combatState.enemies) || [];
   if (en.length) {
     const h2 = document.createElement('h4'); h2.textContent = 'Enemies'; side.appendChild(h2);

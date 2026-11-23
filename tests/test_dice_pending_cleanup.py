@@ -169,6 +169,12 @@ class DicePendingCleanupTest(unittest.TestCase):
         self.assertFalse(self.mod._current_stats.get("turn_order"))
         self.assertIn("[Table]: The players closed the combat screen", self._queue())
 
+    def test_allies_are_kept_on_the_board(self):
+        self.client.post("/stats", json={"combat": {"enemies": [{"name": "Rat", "hp": 3, "max": 3}],
+                                                    "allies": [{"name": "Linan Swift", "hp": 8, "max": 11}]}})
+        self.assertEqual(self.mod._current_stats["combat"]["allies"], [{"name": "Linan Swift", "hp": 8, "max": 11, "note": ""}])
+        self.client.post("/stats", json={"combat": {}})
+
     def test_badge_moves_out_of_the_map_in_combat(self):
         html = (DISPLAY / "templates" / "index.html").read_text(encoding="utf-8")
         self.assertIn("body.combat #dice-pending-badge", html)

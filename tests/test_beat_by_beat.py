@@ -152,5 +152,18 @@ class LeaveCombatAndWatchdogTest(unittest.TestCase):
         self.assertIn("End combat in the same call as its last beat", skill)
 
 
+class AlliesAndActionButtonsTest(unittest.TestCase):
+    def test_wiring(self):
+        h = (D / "templates" / "index.html").read_text(encoding="utf-8")
+        self.assertIn("function _cbAllies()", h)
+        self.assertIn("h3.textContent = 'Allies'", h)
+        self.assertIn("pick an action", h)
+        self.assertIn("b.addEventListener('click', () => _cbArm(actor.name, kind, name));", h)
+        app = (D / "dnd-display-app.py").read_text(encoding="utf-8")
+        self.assertIn('out = {"enemies": [], "allies": [], "map": None}', app)
+        cmds = (ROOT / "skills" / "dnd" / "SKILL-commands.md").read_text(encoding="utf-8")
+        self.assertIn("**Allies:** friendly NPCs fighting with the party", cmds)
+
+
 if __name__ == "__main__":
     unittest.main()

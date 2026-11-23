@@ -2279,11 +2279,15 @@ def _clean_combat(raw, prev=None, place_label: str = ""):
         except (TypeError, ValueError):
             return None
 
-    out = {"enemies": [], "map": None}
+    out = {"enemies": [], "allies": [], "map": None}
     for e in (raw.get("enemies") or [])[:24]:
         if isinstance(e, dict) and e.get("name"):
             out["enemies"].append({"name": str(e["name"])[:40], "hp": _n(e.get("hp")), "max": _n(e.get("max")),
                                    "note": str(e.get("note", ""))[:40]})
+    for a in (raw.get("allies") or [])[:12]:          # friendly NPCs fighting with the party (not player characters)
+        if isinstance(a, dict) and a.get("name"):
+            out["allies"].append({"name": str(a["name"])[:40], "hp": _n(a.get("hp")), "max": _n(a.get("max")),
+                                  "note": str(a.get("note", ""))[:40]})
     m = raw.get("map")
     if isinstance(m, dict):
         cols = _n(m.get("cols", 12), 4, 26) or 12
