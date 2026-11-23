@@ -139,5 +139,18 @@ class ConditionDuplicatesTest(unittest.TestCase):
         self.assertIn('"unconscious" and "Unconscious" are one condition'.replace('"unconscious" and "Unconscious"', '"Unconscious" and "unconscious"'), app)
 
 
+class LeaveCombatAndWatchdogTest(unittest.TestCase):
+    def test_wiring(self):
+        h = (D / "templates" / "index.html").read_text(encoding="utf-8")
+        self.assertIn('id="cb-leave"', h)
+        self.assertIn("body.combat #cb-leave { display: block; }", h)
+        self.assertIn("if (Date.now() - window._typeTick > 6000)", h)            # typing that stalls finishes instantly
+        self.assertIn("window._typeTick = Date.now();\n  scrollToBottom();", h)
+        t = (D / "turn.py").read_text(encoding="utf-8")
+        self.assertIn('ap.add_argument("--end-combat"', t)
+        skill = (ROOT / "skills" / "dnd" / "SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("End combat in the same call as its last beat", skill)
+
+
 if __name__ == "__main__":
     unittest.main()

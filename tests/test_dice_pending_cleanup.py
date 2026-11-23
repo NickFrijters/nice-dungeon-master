@@ -159,6 +159,16 @@ class DicePendingCleanupTest(unittest.TestCase):
         self.client.post("/player-input/dice", json={"character": "Milo", "spec": "1d20", "request_id": rid})
         self.assertEqual(self._queue(), "")                                                  # it gets the result by polling
 
+    def test_the_players_can_close_the_combat_screen(self):
+        Path(self.mod.QUEUE_FILE).write_text("", encoding="utf-8")
+        self.client.post("/stats", json={"turn_order": {"order": ["A", "B"], "current": "A", "round": 1},
+                                         "combat": {"enemies": [{"name": "Rat", "hp": 3, "max": 3}]}})
+        self.assertTrue(self.mod._current_stats.get("combat"))
+        self.assertEqual(self.client.post("/combat/close", json={}).status_code, 204)
+        self.assertFalse(self.mod._current_stats.get("combat"))
+        self.assertFalse(self.mod._current_stats.get("turn_order"))
+        self.assertIn("[Table]: The players closed the combat screen", self._queue())
+
     def test_badge_moves_out_of_the_map_in_combat(self):
         html = (DISPLAY / "templates" / "index.html").read_text(encoding="utf-8")
         self.assertIn("body.combat #dice-pending-badge", html)

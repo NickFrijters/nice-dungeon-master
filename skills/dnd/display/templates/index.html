@@ -3416,6 +3416,10 @@
   body.page-held #beat-continue { display: none !important; }   /* one Continue at a time: the text page first */
   #turn-bar .tb-sent { font: italic 14px/1.4 'EB Garamond', Georgia, serif; color: rgba(235,215,170,.9); margin-bottom: 6px; padding-left: 10px; border-left: 2px solid rgba(235,190,90,.6); }
   #turn-bar .tb-sent:empty { display: none; }
+  #cb-leave { display: none; position: fixed; top: 14px; right: 230px; z-index: 40; padding: 5px 12px; border-radius: 14px; cursor: pointer;
+    font: 12px 'Cinzel', serif; letter-spacing: .08em; color: rgba(235,215,170,.85); background: rgba(30,20,8,.85); border: 1px solid rgba(235,190,90,.45); }
+  #cb-leave:hover { color: rgba(255,240,200,1); border-color: rgba(235,205,120,.95); }
+  body.combat #cb-leave { display: block; }
   /* Party cards: the numbers a player looks at most (HP, XP, AC, speed) were 8-10px and dim; a notch bigger and brighter. */
   #sidebar .sb-identity { font-size: 11px; color: rgba(215,200,165,.72); }
   #sidebar .sb-label { font-size: 9px; color: rgba(205,165,80,.85); }
@@ -3455,6 +3459,7 @@
 <!-- Overlays -->
 <div id="vignette"></div>
 <div id="frame"></div>
+<button type="button" id="cb-leave" title="Close the combat screen if the fight is over">End fight ✕</button>
 <div id="combat-view" aria-label="Combat">
   <div id="cb-order"></div>
   <div id="cb-map-wrap"><div id="cb-map"></div></div>
@@ -4556,6 +4561,7 @@ function typeNextChar() {
   currentCursor = currentEl.querySelector('p:last-child');
   if (currentCursor) currentCursor.classList.add('typing-cursor');
 
+  window._typeTick = Date.now();
   scrollToBottom();
   setTimeout(typeNextChar, _nextDelay());
 }
@@ -4735,6 +4741,23 @@ function _releaseHeld(durSec) {
 // Hidden / occluded tabs get their timers throttled to ~1/s (or 1/min), which
 // stalls the typewriter for minutes and delays TTS (the bar is only added once a
 // block is finalised). Show text instantly there and still finalise the block.
+// Leaving the combat screen: two clicks (the second within 4 s) so it cannot happen by accident.
+(function () {
+  const b = document.getElementById('cb-leave'); if (!b) return;
+  let armed = 0;
+  b.addEventListener('click', async () => {
+    if (Date.now() - armed > 4000) { armed = Date.now(); b.textContent = 'Really end the fight?'; setTimeout(() => { if (Date.now() - armed >= 3900) b.textContent = 'End fight ✕'; }, 4100); return; }
+    armed = 0; b.textContent = 'End fight ✕';
+    try { await fetch('/combat/close', { method: 'POST', headers: _authHeaders(), body: '{}' }); } catch (_) {}
+  });
+})();
+// Safety net: if the typewriter stops for no reason (not held for a page, a voice or a hidden tab) for 6 s, show the
+// rest of the text at once. Text must never stay half written.
+window._typeTick = Date.now();
+setInterval(() => {
+  if (!charQueue.length || _pageHeld || _heldItems.length || document.hidden) { window._typeTick = Date.now(); return; }
+  if (Date.now() - window._typeTick > 6000) { isTyping = false; _flushWhileHidden(); window._typeTick = Date.now(); }
+}, 2000);
 function _flushWhileHidden() {
   instantFlush();
   _turnTypingDone(true);

@@ -4281,6 +4281,24 @@ def ready_input():
     return "", 204
 
 
+@app.route("/combat/close", methods=["POST"])
+def combat_close():
+    """The players leave the combat screen themselves (the DM forgot to clear it, or the fight is over for them)."""
+    if not _token_ok():
+        return "Forbidden", 403
+    try:
+        with app.test_client() as c:
+            c.post("/stats", json={"combat": {}, "turn_order": None}, headers={"X-DND-Token": _lan_token or ""})
+    except Exception:
+        return "could not close", 500
+    try:
+        with _staged_lock, open(QUEUE_FILE, "a", encoding="utf-8") as f:
+            f.write("[Table]: The players closed the combat screen: the fight is over for them. Carry on with the story and clear the board on your side.\n")
+    except OSError:
+        pass
+    return "", 204
+
+
 @app.route("/party-input", methods=["POST"])
 def party_input():
     """GO: send every filled row of the Party Input to the DM at once.

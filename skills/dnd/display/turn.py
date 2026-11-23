@@ -199,6 +199,7 @@ def main(argv=None) -> int:
     ap.add_argument("--enemy-hp", action="append", default=[], metavar="NAME:CUR[:MAX]", help="an enemy's HP on the board now")
     ap.add_argument("--move", action="append", default=[], metavar="NAME:C7", help="a token's new square on the board (column letter + row number)")
     ap.add_argument("--remove-token", action="append", default=[], metavar="NAME", help="take a defeated creature's token off the board")
+    ap.add_argument("--end-combat", action="store_true", help="the fight is over: clear the battle board and the turn order")
     ap.add_argument("--resist", choices=["half", "double"], help="target resists (half damage, rounded down) or is vulnerable (double)")
     ap.add_argument("--pause", metavar="NEXT", help='beat by beat: show a Continue button ("Next: the kobolds attack") '
                                                      'and, with --wait, go on only when the table presses it')
@@ -221,6 +222,17 @@ def main(argv=None) -> int:
             print(f"turn.py: roll failed: {e}", file=sys.stderr)
             return 2
 
+    if a.end_combat:
+        old_argv = sys.argv
+        sys.argv = ["push_stats.py", "--combat", "{}", "--turn-clear"]
+        try:
+            with contextlib.redirect_stdout(io.StringIO()):
+                push_stats.main()
+        except SystemExit as e:
+            if e.code not in (None, 0):
+                print(f"turn.py: could not clear the board ({e.code})", file=sys.stderr)
+        finally:
+            sys.argv = old_argv
     if a.enemy_hp or a.move or a.remove_token:
         try:
             _patch_board(a.enemy_hp, a.move, a.remove_token)

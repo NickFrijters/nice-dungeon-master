@@ -10,6 +10,12 @@ Versions before **1.6.0** are reconstructed retroactively from git history; the 
 
 ## [Unreleased]
 
+## [2.55.4] — 2026-11-23 — End fight button, typing watchdog
+
+### Added / Fixed
+- A combat screen could linger after the story had moved on (the DM forgot to clear it). Players now have an **End fight** button on the combat screen (two clicks, so it cannot happen by accident); it clears the board and tells the DM with a `[Table]: ...` line. For the DM, `turn.py --end-combat` clears the board in the same call as the last beat, and the rules say to do so.
+- Text that stopped half way through a word: if the typewriter stalls for 6 seconds for no reason (not paused for a page, a voice or a hidden tab), the rest of the text now appears at once, so text is never left half written.
+
 ## [2.55.3] — 2026-11-23 — one chip per condition
 
 ### Fixed
