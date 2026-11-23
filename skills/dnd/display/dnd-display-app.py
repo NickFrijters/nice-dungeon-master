@@ -2949,7 +2949,7 @@ def health():
 # ── How fast the DM answers ──────────────────────────────────────────────────
 # From the moment the players' GO reaches the DM's queue to the first block the DM sends back, and to its narration.
 # Every turn is written to latency.jsonl in the runtime folder (scripts/latency.py reports on it) and shown on screen.
-_turn_clock = {"t0": None, "first": None}
+_turn_clock = {"t0": None, "first": None, "carry": 0.0}
 _turn_clock_lock = threading.Lock()
 LATENCY_FILE = rt("latency.jsonl")
 
@@ -2962,9 +2962,14 @@ def _dm_answered() -> None:
         pass
 
 
-def _turn_clock_start() -> None:
+def _turn_clock_start(after_roll: bool = False) -> None:
+    """Start timing the DM. After a player's roll the clock restarts, but the DM's time before the roll request
+    (not the player's time on the dice) is carried over, so the badge shows what the DM really took."""
     with _turn_clock_lock:
-        _turn_clock["t0"], _turn_clock["first"] = _time.time(), None
+        carry = 0.0
+        if after_roll and _turn_clock["t0"] is not None and _turn_clock["first"] is not None:
+            carry = _turn_clock["first"] + (_turn_clock.get("carry") or 0.0)
+        _turn_clock["t0"], _turn_clock["first"], _turn_clock["carry"] = _time.time(), None, carry
 
 
 def _turn_clock_hit(data: dict) -> None:
@@ -2979,7 +2984,8 @@ def _turn_clock_hit(data: dict) -> None:
             _turn_clock["first"] = round(now - t0, 2)
         if not plain:
             return
-        rec = {"ts": round(now, 1), "first": _turn_clock["first"], "reply": round(now - t0, 2)}
+        carry = _turn_clock.get("carry") or 0.0
+        rec = {"ts": round(now, 1), "first": round(carry + _turn_clock["first"], 2), "reply": round(carry + now - t0, 2)}
         _turn_clock["t0"] = None
     try:
         with open(LATENCY_FILE, "a", encoding="utf-8") as f:
@@ -3995,7 +4001,7 @@ def player_dice():
                         "total": total, "natural": kept[0] if len(kept) == 1 else None, "text": text, "at": now}
                     if not entry["chars"]:
                         _dice_pending.pop(req_id, None)
-                        _turn_clock_start()      # the players' roll is in: the DM's next answer is timed from here, not from GO
+                        _turn_clock_start(after_roll=True)      # the players' roll is in: the DM's next answer is timed from here (plus the DM's time before the request), not from GO
     if pending_changed:
         _broadcast({"dice_pending": _dice_pending_snapshot()})
 
@@ -4087,6 +4093,7 @@ def dice_request():
         }
     }
     _broadcast(payload)
+    _turn_clock_hit({"dice": True})        # asking for a roll is the DM's first answer: time it
     return jsonify({
         "request_id": request_id,
         "pending": sorted(trackable),

@@ -10,6 +10,15 @@ Versions before **1.6.0** are reconstructed retroactively from git history; the 
 
 ## [Unreleased]
 
+## [2.55.1] — 2026-11-23 — third playtest fixes
+
+### Fixed (third live playtest)
+- The header no longer shows "The Inn" as a place before the DM names one.
+- Party cards show the speed unit ("30 ft" / "9 m"); a bare "30" never said which.
+- In combat the Continue button sits beside the story strip instead of on the map's bottom row.
+- "DM answered in N s" after a roll now adds the DM's time before the dice request (it showed 0.0 s), and asking for a roll counts as the DM's first answer.
+- Loading from the Main Menu: the display already restores party, place, time, NPCs, quests, factions and the board, so the DM rules now say to skip those pushes and only send the recap (a playtest spent 21 s on them).
+
 ## [2.55.0] — 2026-11-23 — readable screens, board patch
 
 ### Added

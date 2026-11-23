@@ -3421,7 +3421,7 @@
   #sidebar .sb-label { font-size: 9px; color: rgba(205,165,80,.85); }
   #sidebar .sb-hp-nums { font-size: 12px; color: rgba(245,230,195,.96); }
   #sidebar .sb-xp-nums { font-size: 10px; color: rgba(220,180,95,.85); }
-  #sidebar .sb-quick-stats { font-size: 10px; color: rgba(220,205,170,.85); }
+  #sidebar .sb-quick-stats { font-size: 9.5px; letter-spacing: 0; color: rgba(220,205,170,.85); }
   /* Quests and factions: 7.5-9px at 35-60% opacity was unreadable from the table. */
   #sidebar .sb-factions-header, #sidebar .sb-quests-header { font-size: 9px; color: rgba(205,165,80,.75); }
   #sidebar .sb-faction-name, #sidebar .sb-quest-name { font-size: 11px; color: rgba(225,212,180,.92); }
@@ -3435,7 +3435,9 @@
   #beat-continue .bc-go { font: 700 14px 'Cinzel', serif; letter-spacing: .16em; text-transform: uppercase; }
   #beat-continue .bc-next { font: italic 13px 'EB Garamond', Georgia, serif; color: rgba(230,215,180,.85); }
   #beat-continue .bc-next:empty { display: none; }
-  body.combat #beat-continue { bottom: calc(22vh + 74px); }
+  /* in combat the button sits in the free corner beside the story strip, not on the map's bottom row */
+  body.combat #beat-continue { left: auto; right: 36px; transform: none; bottom: calc(22vh + 8px); animation-name: beatNudgeSide; }
+  @keyframes beatNudgeSide { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
 </style>
 </head>
 <body>
@@ -3676,15 +3678,19 @@ let bgActive = 'a'; // which bg layer is currently showing
 window._cbMapTitle = '';
 // The turn order is a list of names; a DM that sends {name, init} objects still works.
 function _orderNames(o) { return (Array.isArray(o) ? o : []).map(e => (e && typeof e === 'object') ? String(e.name || e.character || '') : String(e)).filter(Boolean); }
+// 9 -> '9 m', 30 -> '30 ft', '9 m' stays: a bare number on a card never says which unit it is.
+function _speedText(sp) { return (typeof sp === 'string' && /[a-z]/i.test(sp)) ? sp : (sp + (sp <= 18 ? ' m' : ' ft')); }
 function _refreshSceneTitle() {
   const ind = document.getElementById('scene-indicator'); if (!ind) return;
   let pm = ''; try { pm = (_pmLast && _pmLast.label) || ''; } catch (_) {}      // _pmLast is declared further down
   const real = pm || window._cbMapTitle || '';
-  ind.textContent = '— ' + (real || activeScene.label || activeScene.name) + ' —';
+  const guess = (window._sceneSeen && activeScene.name !== 'tavern') ? (activeScene.label || activeScene.name) : '';   // the server's default scene is the inn: never show that as a place   // no guess like "The Inn" before any scene was detected
+  ind.textContent = (real || guess) ? '— ' + (real || guess) + ' —' : '';
 }
 function applyScene(scene) {
   if (!scene || scene.name === activeScene.name) return;
   activeScene = { ...SCENE_DEFAULTS, ...scene };
+  window._sceneSeen = true;
 
   // Update scene indicator with a fade
   const indicator = document.getElementById('scene-indicator');
@@ -5811,7 +5817,7 @@ function _buildPlayerCard(p, solo) {
   const quickLines = [];
   if (p.ac        != null) quickLines.push(`AC <span class="val">${p.ac}</span>`);
   if (p.initiative != null) quickLines.push(`Init <span class="val">${p.initiative}</span>`);
-  if (p.speed     != null) quickLines.push(`Spd <span class="val">${p.speed}</span>`);
+  if (p.speed     != null) quickLines.push(`Spd <span class="val">${_speedText(p.speed)}</span>`);
   if (p.hit_dice) {
     const hd = p.hit_dice;
     quickLines.push(`HD <span class="val">${hd.remaining ?? '?'}/${hd.max ?? '?'} ${hd.die || ''}</span>`);

@@ -119,5 +119,17 @@ class VisualPlaytestTest(unittest.TestCase):
         self.assertIn("When a fight starts, the table gets words within seconds", skill)
 
 
+class Round3Test(unittest.TestCase):
+    def test_wiring(self):
+        h = (D / "templates" / "index.html").read_text(encoding="utf-8")
+        self.assertIn("function _speedText(sp)", h)
+        self.assertIn("activeScene.name !== 'tavern'", h)                       # no "The Inn" guess as a place
+        self.assertIn("animation-name: beatNudgeSide;", h)                       # combat Continue beside the strip
+        cmds = (ROOT / "skills" / "dnd" / "SKILL-commands.md").read_text(encoding="utf-8")
+        self.assertIn("Fast path for `[Menu]: load` (hard rule)", cmds)
+        app = (D / "dnd-display-app.py").read_text(encoding="utf-8")
+        self.assertIn('_turn_clock_hit({"dice": True})', app)
+
+
 if __name__ == "__main__":
     unittest.main()

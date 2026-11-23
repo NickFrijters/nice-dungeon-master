@@ -128,6 +128,15 @@ class DicePendingCleanupTest(unittest.TestCase):
         self.assertEqual(c["map"]["title"], "Hall")                       # the rest of the map is untouched
         self.client.post("/stats", json={"combat": {}})
 
+    def test_latency_after_a_roll_carries_the_dm_time_not_the_players(self):
+        self.mod._turn_clock_start()
+        with self.mod._turn_clock_lock:
+            self.mod._turn_clock["first"] = 7.0        # the DM asked for the roll after 7 s
+        self.mod._turn_clock_start(after_roll=True)    # the player rolled (after any amount of time)
+        self.assertEqual(self.mod._turn_clock["carry"], 7.0)
+        self.mod._turn_clock_start()                   # a normal turn start carries nothing
+        self.assertEqual(self.mod._turn_clock["carry"], 0.0)
+
     def test_badge_moves_out_of_the_map_in_combat(self):
         html = (DISPLAY / "templates" / "index.html").read_text(encoding="utf-8")
         self.assertIn("body.combat #dice-pending-badge", html)
