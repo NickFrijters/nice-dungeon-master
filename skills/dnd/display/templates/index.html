@@ -3411,7 +3411,8 @@
     font: 700 11px 'Cinzel', serif; letter-spacing: .1em; padding: 6px 10px; cursor: pointer; margin-left: auto; margin-right: 8px; }
   #party-dice-btn:hover { border-color: rgba(235,205,120,.9); }
   /* Beat by beat: one step on screen, then Continue */
-  #beat-continue { position: fixed; left: calc(50% + 40px); bottom: 150px; transform: translateX(-50%); z-index: 31; display: none;
+  body.page-held #beat-continue { display: none !important; }   /* one Continue at a time: the text page first */
+#beat-continue { position: fixed; left: calc(50% + 40px); bottom: 150px; transform: translateX(-50%); z-index: 31; display: none;
     flex-direction: column; align-items: center; gap: 2px; cursor: pointer; padding: 10px 30px; border-radius: 24px;
     background: rgba(40,28,10,.95); border: 2px solid rgba(235,205,120,.95); box-shadow: 0 6px 30px rgba(0,0,0,.7);
     color: rgba(255,235,170,1); animation: pageNudge 1.6s ease-in-out infinite; zoom: var(--ui-scale, 1); }
@@ -4432,6 +4433,7 @@ function _pageShouldHold() {
   // the space below the text instead (Party Input's reserved room, the progress tracker) paused short windows after
   // a line and a half while everything was still in view.
   const h = textScroll.clientHeight;
+  if (textScroll.scrollHeight <= h + 2) return false;   // nothing has scrolled yet: nothing can be pushed out of sight
   const cv = document.body.classList.contains('combat') ? document.getElementById('combat-view') : null;
   const topGap = cv ? Math.max(0, cv.getBoundingClientRect().bottom - textScroll.getBoundingClientRect().top) : h * 0.10;
   const visibleTop = Math.max(0, textScroll.scrollHeight - h) + topGap;   // what stays in view once it scrolls to the end
@@ -4440,11 +4442,13 @@ function _pageShouldHold() {
 function _pageHold() {
   if (_pageCredit > 0) { _pageCredit--; _pageStartY = _pageY(_pageLast()); return false; }
   _pageHeld = true;
+  document.body.classList.add('page-held');
   document.getElementById('page-continue').classList.add('show');
   return true;
 }
 function _pageRelease() {
   _pageHeld = false;
+  document.body.classList.remove('page-held');
   const b = document.getElementById('page-continue'); if (b) b.classList.remove('show');
 }
 function _pageResume() {
@@ -7041,7 +7045,7 @@ function _renderCombatMap(to) {
     const h = _cbHp(tk.name);
     const t = document.createElement('div');
     t.className = 'cb-token ' + tk.side + (tk.name === to.current ? ' current' : '') + (h.hp === 0 ? ' down' : '');
-    t.textContent = tk.name.replace(/[^A-Za-z0-9 ]/g, '').split(' ').filter(Boolean).map(w => w[0]).join('').slice(0, 2).toUpperCase() +
+    t.textContent = tk.name.replace(/[^A-Za-z0-9 ]/g, '').split(' ').filter(w => w && !/^\d+$/.test(w)).map(w => w[0]).join('').slice(0, 2).toUpperCase() +
       (/\d+$/.test(tk.name) ? tk.name.match(/\d+$/)[0] : '');
     t.title = tk.name + (h.max ? ' (' + h.hp + '/' + h.max + ' HP)' : '');
     t.style.cssText = `width:${size}px;height:${size}px;left:${pad + tk.x * cell + off}px;top:${pad + tk.y * cell + off}px;font-size:${Math.max(10, Math.round(size * 0.34))}px`;

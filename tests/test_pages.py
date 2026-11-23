@@ -34,7 +34,7 @@ const lastP = { y: 100, getBoundingClientRect() { return { bottom: lastP.y }; } 
 const currentEl = null;
 let curEl = { getBoundingClientRect() { return { top: 100 }; }, querySelector() { return lastP; } };
 const textScroll = { clientHeight: 800, get scrollHeight() { return lastP.y + 180; }, scrollTop: 0, getBoundingClientRect() { return { top: 0 }; } };
-const document = { hidden: false, body: { classList: { contains() { return false; } } },
+const document = { hidden: false, body: { classList: { contains() { return false; }, add() {}, remove() {} } },
   getElementById(id) { return id === 'page-continue' ? btn : null; },
   addEventListener(t, f) { listeners[t] = f; } };
 const getComputedStyle = () => ({ paddingTop: '72px' });
@@ -190,6 +190,13 @@ class StringChecksTest(unittest.TestCase):
         src = _src()
         c = src.index("function clearDisplay(then) {")
         self.assertIn("_pageRelease()", src[c:c + 700])
+
+
+class TallScreenTest(unittest.TestCase):
+    def test_no_pause_before_anything_has_scrolled(self):
+        # On a tall screen the first line starts inside the top gap; with nothing scrolled it must not pause the text.
+        html = (Path(__file__).resolve().parent.parent / "skills" / "dnd" / "display" / "templates" / "index.html").read_text(encoding="utf-8")
+        self.assertIn("if (textScroll.scrollHeight <= h + 2) return false;", html)
 
 
 if __name__ == "__main__":

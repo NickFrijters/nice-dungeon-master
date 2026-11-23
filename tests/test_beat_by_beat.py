@@ -18,5 +18,20 @@ class BeatByBeatTest(unittest.TestCase):
         self.assertIn("Beat by beat (hard rule)", (ROOT / "skills" / "dnd" / "SKILL.md").read_text(encoding="utf-8"))
 
 
+class PlaytestFixesTest(unittest.TestCase):
+    def test_token_label_has_the_number_once(self):
+        html = (D / "templates" / "index.html").read_text(encoding="utf-8")
+        self.assertIn(r".filter(w => w && !/^\d+$/.test(w))", html)          # "Kobold 1" is K1, not K11
+
+    def test_one_continue_at_a_time(self):
+        html = (D / "templates" / "index.html").read_text(encoding="utf-8")
+        self.assertIn("body.page-held #beat-continue { display: none !important; }", html)
+        self.assertIn("document.body.classList.add('page-held');", html)
+
+    def test_narration_always_ends_with_a_newline(self):
+        src = (D / "send.py").read_text(encoding="utf-8")
+        self.assertIn('chunk if chunk.endswith("\\n") else chunk + "\\n"', src)
+
+
 if __name__ == "__main__":
     unittest.main()

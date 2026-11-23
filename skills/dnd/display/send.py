@@ -693,7 +693,9 @@ def main() -> None:
     if text.strip():
         chunks = _split_paragraphs(text)
         for chunk in chunks:
-            payload: dict = {"text": chunk}
+            # The page holds the last line of a chunk until a newline arrives; text without one never showed up
+            # (turn.py --narrate "..." and printf pipes sent exactly that).
+            payload: dict = {"text": chunk if chunk.endswith("\n") else chunk + "\n"}
             if args.action:
                 payload["action"] = args.action
             elif args.player:

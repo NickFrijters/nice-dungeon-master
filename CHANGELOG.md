@@ -10,6 +10,15 @@ Versions before **1.6.0** are reconstructed retroactively from git history; the 
 
 ## [Unreleased]
 
+## [2.54.1] — 2026-11-23 — playtest fixes
+
+### Fixed (found by playtesting in a real browser)
+- DM text sent without a trailing newline (`turn.py --narrate "..."`, `printf | send.py`) never appeared on screen. `send.py` now always ends a block with a newline.
+- On a tall screen the text paused after its first line ("press Continue") although nothing had scrolled yet.
+- `--turn-current` / `--turn-round` wiped the saved turn order, so reloading the page mid-fight showed the roleplay screen instead of the battle map. The pointer now moves inside the saved order.
+- Enemy tokens read "K11" / "K22"; now "K1" / "K2".
+- The beat-by-beat Continue and the text-page Continue no longer show at the same time; the text page goes first.
+
 ## [2.54.0] — 2026-11-23 — beat by beat
 
 ### Added

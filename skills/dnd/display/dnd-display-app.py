@@ -3396,6 +3396,8 @@ def stats():
         if "turn_order" in data:
             new_to = data["turn_order"]
             old_to = _current_stats.get("turn_order") or {}
+            if isinstance(new_to, dict) and new_to and "order" not in new_to and old_to.get("order"):
+                new_to = {**old_to, **new_to}    # `--turn-current` / `--turn-round` only move the pointer: keep the order
             if (not new_to) or not isinstance(new_to, dict) or new_to.get("current") != old_to.get("current") \
                     or new_to.get("round") != old_to.get("round"):
                 _clear_dice_pending()        # a new turn: last turn's unanswered roll requests are over

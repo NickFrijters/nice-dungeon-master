@@ -104,6 +104,14 @@ class DicePendingCleanupTest(unittest.TestCase):
         self.client.post("/chunk", json={"text": "d20+5 = 17", "dice": True})          # a dice line is not the DM moving on
         self.assertEqual(len(self.pending()), 1)
 
+    def test_moving_the_pointer_keeps_the_turn_order(self):
+        self.client.post("/stats", json={"turn_order": {"order": ["Dagna", "Goblin"], "current": "Dagna", "round": 2}})
+        self.client.post("/stats", json={"turn_order": {"current": "Goblin"}})          # what --turn-current sends
+        to = self.mod._current_stats["turn_order"]
+        self.assertEqual((to["order"], to["current"], to["round"]), (["Dagna", "Goblin"], "Goblin", 2))
+        self.client.post("/stats", json={"turn_order": None})
+        self.assertFalse(self.mod._current_stats.get("turn_order"))
+
     def test_badge_moves_out_of_the_map_in_combat(self):
         html = (DISPLAY / "templates" / "index.html").read_text(encoding="utf-8")
         self.assertIn("body.combat #dice-pending-badge", html)
