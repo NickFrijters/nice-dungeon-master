@@ -5836,7 +5836,8 @@ function _buildPlayerCard(p, solo) {
     grappled: 'info', restrained: 'info', prone: 'info', blinded: 'info', deafened: 'info',
     invisible: 'buff',
   };
-  const conditions = p.conditions || [];
+  const _seenCond = new Set();
+  const conditions = (p.conditions || []).filter(c => { const k = String(c).trim().toLowerCase(); if (!k || _seenCond.has(k)) return false; _seenCond.add(k); return true; });   // one chip per condition
   if (conditions.length) {
     const condEl = document.createElement('div');
     condEl.className = 'sb-conditions';

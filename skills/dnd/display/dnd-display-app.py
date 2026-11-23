@@ -3324,8 +3324,8 @@ def stats():
                             ]
                         elif key == "_conditions_add":
                             conds = match.setdefault("conditions", [])
-                            if val not in conds:
-                                conds.append(val)
+                            if str(val).strip().lower() not in [str(c).strip().lower() for c in conds]:
+                                conds.append(val)        # "Unconscious" and "unconscious" are one condition
                         elif key == "_conditions_remove":
                             match["conditions"] = [
                                 c for c in match.get("conditions", [])

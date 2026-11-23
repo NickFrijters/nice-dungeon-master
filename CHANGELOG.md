@@ -10,6 +10,11 @@ Versions before **1.6.0** are reconstructed retroactively from git history; the 
 
 ## [Unreleased]
 
+## [2.55.3] — 2026-11-23 — one chip per condition
+
+### Fixed
+- A condition could show twice on a party card ("Unconscious" twice), when it was added again in a different spelling. One chip per condition now, on the card and when a condition is added.
+
 ## [2.55.2] — 2026-11-23 — menu vs story state, lost rolls
 
 ### Fixed (found by the user's own test, with real leftover state)

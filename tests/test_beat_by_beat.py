@@ -131,5 +131,13 @@ class Round3Test(unittest.TestCase):
         self.assertIn('_turn_clock_hit({"dice": True})', app)
 
 
+class ConditionDuplicatesTest(unittest.TestCase):
+    def test_one_chip_per_condition(self):
+        h = (D / "templates" / "index.html").read_text(encoding="utf-8")
+        self.assertIn("const _seenCond = new Set();", h)
+        app = (D / "dnd-display-app.py").read_text(encoding="utf-8")
+        self.assertIn('"unconscious" and "Unconscious" are one condition'.replace('"unconscious" and "Unconscious"', '"Unconscious" and "unconscious"'), app)
+
+
 if __name__ == "__main__":
     unittest.main()
