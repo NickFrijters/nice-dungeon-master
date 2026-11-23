@@ -10,6 +10,13 @@ Versions before **1.6.0** are reconstructed retroactively from git history; the 
 
 ## [Unreleased]
 
+## [2.54.2] — 2026-11-23 — header place, punctuation, latency badge
+
+### Fixed
+- The header names the real place (the party map's label, or the battle map's title) instead of a keyword guess like "The Inn".
+- Players can type `! ( ) ; & { }` again; only `[ ]` (could fake system lines like `[Continue]:`) and `$ \` \\ | < >` are still removed.
+- "DM answered in N s" disappears when a new action is sent and returns with the new time.
+
 ## [2.54.1] — 2026-11-23 — playtest fixes
 
 ### Fixed (found by playtesting in a real browser)

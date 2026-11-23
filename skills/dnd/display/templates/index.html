@@ -3656,6 +3656,15 @@ const SCENE_DEFAULTS = {
 let activeScene = { ...SCENE_DEFAULTS };
 let bgActive = 'a'; // which bg layer is currently showing
 
+// The header names the real place when the DM gave one (party map label, or the battle map's title); the
+// keyword-guessed scene name ("The Inn") is only the fallback.
+window._cbMapTitle = '';
+function _refreshSceneTitle() {
+  const ind = document.getElementById('scene-indicator'); if (!ind) return;
+  let pm = ''; try { pm = (_pmLast && _pmLast.label) || ''; } catch (_) {}      // _pmLast is declared further down
+  const real = pm || window._cbMapTitle || '';
+  ind.textContent = '— ' + (real || activeScene.label || activeScene.name) + ' —';
+}
 function applyScene(scene) {
   if (!scene || scene.name === activeScene.name) return;
   activeScene = { ...SCENE_DEFAULTS, ...scene };
@@ -3664,7 +3673,7 @@ function applyScene(scene) {
   const indicator = document.getElementById('scene-indicator');
   indicator.classList.add('changing');
   setTimeout(() => {
-    indicator.textContent = '— ' + (activeScene.label || activeScene.name) + ' —';
+    _refreshSceneTitle();
     indicator.classList.remove('changing');
   }, 400);
 
@@ -4562,6 +4571,7 @@ function _turnEl() {
 }
 
 function _turnStart() {                       // Stage pressed: the session starts processing
+  { const l = document.getElementById('dm-latency'); if (l) { l.className = ''; l.textContent = ''; } }   // the last answer time goes until the new one is in
   if (_turn) return;
   _turn = { phase: 'wait', t0: Date.now(), total: 0, typed: 0, voice: false,
             audioDur: 0, audioT0: 0, audioEnded: true, typingDone: false };
@@ -5369,6 +5379,7 @@ function _renderPlace(pl) {
   const moved = _pmLast && _pmLast.image === pl.image && (_pmLast.x !== pl.x || _pmLast.y !== pl.y);
   const same = _pmLast && _pmLast.image === pl.image;
   _pmLast = pl;
+  _refreshSceneTitle();
   const key = pl.image + '|' + view.x + ',' + view.y + ',' + view.w + ',' + view.h;
   let box = card.querySelector('.pm-view'), img = card.querySelector('img.pm-img'), pin = card.querySelector('.pm-pin'), ring = card.querySelector('.pm-ring');
   if (!box || _pmKey !== key) {
@@ -6709,8 +6720,10 @@ function _renderCombat(to) {
   if (side.scrollHeight > side.clientHeight + 2) side.classList.add('tighter');
   const m = _combatState && _combatState.map;
   const lg = document.getElementById('cb-legend'); lg.textContent = '';
+  if (!m && window._cbMapTitle) { window._cbMapTitle = ''; _refreshSceneTitle(); }
   if (m) {
     const t = document.createElement('span'); t.className = 'cb-title'; t.textContent = m.title || 'Battle map'; lg.appendChild(t);
+    if (window._cbMapTitle !== (m.title || '')) { window._cbMapTitle = m.title || ''; _refreshSceneTitle(); }
     const s = document.createElement('span'); s.textContent = '1 square = 5 ft'; lg.appendChild(s);
     const d = document.createElement('span'); d.textContent = 'Drag a token to move it'; lg.appendChild(d);
   }

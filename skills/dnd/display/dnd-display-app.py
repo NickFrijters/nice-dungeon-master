@@ -207,7 +207,9 @@ _PRINTABLE    = re.compile(
     "＀-￯"             # Halfwidth / Fullwidth
     "]"
 )
-_SHELL_CHARS  = re.compile(r'[$`\\;|&><()\[\]{}!]')
+# [ ] could fake a system line such as [Continue]: or [Menu]:; $ ` \ | < > are shell tricks.
+# ! ( ) ; & { } are ordinary writing and stay.
+_SHELL_CHARS  = re.compile(r'[$`\\|><\[\]]')
 # Unicode \w covers letters from all scripts above. Allow space, apostrophe, hyphen
 # inside the name; trim 1-2 char names to a separate branch.
 _CHAR_NAME_RE = re.compile(r"^\w[\w '\-]{0,48}\w$|^\w{1,2}$", re.UNICODE)
