@@ -165,5 +165,14 @@ class AlliesAndActionButtonsTest(unittest.TestCase):
         self.assertIn("**Allies:** friendly NPCs fighting with the party", cmds)
 
 
+class FloorTextureTest(unittest.TestCase):
+    def test_town_and_default_floors_are_paving_and_flagstones(self):
+        h = (D / "templates" / "index.html").read_text(encoding="utf-8")
+        self.assertIn('#cb-map[data-biome="town"] { background: url("data:image/svg+xml,', h)      # cobbles, not grey dots
+        self.assertNotIn("radial-gradient(circle at 50% 50%, #8d8676 0 38%", h)
+        self.assertGreaterEqual(h.count("data:image/svg+xml"), 2)                                   # town paving and dungeon flagstones
+        self.assertIn("#cb-map .cb-range { position: absolute; background: rgba(255,225,130,.11);", h)  # range tint no longer hides the floor
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -10,6 +10,11 @@ Versions before **1.6.0** are reconstructed retroactively from git history; the 
 
 ## [Unreleased]
 
+## [2.56.1] — 2026-11-24 — battle map floors
+
+### Fixed
+- The battle map looked as if it had no floor: the town ground was big grey dots on a dark base (a pegboard), the default dungeon ground was a flat dark gradient, and the yellow movement-range tint covered everything in beige. The town is now cobblestone paving, the dungeon default is flagstones, and the range tint is much lighter, so the ground stays visible.
+
 ## [2.56.0] — 2026-11-23 — one-click combat actions, allies
 
 ### Added
