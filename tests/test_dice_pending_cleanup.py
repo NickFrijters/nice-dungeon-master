@@ -175,6 +175,23 @@ class DicePendingCleanupTest(unittest.TestCase):
         self.assertEqual(self.mod._current_stats["combat"]["allies"], [{"name": "Linan Swift", "hp": 8, "max": 11, "note": ""}])
         self.client.post("/stats", json={"combat": {}})
 
+    def test_health_check_and_nudge(self):
+        h = self.client.get("/menu/health").get_json()
+        self.assertEqual({c["id"] for c in h["checks"]} >= {"dm", "voice"}, True)
+        self.assertIn("version", h)
+        dm = next(c for c in h["checks"] if c["id"] == "dm")
+        if not dm["ok"]:
+            self.assertIn("/dm:dnd", dm["hint"])                                              # says what to do, in plain words
+        Path(self.mod.QUEUE_FILE).write_text("", encoding="utf-8")
+        hb = Path(self.mod.rt(".dm-heartbeat"))
+        hb.write_text("1", encoding="utf-8")                                                  # a DM that is waiting
+        self.assertTrue(self.client.post("/dm/nudge", json={}).get_json()["sent"])
+        self.assertIn("[Table]: The players are still waiting", self._queue())
+        hb.unlink()
+        r = self.client.post("/dm/nudge", json={}).get_json()
+        self.assertFalse(r["sent"])
+        self.assertIn("press Enter", r["why"])
+
     def test_badge_moves_out_of_the_map_in_combat(self):
         html = (DISPLAY / "templates" / "index.html").read_text(encoding="utf-8")
         self.assertIn("body.combat #dice-pending-badge", html)

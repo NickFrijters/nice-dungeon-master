@@ -32,6 +32,7 @@ import sys
 import threading
 import unicodedata
 from collections import deque
+from pathlib import Path
 from typing import Optional
 from flask import Flask, Response, request, render_template, jsonify, send_from_directory, redirect
 from flask_cors import CORS
@@ -1612,6 +1613,60 @@ def menu_campaigns():
                     "saving": _saving(),
                     "story_ready": story_ready,
                     "campaigns": _list_campaigns()})
+
+
+def _app_version() -> str:
+    try:
+        root = Path(__file__).resolve().parents[3]
+        return json.loads((root / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8")).get("version", "")
+    except Exception:
+        try:
+            return (Path(__file__).resolve().parents[3] / "VERSION").read_text(encoding="utf-8").strip()
+        except Exception:
+            return ""
+
+
+@app.route("/menu/health")
+def menu_health():
+    """The start-up self-check, in plain words: what works, what is missing and what to do about it."""
+    checks = []
+    dm = _dm_listening()
+    checks.append({"id": "dm", "ok": dm, "label": "Dungeon Master connected" if dm else "Dungeon Master not connected",
+                   "hint": "" if dm else "Open the DM window and type /dm:dnd (or use the desktop shortcut)."})
+    st = _display_settings()
+    voice_on = bool(st.get("narration_audio"))
+    tts_ok = bool(_tts is not None and _tts.available())
+    if voice_on and not tts_ok:
+        checks.append({"id": "voice", "ok": False, "label": "Voice is on but the voice engine is not ready",
+                       "hint": "The story still shows as text. Open Settings to turn the voice off or check it."})
+    elif voice_on:
+        checks.append({"id": "voice", "ok": True, "label": "Voice ready", "hint": ""})
+    else:
+        checks.append({"id": "voice", "ok": True, "label": "Voice off (text only)", "hint": "", "info": True})
+    if not st.get("sound_effects", True):
+        checks.append({"id": "sfx", "ok": True, "label": "Sound effects off", "hint": "", "info": True})
+    n = len(_list_campaigns())
+    if n == 0:
+        checks.append({"id": "campaigns", "ok": False, "label": "No campaigns yet",
+                       "hint": "Start a new campaign or import an adventure below."})
+    return jsonify({"version": _app_version(), "dm": dm, "checks": checks, "campaigns": n,
+                    "ok": all(c["ok"] for c in checks)})
+
+
+@app.route("/dm/nudge", methods=["POST"])
+def dm_nudge():
+    """A stuck turn: wake the DM's wait loop with a plain line, or say honestly that it is not listening."""
+    if not _token_ok():
+        return "Forbidden", 403
+    if not _dm_listening():
+        return jsonify({"sent": False, "why": "The Dungeon Master is not waiting for input right now. "
+                        "Click in the DM window and press Enter (or type: continue)."}), 200
+    try:
+        with _staged_lock, open(QUEUE_FILE, "a", encoding="utf-8") as f:
+            f.write("[Table]: The players are still waiting. Carry on: answer the last input or move the scene along.\n")
+    except OSError:
+        return jsonify({"sent": False, "why": "Could not reach the Dungeon Master's input."}), 200
+    return jsonify({"sent": True}), 200
 
 
 @app.route("/menu/load", methods=["POST"])

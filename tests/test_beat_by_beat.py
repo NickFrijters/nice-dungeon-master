@@ -174,5 +174,47 @@ class FloorTextureTest(unittest.TestCase):
         self.assertIn("#cb-map .cb-range { position: absolute; background: rgba(255,225,130,.11);", h)  # range tint no longer hides the floor
 
 
+class UsabilityBatchTest(unittest.TestCase):
+    def test_wiring(self):
+        h = (D / "templates" / "index.html").read_text(encoding="utf-8")
+        for needle in ('id="now-line"', "function _nowLineTick()", "fetch('/dm/nudge'", "function _rollDice3D(", "function _d3Parse(",
+                       'id="dice3d"', "_cbPrevPos[tk.name] = { x: tk.x, y: tk.y };", "translate: '-5px 0'"):
+            self.assertIn(needle, h)
+        m = (D / "templates" / "menu.html").read_text(encoding="utf-8")
+        for needle in ("async function refreshHealth()", 'id="start-big"', "function updateStartBig()", "fetch('/menu/health')"):
+            self.assertIn(needle, m)
+
+    def test_dice_parser_picks_the_natural_die(self):
+        import shutil, subprocess, tempfile
+        node = shutil.which("node")
+        if not node:
+            self.skipTest("node not installed")
+        h = (D / "templates" / "index.html").read_text(encoding="utf-8")
+        a = h.index("function _d3Parse(text) {"); b = h.index("function _d3Poly(sides) {")
+        js = h[a:b] + """
+const out = [_d3Parse('Dagna rolls 1d20+4: [18] +4 = 22 - Fire Bolt'), _d3Parse('Milo rolls 1d20: [14, 6] -> keep 14 (advantage) = 14'),
+  _d3Parse('Joris rolls 2d6+3: [4, 5] +3 = 12'), _d3Parse('no dice here')];
+console.log(JSON.stringify(out));"""
+        with tempfile.NamedTemporaryFile("w", suffix=".js", delete=False, encoding="utf-8") as f:
+            f.write(js)
+        r = subprocess.run([node, f.name], capture_output=True, text=True)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        import json
+        o = json.loads(r.stdout)
+        self.assertEqual((o[0]["big"], o[0]["total"], o[0]["d20"]), (18, 22, True))
+        self.assertEqual(o[1]["big"], 14)
+        self.assertEqual((o[2]["big"], o[2]["total"], o[2]["sides"]), (9, 12, 6))
+        self.assertIsNone(o[3])
+
+
+class DayNightTest(unittest.TestCase):
+    def test_wiring(self):
+        h = (D / "templates" / "index.html").read_text(encoding="utf-8")
+        self.assertIn("document.body.dataset.tod = tod;", h)
+        self.assertIn("ov.className = 'cb-tod';", h)
+        self.assertIn("g.className = 'cb-glow';", h)
+        self.assertIn("ov.style.maskComposite = 'intersect';", h)
+
+
 if __name__ == "__main__":
     unittest.main()

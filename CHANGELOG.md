@@ -10,6 +10,15 @@ Versions before **1.6.0** are reconstructed retroactively from git history; the 
 
 ## [Unreleased]
 
+## [2.57.0] — 2026-11-24 — start screen, status line, 3D dice, effects, night map
+
+### Added
+- **Start screen:** a status strip at the top of the Main Menu with a self-check in plain words (Dungeon Master connected or not, with what to do; voice ready, off or not working; version), and one big **Start evening / Continue** button for the active (or latest) campaign. The old duplicate "No Dungeon Master" notice is gone.
+- **One "what is happening now" line** on the play screen, the same everywhere: "The DM is thinking... 6 s", "Waiting for Milo's roll", "Press Continue: next, Kobold 1 attacks", "Turn: Dagna" in combat. After 25 s of waiting it offers **Nudge the DM**, which wakes the DM's wait with a `[Table]` line, or says honestly that the DM is not listening and what to do in the DM window.
+- **3D dice:** every roll on screen makes a die tumble across the screen with wooden clacks and land on the natural number (gold glow on a 20, red on a 1, "total" under it when it differs). Not shown when the tab is hidden or the system asks for reduced motion; the clacks follow the sound-effects setting.
+- **Combat effects:** a token that is hit shakes and flashes, and tokens glide to their new square instead of jumping (damage numbers already floated up).
+- **Day and night on the battle map:** the DM's time of day (night, dusk, dawn) darkens the map, and fires light a warm ring around themselves.
+
 ## [2.56.1] — 2026-11-24 — battle map floors
 
 ### Fixed

@@ -3423,6 +3423,35 @@
   body.page-held #beat-continue { display: none !important; }   /* one Continue at a time: the text page first */
   #turn-bar .tb-sent { font: italic 14px/1.4 'EB Garamond', Georgia, serif; color: rgba(235,215,170,.9); margin-bottom: 6px; padding-left: 10px; border-left: 2px solid rgba(235,190,90,.6); }
   #turn-bar .tb-sent:empty { display: none; }
+  /* one fixed "what is happening now" line, the same on every screen */
+  /* the table's big moment: a die tumbles across the screen and lands on the number */
+  #dice3d { position: fixed; inset: 0; z-index: 60; pointer-events: none; display: none; perspective: 900px; }
+  #dice3d.on { display: block; }
+  #dice3d .d3-die { position: absolute; left: 50%; top: 46%; width: 150px; height: 150px; margin: -75px 0 0 -75px; transform-style: preserve-3d; will-change: transform; }
+  #dice3d .d3-die svg { width: 100%; height: 100%; overflow: visible; filter: drop-shadow(0 10px 14px rgba(0,0,0,.7)); }
+  #dice3d .d3-num { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font: 700 52px 'Cinzel', serif;
+    color: #fff5d8; text-shadow: 0 2px 6px rgba(0,0,0,.9), 0 0 14px rgba(255,210,120,.55); }
+  #dice3d .d3-shadow { position: absolute; left: 50%; top: calc(46% + 92px); width: 120px; height: 22px; margin-left: -60px; border-radius: 50%;
+    background: radial-gradient(ellipse, rgba(0,0,0,.65), transparent 70%); }
+  #dice3d .d3-cap { position: absolute; left: 0; right: 0; top: calc(46% + 120px); text-align: center; font: 15px 'EB Garamond', Georgia, serif;
+    color: rgba(245,232,200,.95); text-shadow: 0 1px 4px #000; opacity: 0; }
+  #dice3d.crit .d3-num { color: #ffe08a; text-shadow: 0 0 22px rgba(255,200,60,.95), 0 2px 6px #000; }
+  #dice3d.fumble .d3-num { color: #ff9b8a; text-shadow: 0 0 18px rgba(255,70,50,.9), 0 2px 6px #000; }
+  @media (prefers-reduced-motion: reduce) { #dice3d { display: none !important; } }
+  /* day and night on the battle map */
+  #cb-map .cb-tod { position: absolute; z-index: 1; pointer-events: none; transition: opacity .6s; }
+  #cb-map .cb-glow { position: absolute; z-index: 1; pointer-events: none; border-radius: 50%; mix-blend-mode: screen;
+    background: radial-gradient(circle, rgba(255,180,80,.34), rgba(255,140,50,.12) 45%, transparent 70%); animation: cbFlicker 1.4s infinite alternate; }
+  #now-line { position: fixed; right: 18px; bottom: 96px; z-index: 29; max-width: min(420px, 60vw); padding: 7px 14px; border-radius: 16px;
+    font: 14px/1.35 'EB Garamond', Georgia, serif; color: rgba(245,232,200,.97); background: rgba(28,20,8,.88); border: 1px solid rgba(235,190,90,.5);
+    box-shadow: 0 4px 18px rgba(0,0,0,.6); display: flex; align-items: center; gap: 10px; zoom: var(--ui-scale, 1); }
+  #now-line[hidden] { display: none; }
+  #now-line.wait { border-color: rgba(235,190,90,.9); }
+  #now-line.act { border-color: rgba(140,215,140,.8); }
+  #now-line.slow { border-color: rgba(235,110,95,.9); }
+  #nl-nudge { font: 700 12px 'Cinzel', serif; letter-spacing: .08em; padding: 4px 10px; border-radius: 12px; cursor: pointer; white-space: nowrap;
+    color: #1a1208; background: rgba(235,190,90,.95); border: 0; }
+  #nl-nudge[hidden] { display: none; }
   #cb-leave { display: none; position: fixed; top: 14px; right: 230px; z-index: 40; padding: 5px 12px; border-radius: 14px; cursor: pointer;
     font: 12px 'Cinzel', serif; letter-spacing: .08em; color: rgba(235,215,170,.85); background: rgba(30,20,8,.85); border: 1px solid rgba(235,190,90,.45); }
   #cb-leave:hover { color: rgba(255,240,200,1); border-color: rgba(235,205,120,.95); }
@@ -3466,6 +3495,8 @@
 <!-- Overlays -->
 <div id="vignette"></div>
 <div id="frame"></div>
+<div id="dice3d" aria-hidden="true"><div class="d3-shadow"></div><div class="d3-die"></div><div class="d3-cap"></div></div>
+<div id="now-line" role="status" aria-live="polite" hidden><span id="nl-text"></span><button type="button" id="nl-nudge" hidden>Nudge the DM</button></div>
 <button type="button" id="cb-leave" title="Close the combat screen if the fight is over">End fight ✕</button>
 <div id="combat-view" aria-label="Combat">
   <div id="cb-order"></div>
@@ -5267,6 +5298,7 @@ function _renderDiceBlockNow(text, isReplay) {
   block.appendChild(resultsWrap);
 
   if (!isReplay) {
+    try { _rollDice3D(cleaned.split(String.fromCharCode(10))[0], ''); } catch (_) {}
     if (hasCrit)   triggerFlash('crit');
     else if (hasFumble) triggerFlash('fumble');
   }
@@ -5742,6 +5774,73 @@ const _playerData = {};
 
 // ── CRIT / FUMBLE flash ─────────────────────────────────────────────
 const _flashOverlay = document.getElementById('flash-overlay');
+// ── 3D dice: a die tumbles across the screen with sound and lands on the rolled number ──────────────────
+let _d3Busy = false;
+function _d3Clack(vol, when) {   // a short wooden "clack", made with the Web Audio API (no sound files)
+  if (!_sfxEnabled()) return;
+  try {
+    const ctx = _audioCtx(), t0 = ctx.currentTime + when;
+    const buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.05), ctx.sampleRate), d = buf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 3);
+    const src = ctx.createBufferSource(); src.buffer = buf;
+    const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 1500 + Math.random() * 900; f.Q.value = 1.2;
+    const g = ctx.createGain(); g.gain.value = vol;
+    src.connect(f); f.connect(g); g.connect(ctx.destination); src.start(t0);
+  } catch (_) {}
+}
+function _d3Parse(text) {
+  const m = /(\d*)d(\d+)/i.exec(text); if (!m) return null;
+  const sides = parseInt(m[2], 10); if (!(sides >= 2 && sides <= 100)) return null;
+  let big = null;
+  const keep = /keep (\d+)/i.exec(text), br = /\[([\d,\s]+)\]/.exec(text);
+  if (sides === 20 && keep) big = parseInt(keep[1], 10);
+  else if (br) { const nums = br[1].split(',').map(x => parseInt(x, 10)).filter(x => !isNaN(x)); big = sides === 20 ? nums[0] : nums.reduce((a, b) => a + b, 0); }
+  if (big == null) { const tot = /=\s*(\d+)/.exec(text); if (!tot) return null; big = parseInt(tot[1], 10); }
+  const total = (/=\s*(\d+)/.exec(text) || [])[1];
+  return { sides, big, total: total != null ? parseInt(total, 10) : big, d20: sides === 20 };
+}
+function _d3Poly(sides) {
+  const pts = sides <= 4 ? 3 : (sides <= 8 ? 4 : (sides <= 12 ? 5 : 6));
+  const c = 75, r = 66, a0 = pts === 4 ? Math.PI / 4 : -Math.PI / 2, out = [];
+  for (let i = 0; i < pts; i++) out.push([c + r * Math.cos(a0 + i * 2 * Math.PI / pts), c + r * Math.sin(a0 + i * 2 * Math.PI / pts)]);
+  return out;
+}
+function _rollDice3D(text, caption) {
+  if (_d3Busy || document.hidden || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) return;
+  const info = _d3Parse(text); if (!info) return;
+  const root = document.getElementById('dice3d'); if (!root) return;
+  _d3Busy = true;
+  const die = root.querySelector('.d3-die'), cap = root.querySelector('.d3-cap'), shadow = root.querySelector('.d3-shadow');
+  const poly = _d3Poly(info.sides), P = poly.map(p => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ');
+  let inner = '';
+  if (info.sides >= 8) inner = poly.map((p, i) => { const q = poly[(i + 1) % poly.length]; return '<line x1="75" y1="75" x2="' + p[0].toFixed(1) + '" y2="' + p[1].toFixed(1) + '" /><line x1="' + p[0].toFixed(1) + '" y1="' + p[1].toFixed(1) + '" x2="' + q[0].toFixed(1) + '" y2="' + q[1].toFixed(1) + '" />'; }).join('');
+  die.innerHTML = '<svg viewBox="0 0 150 150"><defs><linearGradient id="d3g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7a5ad0"/><stop offset="1" stop-color="#2e1d63"/></linearGradient></defs>' +
+    '<polygon points="' + P + '" fill="url(#d3g)" stroke="#e9c76a" stroke-width="4" stroke-linejoin="round"/>' +
+    '<g stroke="rgba(233,199,106,.55)" stroke-width="2" fill="none">' + inner + '</g></svg><div class="d3-num"></div>';
+  const num = die.querySelector('.d3-num');
+  root.classList.remove('crit', 'fumble'); root.classList.add('on');
+  cap.textContent = caption || ''; cap.style.opacity = 0; shadow.style.opacity = 1;
+  const W = innerWidth, H = innerHeight, dur = 1500;
+  die.animate([
+    { transform: 'translate(' + (-W * 0.45) + 'px,' + (-H * 0.55) + 'px) rotate3d(1,1,0,0deg) scale(.5)', offset: 0 },
+    { transform: 'translate(' + (-W * 0.18) + 'px, 40px) rotate3d(1,1,0,420deg) scale(1.05)', offset: 0.34 },
+    { transform: 'translate(' + (-W * 0.06) + 'px,-120px) rotate3d(1,1,1,640deg) scale(1.0)', offset: 0.5 },
+    { transform: 'translate(' + (W * 0.03) + 'px, 30px) rotate3d(1,0,1,860deg) scale(1.05)', offset: 0.72 },
+    { transform: 'translate(' + (W * 0.015) + 'px,-36px) rotate3d(0,1,1,980deg) scale(1.0)', offset: 0.86 },
+    { transform: 'translate(0,0) rotate3d(0,0,1,1080deg) scale(1)', offset: 1 }
+  ], { duration: dur, easing: 'cubic-bezier(.3,.1,.4,1)', fill: 'forwards' });
+  shadow.animate([{ transform: 'scale(.4)', opacity: .2 }, { transform: 'scale(1)', opacity: 1 }], { duration: dur, fill: 'forwards' });
+  [[0.34, .5], [0.5, .22], [0.72, .4], [0.86, .2], [1.0, .6]].forEach(([at, vol]) => _d3Clack(vol, at * dur / 1000));
+  const spin = setInterval(() => { num.textContent = 1 + Math.floor(Math.random() * info.sides); }, 70);
+  setTimeout(() => {
+    clearInterval(spin); num.textContent = String(info.big);
+    if (info.d20 && info.big === 20) root.classList.add('crit'); else if (info.d20 && info.big === 1) root.classList.add('fumble');
+    cap.style.opacity = 1;
+    if (info.total !== info.big) cap.textContent = (caption ? caption + '  ·  ' : '') + 'total ' + info.total;
+  }, dur);
+  setTimeout(() => { root.classList.remove('on'); die.getAnimations().forEach(a => a.cancel()); _d3Busy = false; }, dur + 1300);
+}
+
 function triggerFlash(type) {
   _flashOverlay.classList.remove('flash-crit', 'flash-fumble');
   // Force reflow so the animation restarts cleanly
@@ -6722,6 +6821,7 @@ let _currentTurnOrder = null;
 // Combat mode is on while a turn order is running. The board comes from push_stats --combat.
 let _combatState = null;
 let _cbPrevHp = {};
+let _cbPrevPos = {};   // where each token stood at the last draw: it glides from there to its new square
 function _updateCombat(stats) {
   if ('combat' in stats) _combatState = stats.combat || null;
   const to = ('turn_order' in stats && !stats.turn_order) ? null : _currentTurnOrder;
@@ -7131,6 +7231,23 @@ function _renderCombatMap(to) {
     d.style.cssText = `left:${pad + t.x * cell}px;top:${pad + t.y * cell}px;width:${t.w * cell}px;height:${t.h * cell}px`; map.appendChild(d);
   });
   map.appendChild(grid);
+  const tod = document.body.dataset.tod;
+  if (tod === 'night' || tod === 'dusk' || tod === 'dawn') {
+    const dark = { night: 'rgba(12,18,52,.56)', dusk: 'rgba(70,28,40,.30)', dawn: 'rgba(90,60,40,.20)' }[tod];
+    const lights = (m.terrain || []).filter(t => t.kind === 'fire').map(t => [(t.x + t.w / 2) * cell, (t.y + t.h / 2) * cell]);
+    const ov = document.createElement('div'); ov.className = 'cb-tod';
+    ov.style.cssText = `left:${pad}px;top:${pad}px;width:${m.cols * cell}px;height:${m.rows * cell}px;background:${dark}`;
+    if (lights.length && tod === 'night') {      // dark everywhere except where a fire reaches
+      const r1 = cell * 1.3, r2 = cell * 3.8;
+      const masks = lights.map(([x, y]) => `radial-gradient(circle at ${x}px ${y}px, transparent ${r1}px, #000 ${r2}px)`).join(',');
+      ov.style.webkitMaskImage = masks; ov.style.maskImage = masks; ov.style.webkitMaskComposite = 'source-in'; ov.style.maskComposite = 'intersect';
+      lights.forEach(([x, y]) => {
+        const g = document.createElement('div'); g.className = 'cb-glow';
+        g.style.cssText = `left:${pad + x - r2}px;top:${pad + y - r2}px;width:${r2 * 2}px;height:${r2 * 2}px`; map.appendChild(g);
+      });
+    }
+    map.appendChild(ov);
+  }
   const actor = m.tokens.find(t => t.name === to.current);
   if (actor) {
     const r = _cbReach(m, actor);
@@ -7202,6 +7319,19 @@ function _renderCombatMap(to) {
       f.style.cssText = `left:${pad + tk.x * cell + cell * sz / 2}px;top:${pad + tk.y * cell}px`;
       map.appendChild(f); setTimeout(() => f.remove(), 1700);
     }
+    // A hit shakes and flashes the token; a move glides instead of jumping (not on the first draw, not with reduced motion).
+    const calm = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (!calm && t.animate) {
+      if (was != null && h.hp != null && h.hp < was) {
+        t.animate([{ translate: '0 0' }, { translate: '-5px 0' }, { translate: '5px 0' }, { translate: '-4px 0' }, { translate: '3px 0' }, { translate: '0 0' }], { duration: 380 });
+        t.animate([{ filter: 'brightness(2.4) saturate(2)' }, { filter: 'none' }], { duration: 480 });
+      }
+      const pp = _cbPrevPos[tk.name];
+      if (pp && (pp.x !== tk.x || pp.y !== tk.y)) {
+        t.animate([{ translate: ((pp.x - tk.x) * cell) + 'px ' + ((pp.y - tk.y) * cell) + 'px' }, { translate: '0 0' }], { duration: 480, easing: 'cubic-bezier(.2,.7,.2,1)' });
+      }
+    }
+    _cbPrevPos[tk.name] = { x: tk.x, y: tk.y };
     if (h.hp != null) _cbPrevHp[tk.name] = h.hp;
   });
 }
@@ -8678,6 +8808,14 @@ const WEATHER_ICONS = {
 
 function updateWorldClock(wt) {
   if (!wt) return;
+  { // day, dawn, dusk or night: the battle map darkens at night and fires light a ring around themselves
+    const tk = String(wt.time || '').toLowerCase();
+    const tod = /night|midnight|witching/.test(tk) ? 'night' : (/dusk|evening|sunset|twilight/.test(tk) ? 'dusk' : (/dawn|sunrise|early/.test(tk) ? 'dawn' : 'day'));
+    if (document.body.dataset.tod !== tod) {
+      document.body.dataset.tod = tod;
+      try { if (document.body.classList.contains('combat') && _combatState && _currentTurnOrder) _renderCombatMap(_currentTurnOrder); } catch (_) {}
+    }
+  }
   const timeKey    = (wt.time || '').toLowerCase();
   const weatherKey = Object.keys(WEATHER_ICONS).find(k => (wt.weather||'').toLowerCase().includes(k)) || '';
 
@@ -9053,6 +9191,44 @@ function _escHtml(s) {
 // How long the DM took to answer the last GO: green within the 5-second target, amber up to 10, red beyond.
 // Beat by beat: the DM played one step and waits; Continue (button or Enter, on any screen) asks for the next.
 window._beatPause = null;
+// The one line that always says what is going on, and the way out when a turn is stuck.
+let _nlNote = '', _nlNoteUntil = 0;
+function _nowLineTick() {
+  const el = document.getElementById('now-line'); if (!el) return;
+  const txt = document.getElementById('nl-text'), btn = document.getElementById('nl-nudge');
+  let msg = '', cls = '', nudge = false;
+  const secs = t0 => Math.round((Date.now() - t0) / 1000);
+  if (Date.now() < _nlNoteUntil) { msg = _nlNote; cls = 'slow'; }
+  else if (window._beatPause) { msg = 'Press Continue: ' + String((window._beatPause.label || 'go on')).replace(/^Next: /, 'next, '); cls = 'act'; }
+  else if ((window._dicePendingNames || []).length) { msg = 'Waiting for ' + window._dicePendingNames.join(' and ') + "'s roll"; cls = 'wait'; }
+  else if (typeof _turn !== 'undefined' && _turn) {
+    const s0 = secs(_turn.t0 || Date.now());
+    if (_turn.phase === 'wait') { msg = 'The DM is thinking... ' + s0 + ' s'; cls = s0 > 25 ? 'slow' : 'wait'; nudge = s0 > 25; }
+    else { msg = _pageHeld ? 'Press Continue to read on' : 'The DM is writing...'; cls = 'wait'; }
+  } else if (document.body.classList.contains('combat') && typeof _combatTurnName === 'function' && _combatTurnName()) {
+    msg = 'Turn: ' + _combatTurnName(); cls = 'act';
+  }
+  if (!msg) { el.hidden = true; return; }
+  el.hidden = false; el.className = cls;
+  if (txt.textContent !== msg) txt.textContent = msg;
+  btn.hidden = !nudge;
+}
+function _combatTurnName() {
+  try { const to = window._currentTurnOrder || (typeof _currentTurnOrder !== 'undefined' ? _currentTurnOrder : null); return to && to.current ? to.current : ''; } catch (_) { return ''; }
+}
+(function () {
+  const btn = document.getElementById('nl-nudge'); if (!btn) return;
+  btn.addEventListener('click', async () => {
+    btn.disabled = true;
+    try {
+      const r = await (await fetch('/dm/nudge', { method: 'POST', headers: _authHeaders(), body: '{}' })).json();
+      _nlNote = r.sent ? 'Nudged. The DM has been told you are waiting.' : (r.why || 'Could not reach the DM.');
+      _nlNoteUntil = Date.now() + (r.sent ? 5000 : 15000);
+    } catch (_) { _nlNote = 'Could not reach the display server.'; _nlNoteUntil = Date.now() + 8000; }
+    btn.disabled = false;
+  });
+  setInterval(_nowLineTick, 500);
+})();
 function _showBeatPause(bp) {
   window._beatPause = bp || null;
   const b = document.getElementById('beat-continue'); if (!b) return;

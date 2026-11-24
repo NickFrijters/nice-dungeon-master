@@ -47,6 +47,22 @@
   button.danger.solid { background:#a8483a; color:#fff3ee; border-color:#a8483a; }
   .confirm { flex-basis:100%; display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:4px; padding-top:10px;
              border-top:1px dashed var(--line); color:#f0c8bc; font-size:.95rem; }
+  #no-dm { display:none !important; }   /* the self-check chips below say this once, with what to do */
+  /* start-up self-check: one row of chips, in plain words */
+  #health { display:flex; flex-wrap:wrap; gap:8px; margin:-14px 0 20px; align-items:center; }
+  .chip { font-size:.88rem; padding:4px 12px; border-radius:14px; border:1px solid var(--line); color:var(--dim); }
+  .chip.ok { color:#7cc88a; border-color:#4a8a56; }
+  .chip.bad { color:#f0b9a8; border-color:#a8483a; background:#2a1612; }
+  .chip.info { color:var(--dim); }
+  .chip.ver { margin-left:auto; font:11px ui-monospace, Consolas, monospace; border-color:transparent; }
+  .hint { color:#f0c8bc; font-size:.92rem; margin:-12px 0 18px; }
+  #start-big { display:flex; align-items:center; gap:18px; margin:0 0 8px; padding:18px 22px; border-radius:12px; border:2px solid var(--gold);
+               background:linear-gradient(135deg,#2e2110,#1f1a17); }
+  #start-big[hidden] { display:none; }
+  #start-big .st-text { flex:1; }
+  #start-big .st-title { font-size:1.35rem; color:var(--gold); }
+  #start-big .st-sub { color:var(--dim); font-size:.92rem; margin-top:2px; }
+  #start-big button { font-size:1.15rem; padding:14px 28px; }
   .card.wrap { flex-wrap:wrap; }
   #trash-section[hidden] { display:none; }
   .card.trashed { opacity:.85; }
@@ -58,6 +74,13 @@
   <p class="sub">Choose how tonight begins.</p>
   <!-- what is happening right now (loading, creating, saving): at the top, where it is seen -->
   <div id="progress"><div id="status" role="status"></div><div id="steps" class="steps" aria-live="polite"></div></div>
+
+  <div id="health" aria-live="polite"></div>
+  <div id="health-hints"></div>
+  <div id="start-big" hidden>
+    <div class="st-text"><div class="st-title" id="st-title"></div><div class="st-sub" id="st-sub"></div></div>
+    <button type="button" id="st-btn">Start evening</button>
+  </div>
 
   <div id="no-dm" class="notice" hidden>
     <strong>No Dungeon Master is connected.</strong> You can open a campaign and look around, but nobody will answer until
@@ -377,6 +400,7 @@ async function refresh() {
       }
     }
     document.getElementById('no-dm').hidden = !!data.dm_listening || !!data.saving;
+    if (typeof updateStartBig === 'function') updateStartBig();
     document.getElementById('saving').hidden = !data.saving;
     if (data.saving) showSteps(['Sent to the Dungeon Master', 'Saving the session', 'Ready for the next one'], 1);
     else if (!waitingFor && !quitting && !pending) clearSteps();
@@ -384,6 +408,43 @@ async function refresh() {
     if (waitingFor && data.active === waitingFor) { location.href = '/'; return; }
   } catch (e) { /* server busy; try again */ }
 }
+// ── Start-up self-check and the one-step start button ──────────────────────────────────────────
+async function refreshHealth() {
+  if (quitting) return;
+  try {
+    const h = await (await fetch('/menu/health')).json();
+    window.lastHealth = h;
+    const box = document.getElementById('health'); box.textContent = '';
+    h.checks.forEach(c => {
+      const el = document.createElement('span');
+      el.className = 'chip ' + (c.info ? 'info' : (c.ok ? 'ok' : 'bad'));
+      el.textContent = (c.info ? '' : (c.ok ? '✓ ' : '⚠ ')) + c.label;
+      box.appendChild(el);
+    });
+    if (h.version) { const v = document.createElement('span'); v.className = 'chip ver'; v.textContent = 'v' + h.version; box.appendChild(v); }
+    const hints = document.getElementById('health-hints'); hints.textContent = '';
+    h.checks.filter(c => !c.ok && c.hint).forEach(c => { const p = document.createElement('p'); p.className = 'hint'; p.textContent = c.hint; hints.appendChild(p); });
+    updateStartBig();
+  } catch (e) { /* server busy */ }
+}
+function updateStartBig() {
+  const list = window.lastCampaigns || [], box = document.getElementById('start-big');
+  if (!list.length) { box.hidden = true; return; }
+  const h = window.lastHealth || { dm: false };
+  const target = list.find(c => c.active) || list[0];
+  const nice = String(target.name).replace(/-/g, ' ');
+  box.hidden = false;
+  document.getElementById('st-title').textContent = (target.active ? 'Continue ' : 'Play ') + nice;
+  document.getElementById('st-sub').textContent = h.dm ? 'Everything is ready. One click and the story opens.'
+                                                       : 'Waiting for the Dungeon Master to connect (see above).';
+  const b = document.getElementById('st-btn');
+  b.textContent = target.active ? 'Continue' : 'Start evening';
+  b.disabled = !h.dm || waitingFor !== null;
+  b.onclick = () => { if (target.active && window.lastStoryReady) location.href = '/'; else load(target.name, b); };
+}
+refreshHealth();
+setInterval(refreshHealth, 3000);
+const _origRefresh = refresh;
 loadOptions();
 refresh();
 refreshTrash();
